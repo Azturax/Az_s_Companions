@@ -1,6 +1,6 @@
 # Version compatibility
 
-Kon Companions declares support for:
+Az's Companions declares support for:
 
 - **Minecraft:** `1.21.1` → `26.2` (Maven range `[1.21.1,26.3)`)
 - **NeoForge:** `21.1.x` → `26.2.x` (Maven range `[21.1,26.3)`)
@@ -37,7 +37,7 @@ The runtime ranges already allow both lines; publish separate jars if bytecode d
 
 ## Runtime helpers
 
-`com.koncompanions.util.ModVersionCompat` exposes:
+`com.azscompanions.util.ModVersionCompat` exposes:
 
 - `isWithinSupportedWindow()`
 - `isNeo21_1Line()` / `isNeo26Line()`

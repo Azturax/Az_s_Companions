@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:logs",
+    "#azscompanions:task_materials",
+    "minecraft:cobblestone",
+    "minecraft:dirt",
+    "minecraft:sand",
+    "minecraft:gravel",
+    "minecraft:clay"
+  ]
+}

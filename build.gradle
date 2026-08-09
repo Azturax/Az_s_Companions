@@ -11,13 +11,24 @@ allprojects {
         maven { url = "https://maven.fabricmc.net/" }
         maven { url = "https://maven.neoforged.net/releases/" }
         maven { url = "https://maven.architectury.dev/" }
+        maven {
+            name = 'Modrinth'
+            url = 'https://api.modrinth.com/maven'
+            content { includeGroup 'maven.modrinth' }
+        }
     }
 }
 
 tasks.register('buildAll') {
     group = 'build'
-    description = 'Build Fabric and NeoForge jars'
-    dependsOn ':fabric:build', ':neoforge:build'
+    description = 'Build Fabric, Fabric CCI, NeoForge standalone, and NeoForge CCI jars'
+    dependsOn ':fabric:build', ':fabric-cci:build', ':neoforge:build', ':neoforge-cci:build'
+}
+
+tasks.register('runFabricCciClient') {
+    group = 'fabric'
+    description = 'Run Fabric client with the CCI-compatible edition'
+    dependsOn ':fabric-cci:runClient'
 }
 
 tasks.register('runFabricClient') {
@@ -28,4 +39,10 @@ tasks.register('runFabricClient') {
 tasks.register('runNeoForgeClient') {
     group = 'neoforge'
     dependsOn ':neoforge:runClient'
+}
+
+tasks.register('runNeoForgeCciClient') {
+    group = 'neoforge'
+    description = 'Run NeoForge client with the CCI-compatible edition'
+    dependsOn ':neoforge-cci:runClient'
 }

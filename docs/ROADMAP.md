@@ -1,4 +1,4 @@
-# Kon Companions — Development Roadmap
+# Az's Companions — Development Roadmap
 
 All characters remain explicitly adult, wholesome, and non-sexual across every phase.
 
@@ -10,7 +10,7 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [x] `CompanionEntity` with ownership, trust, permissions, home
 - [x] Data-driven companion definitions (`data/*/companions/*.json`)
 - [x] Default companion: Kon (dialogue + personality + skin path)
-- [x] Companion Selection screen + craftable selector item + `/koncompanions`
+- [x] Companion Selection screen + craftable selector item + `/azscompanions`
 - [x] Management / inventory / radial command menus
 - [x] Task queue (priority, pause/resume, cancel, reports)
 - [x] Vanilla tasks: follow, stay, guard, gather, farm, chop, mine, combat, collect, deposit, build, craft, machine, sleep, home
@@ -18,7 +18,7 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [x] Config (common/server/client)
 - [x] Debug commands (`/kondebug`)
 - [ ] Polish Kon player-model texture from final art (placeholder PNG shipped)
-- [ ] GameTest templates under `data/koncompanions/structure`
+- [ ] GameTest templates under `data/azscompanions/structure`
 - [ ] Exact server-wide companion counting via SavedData
 
 ## Phase 2 — Expanded automation

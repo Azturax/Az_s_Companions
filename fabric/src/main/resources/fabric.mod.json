@@ -3,9 +3,9 @@
   "id": "${mod_id}",
   "version": "${version}",
   "name": "${mod_name}",
-  "description": "Wholesome adult AI companions for Minecraft. Charm summon, customize, chat, follow, and Kon Bed sleep. Minecraft 1.21.1.",
+  "description": "Az's Companions — wholesome adult AI companions for Minecraft. Charm summon, customize, chat, follow, and bed sleep. One companion per player. Minecraft 1.21.1.",
   "authors": [
-    "Kon Companions Team"
+    "Az"
   ],
   "contact": {
     "homepage": "https://github.com/Azturax/My-Girlfriend-Kon",
@@ -13,14 +13,14 @@
     "issues": "https://github.com/Azturax/My-Girlfriend-Kon/issues"
   },
   "license": "${mod_license}",
-  "icon": "assets/koncompanions/textures/gui/kon_card.png",
+  "icon": "assets/azscompanions/textures/gui/kon_card.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.koncompanions.KonCompanionsFabric"
+      "com.azscompanions.AzsCompanionsFabric"
     ],
     "client": [
-      "com.koncompanions.KonCompanionsFabricClient"
+      "com.azscompanions.AzsCompanionsFabricClient"
     ]
   },
   "depends": {
@@ -33,7 +33,7 @@
     "modmenu": "*"
   },
   "custom": {
-    "koncompanions:support": {
+    "azscompanions:support": {
       "minecraft": "1.21.1",
       "loaders": ["fabric", "neoforge"]
     }

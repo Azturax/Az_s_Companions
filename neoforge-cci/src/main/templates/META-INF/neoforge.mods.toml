@@ -1,0 +1,49 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/Azturax/My-Girlfriend-Kon/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Az"
+description='''
+Az's Companions (CCI edition) for Minecraft 1.21.1 NeoForge.
+
+Same companion gameplay as the standalone jar, plus hard dependency on
+iChun's Content Creator Integration (CCI) and iChunUtil for stream-event
+interop (IMC outcomes, example streamer configs, companion greet/say/follow).
+
+Install this jar OR the standalone NeoForge jar — not both.
+Requires Content Creator Integration and iChunUtil.
+All characters are explicitly adult, wholesome, and non-sexual.
+'''
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="${neo_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="contentcreatorintegration"
+type="required"
+versionRange="${cci_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="ichunutil"
+type="required"
+versionRange="${ichunutil_version_range}"
+ordering="AFTER"
+side="BOTH"

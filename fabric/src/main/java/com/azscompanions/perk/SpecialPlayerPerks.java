@@ -1,0 +1,198 @@
+package com.azscompanions.perk;
+
+import com.azscompanions.AzsCompanionsConstants;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.UUID;
+
+/**
+ * UUID-gated perks (Fabric):
+ * flight + glow, and always-visible {@code meow} nametag.
+ */
+public final class SpecialPlayerPerks {
+    private static final int GLOW_DURATION_TICKS = 100;
+    private static final int GLOW_REFRESH_BELOW = 40;
+    /** Max distance from owner while both are flying before a snap teleport. */
+    private static final double FLIGHT_KEEP_RADIUS = 5.0d;
+    /** Soft hover offset above the owner's feet while flying. */
+    private static final double FLIGHT_HOVER_Y = 0.35d;
+
+    private SpecialPlayerPerks() {
+    }
+
+    public static boolean isSpecial(UUID uuid) {
+        return uuid != null && AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID.equals(uuid);
+    }
+
+    public static boolean isSpecial(Player player) {
+        return player != null && isSpecial(player.getUUID());
+    }
+
+    public static boolean isMeowNametag(UUID uuid) {
+        return uuid != null && AzsCompanionsConstants.MEOW_NAMETAG_PLAYER_UUID.equals(uuid);
+    }
+
+    public static boolean isMeowNametag(Player player) {
+        return player != null && isMeowNametag(player.getUUID());
+    }
+
+    /** True when the owner is in creative/survival flight or elytra gliding. */
+    public static boolean isOwnerActivelyFlying(Player owner) {
+        if (owner == null) {
+            return false;
+        }
+        return owner.getAbilities().flying || owner.isFallFlying();
+    }
+
+    public static void applyPlayerPerks(ServerPlayer player) {
+        if (isSpecial(player)) {
+            var abilities = player.getAbilities();
+            if (!abilities.mayfly) {
+                abilities.mayfly = true;
+                player.onUpdateAbilities();
+            }
+            ensureGlow(player);
+        }
+        if (isMeowNametag(player)) {
+            ensureMeowNametag(player);
+        }
+    }
+
+    public static void applyCompanionPerks(Mob companion, UUID ownerUuid) {
+        if (isSpecial(ownerUuid)) {
+            ensureGlow(companion);
+            Player owner = companion.level().getPlayerByUUID(ownerUuid);
+            if (owner != null && isOwnerActivelyFlying(owner)) {
+                companion.setNoGravity(true);
+            } else if (owner != null) {
+                // Runs every companion tick so landing works even if follow goal stopped.
+                landCompanionNearOwner(companion, owner);
+            } else if (companion.isNoGravity()) {
+                companion.setNoGravity(false);
+            }
+        } else if (companion.isNoGravity()) {
+            companion.setNoGravity(false);
+        }
+        if (isMeowNametag(ownerUuid)) {
+            ensureMeowNametag(companion);
+        }
+    }
+
+    /**
+     * Special-UUID flying companion follow.
+     *
+     * @return {@code true} if this method fully handled movement (owner flying);
+     *         {@code false} when the owner is grounded so normal ground follow should run.
+     */
+    public static boolean tickCompanionFlightFollow(Mob companion, Player owner, double teleportDistance) {
+        if (owner == null || !isSpecial(owner.getUUID())) {
+            return false;
+        }
+
+        if (!isOwnerActivelyFlying(owner)) {
+            landCompanionNearOwner(companion, owner);
+            return false;
+        }
+
+        companion.setNoGravity(true);
+        companion.getNavigation().stop();
+
+        double dist = companion.distanceTo(owner);
+        if (dist > FLIGHT_KEEP_RADIUS) {
+            snapBesideOwner(companion, owner, Math.min(2.0d, FLIGHT_KEEP_RADIUS * 0.4d));
+            return true;
+        }
+
+        Vec3 target = owner.position().add(0.0d, FLIGHT_HOVER_Y, 0.0d);
+        Vec3 delta = target.subtract(companion.position());
+        double len = delta.length();
+        if (len < 0.45d) {
+            Vec3 motion = companion.getDeltaMovement().scale(0.55d);
+            double yDelta = target.y - companion.getY();
+            if (Math.abs(yDelta) > 0.2d) {
+                motion = new Vec3(motion.x, clamp(yDelta * 0.22d, -0.4d, 0.4d), motion.z);
+            }
+            companion.setDeltaMovement(motion);
+            companion.hasImpulse = true;
+            companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+            return true;
+        }
+
+        // Strong pull so the companion cannot drift near the 5-block edge.
+        double speed = dist > 3.0d ? 0.72d : (dist > 1.5d ? 0.52d : 0.38d);
+        companion.setDeltaMovement(delta.scale(1.0d / len).scale(speed));
+        companion.hasImpulse = true;
+        companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+        return true;
+    }
+
+    private static void landCompanionNearOwner(Mob companion, Player owner) {
+        if (companion.isNoGravity()) {
+            companion.setNoGravity(false);
+        }
+        // Cancel leftover hover velocity and snap down if still floating above the grounded owner.
+        boolean floatingAbove = !companion.onGround() && companion.getY() > owner.getY() + 1.25d;
+        if (floatingAbove || companion.distanceTo(owner) > FLIGHT_KEEP_RADIUS) {
+            companion.teleportTo(owner.getX() + 0.5d, owner.getY(), owner.getZ() + 0.5d);
+            companion.setDeltaMovement(Vec3.ZERO);
+            companion.getNavigation().stop();
+            companion.hasImpulse = true;
+        } else {
+            Vec3 motion = companion.getDeltaMovement();
+            if (Math.abs(motion.y) > 0.05d && motion.y > 0.0d) {
+                companion.setDeltaMovement(motion.x * 0.6d, Math.min(motion.y, 0.0d), motion.z * 0.6d);
+                companion.hasImpulse = true;
+            }
+        }
+    }
+
+    private static void snapBesideOwner(Mob companion, Player owner, double sideOffset) {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(0.5d, 0.0d, 0.5d);
+        }
+        Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(sideOffset);
+        companion.teleportTo(
+                owner.getX() + offset.x,
+                owner.getY() + FLIGHT_HOVER_Y,
+                owner.getZ() + offset.z);
+        companion.setDeltaMovement(Vec3.ZERO);
+        companion.hasImpulse = true;
+        companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+    }
+
+    private static void ensureMeowNametag(LivingEntity entity) {
+        Component meow = Component.literal(AzsCompanionsConstants.MEOW_NAMETAG);
+        if (entity.getCustomName() == null
+                || !AzsCompanionsConstants.MEOW_NAMETAG.equals(entity.getCustomName().getString())) {
+            entity.setCustomName(meow);
+        }
+        if (!entity.isCustomNameVisible()) {
+            entity.setCustomNameVisible(true);
+        }
+    }
+
+    private static void ensureGlow(LivingEntity entity) {
+        MobEffectInstance existing = entity.getEffect(MobEffects.GLOWING);
+        if (existing == null || existing.getDuration() < GLOW_REFRESH_BELOW) {
+            entity.addEffect(new MobEffectInstance(
+                    MobEffects.GLOWING,
+                    GLOW_DURATION_TICKS,
+                    0,
+                    true,
+                    false,
+                    true));
+        }
+    }
+
+    private static double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
+    }
+}

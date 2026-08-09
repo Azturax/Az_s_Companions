@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "azscompanions:kon_bed",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "azscompanions:kon_bed",
+              "properties": { "part": "head" }
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
+      ]
+    }
+  ]
+}

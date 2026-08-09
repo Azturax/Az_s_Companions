@@ -1,0 +1,118 @@
+plugins {
+    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = "${rootProject.archives_name}-fabric-cci"
+}
+
+version = rootProject.mod_version
+group = rootProject.mod_group_id
+
+def fabricProject = project(':fabric')
+def fabricSrc = fabricProject.file('src/main/java')
+def fabricResources = fabricProject.file('src/main/resources')
+def commonResourcesDir = rootProject.file('common/src/main/resources')
+
+repositories {
+    maven { url = "https://maven.fabricmc.net/" }
+    mavenCentral()
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter {
+            includeGroup 'maven.modrinth'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+
+    implementation project(':common')
+
+    // CCI + iChunUtil (Fabric 1.21 / 1.21.1) via Modrinth Maven version IDs.
+    modImplementation "maven.modrinth:content-creator-integration:${rootProject.cci_fabric_modrinth_version_id}"
+    modImplementation "maven.modrinth:ichunutil:${rootProject.ichunutil_fabric_modrinth_version_id}"
+}
+
+loom {
+    runs {
+        client {
+            client()
+            configName = "Fabric CCI Client"
+            ideConfigGenerated = true
+        }
+        server {
+            server()
+            configName = "Fabric CCI Server"
+            ideConfigGenerated = true
+        }
+    }
+}
+
+sourceSets.main.java {
+    srcDir(fabricSrc)
+    srcDir('src/main/java')
+}
+
+sourceSets.main.resources {
+    srcDir(commonResourcesDir)
+    srcDir('src/main/resources')
+    exclude("**/*.bbmodel")
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(fabricResources) {
+        exclude 'fabric.mod.json'
+        exclude '**/*.bbmodel'
+    }
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", rootProject.minecraft_version
+    inputs.property "fabric_loader_version", rootProject.fabric_loader_version
+
+    filesMatching("fabric.mod.json") {
+        expand([
+                version               : project.version,
+                minecraft_version     : rootProject.minecraft_version,
+                fabric_loader_version : rootProject.fabric_loader_version,
+                fabric_loader_range   : rootProject.fabric_loader_range,
+                fabric_minecraft_range: rootProject.fabric_minecraft_range,
+                mod_id                : rootProject.mod_id,
+                mod_name              : rootProject.mod_name + " (CCI)",
+                mod_license           : rootProject.mod_license,
+                cci_version           : rootProject.cci_version,
+                ichunutil_version     : rootProject.ichunutil_version,
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+java {
+    withSourcesJar()
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+tasks.named('sourcesJar', Jar).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+jar {
+    from(rootProject.file("LICENSE")) {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
+    from(project(':common').sourceSets.main.output.classesDirs)
+}

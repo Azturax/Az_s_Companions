@@ -11,8 +11,10 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-rootProject.name = 'koncompanions'
+rootProject.name = 'azscompanions'
 
 include 'common'
 include 'fabric'
+include 'fabric-cci'
 include 'neoforge'
+include 'neoforge-cci'

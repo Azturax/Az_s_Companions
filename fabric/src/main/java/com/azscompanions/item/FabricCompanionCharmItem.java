@@ -1,0 +1,120 @@
+package com.azscompanions.item;
+
+import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.FabricCompanionRecruitment;
+import com.azscompanions.entity.FabricCompanionRegistry;
+import com.azscompanions.registry.FabricModItems;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+
+import java.util.List;
+import java.util.UUID;
+
+public final class FabricCompanionCharmItem extends Item {
+    public FabricCompanionCharmItem(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            toggleOrRecruit(serverPlayer, stack);
+        }
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+    }
+
+    private static void toggleOrRecruit(ServerPlayer player, ItemStack stack) {
+        UUID bound = FabricCharmData.getBoundUuid(stack);
+        if (bound == null) {
+            FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
+            if (created != null) {
+                FabricCharmData.bind(stack, created.getUUID());
+                created.sayHello();
+                player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
+            }
+            return;
+        }
+        FabricCompanionEntity living = FabricCompanionRecruitment.findOwned(player, bound);
+        if (living != null) {
+            living.sayBye();
+            var tag = new net.minecraft.nbt.CompoundTag();
+            living.saveWithoutId(tag);
+            FabricCharmData.storeCompanion(stack, tag, bound);
+            living.discard();
+            player.displayClientMessage(Component.translatable("message.azscompanions.charm_despawned"), true);
+            return;
+        }
+        if (FabricCharmData.hasStoredCompanion(stack)) {
+            var stored = FabricCharmData.takeStoredCompanion(stack);
+            if (stored != null) {
+                FabricCompanionEntity spawned = FabricCompanionRecruitment.spawnFromStored(player, stored, bound);
+                if (spawned != null) {
+                    spawned.sayHello();
+                    player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+                }
+            }
+            return;
+        }
+        FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
+        if (created != null) {
+            FabricCharmData.bind(stack, created.getUUID());
+            created.sayHello();
+            player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
+        }
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+        if (!level.isClientSide && entity instanceof Player player) {
+            enforceSingleCharm(player);
+        }
+    }
+
+    public static void enforceSingleCharm(Player player) {
+        boolean kept = false;
+        boolean dropped = false;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack slot = player.getInventory().getItem(i);
+            if (slot.getItem() != FabricModItems.COMPANION_CHARM) {
+                continue;
+            }
+            if (!kept) {
+                kept = true;
+                continue;
+            }
+            ItemStack drop = slot.copy();
+            player.getInventory().setItem(i, ItemStack.EMPTY);
+            ItemEntity entity = player.drop(drop, false);
+            if (entity != null) {
+                entity.setPickUpDelay(40);
+            }
+            dropped = true;
+        }
+        if (dropped) {
+            player.displayClientMessage(Component.translatable("message.azscompanions.charm_only_one"), true);
+        }
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("item.azscompanions.companion_charm.desc"));
+        if (FabricCharmData.isBound(stack)) {
+            tooltip.add(Component.translatable(
+                    FabricCharmData.hasStoredCompanion(stack)
+                            ? "item.azscompanions.companion_charm.bound_stored"
+                            : "item.azscompanions.companion_charm.bound_active"));
+        } else {
+            tooltip.add(Component.translatable("item.azscompanions.companion_charm.unbound"));
+        }
+    }
+}
