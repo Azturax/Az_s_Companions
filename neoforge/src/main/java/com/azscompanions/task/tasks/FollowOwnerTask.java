@@ -2,11 +2,13 @@ package com.azscompanions.task.tasks;
 
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.task.CompanionTask;
 import com.azscompanions.task.TaskPriority;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 public final class FollowOwnerTask extends CompanionTask {
     public FollowOwnerTask() {
@@ -30,11 +32,17 @@ public final class FollowOwnerTask extends CompanionTask {
         double dist = companion.distanceTo(owner);
         if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
             companion.safeTeleportNear(owner.blockPosition());
-        } else if (dist > 4.0d && companion.isOwnerExploring()) {
-            companion.getNavigation().moveTo(owner, 1.1d);
+        } else if (CompanionFollowDistances.needsFollow(dist) && companion.isOwnerExploring()) {
+            Vec3 away = companion.position().subtract(owner.position());
+            if (away.horizontalDistanceSqr() < 1.0e-4d) {
+                away = new Vec3(1.0d, 0.0d, 0.0d);
+            }
+            Vec3 target = owner.position().add(
+                    new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE));
+            companion.getNavigation().moveTo(target.x, target.y, target.z, 1.05d);
         }
         setProgress(100);
-        // Follow is a persistent mode task — complete once navigation is healthy.
-        return dist <= 4.5d ? TaskTickResult.COMPLETED : TaskTickResult.RUNNING;
+        // Loose follow — done once inside the stop / comfort ring.
+        return dist <= CompanionFollowDistances.FOLLOW_STOP ? TaskTickResult.COMPLETED : TaskTickResult.RUNNING;
     }
 }

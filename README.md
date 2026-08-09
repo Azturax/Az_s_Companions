@@ -39,13 +39,13 @@ Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 - **Companion Charm** — desert pyramid chest loot; **one companion per player**
 - Charm **summon / store**; appear → `<Name> Hello!` · store → `<Name> Bye!` (owner only)
 - First summon uses **your username + your skin**
-- **Follow** by day; casual **wander** near owner when idle (8–16 blocks); at night sleeps in the **nearest bed**
-- Loose follow leash: path start **32** / stop **24** / teleport **48**; no teleport while fighting
+- **Follow** by day; casual **wander** when idle (**24–40** blocks, loaded chunks); at night sleeps in the **nearest bed**
+- Loose follow leash: personal space **2** / comfort **2–12** / preferred **~6** / start **32** / stop **8** / teleport **48**; no teleport while fighting or idle
 - **Defend** living attackers of the owner (not environmental damage)
 - **Hands:** right-click with an item to give (main → offhand → swap); empty hand takes back
 - **Potions:** auto-pickup **beneficial only**; give a harmful splash and they throw it at enemies
 - **Shift + right-click** — NeoForge: Customize · Fabric: inventory
-- UUID-gated **special perks** for a few owners (flight follow / glow / nametag)
+- UUID-gated **special perks** for a few owners (flight follow / glow / Kon ears)
 
 ### Customize (NeoForge)
 

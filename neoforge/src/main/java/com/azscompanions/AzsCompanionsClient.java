@@ -1,8 +1,10 @@
 package com.azscompanions;
 
 import com.azscompanions.client.model.FeminineCompanionModel;
+import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
 import com.azscompanions.client.renderer.KonAwareBedRenderer;
+import com.azscompanions.client.renderer.KonEarsLayer;
 import com.azscompanions.client.screen.CompanionInventoryScreen;
 import com.azscompanions.client.screen.CompanionManagementScreen;
 import com.azscompanions.client.screen.CompanionSelectionScreen;
@@ -11,6 +13,8 @@ import com.azscompanions.client.voice.ClientVoiceController;
 import com.azscompanions.registry.ModBlockEntities;
 import com.azscompanions.registry.ModEntities;
 import com.azscompanions.registry.ModMenus;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.resources.PlayerSkin;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -25,6 +29,7 @@ public final class AzsCompanionsClient {
         modBus.addListener(this::onClientSetup);
         modBus.addListener(this::onRegisterRenderers);
         modBus.addListener(this::onRegisterLayers);
+        modBus.addListener(this::onAddLayers);
         modBus.addListener(this::onRegisterScreens);
     }
 
@@ -36,6 +41,16 @@ public final class AzsCompanionsClient {
     private void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_WIDE, () -> FeminineCompanionModel.createBodyLayer(false));
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_SLIM, () -> FeminineCompanionModel.createBodyLayer(true));
+        event.registerLayerDefinition(KonEarsModel.LAYER, KonEarsModel::createBodyLayer);
+    }
+
+    private void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        for (PlayerSkin.Model skin : event.getSkins()) {
+            PlayerRenderer renderer = event.getSkin(skin);
+            if (renderer != null) {
+                renderer.addLayer(new KonEarsLayer(renderer, event.getEntityModels()));
+            }
+        }
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {

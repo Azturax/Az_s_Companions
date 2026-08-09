@@ -1,6 +1,7 @@
 package com.azscompanions.entity.ai;
 
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -12,13 +13,17 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Casual stroll near the owner while they are standing around (idle ~2.5s).
- * Lower priority than follow — disabled while the owner is exploring.
+ * Casual stroll near the owner:
+ * <ul>
+ *   <li>Owner idle — free wander in {@link CompanionFollowDistances#IDLE_WANDER_MIN}–
+ *       {@link CompanionFollowDistances#IDLE_WANDER_MAX}, loaded chunks only, no teleport.</li>
+ *   <li>Owner exploring but companion within follow-start — soft stroll in the comfort
+ *       ring (2–12) instead of bee-lining into the player's face.</li>
+ * </ul>
  */
 public final class CompanionWanderNearOwnerGoal extends Goal {
-    private static final double MIN_RADIUS = 8.0d;
-    private static final double MAX_RADIUS = 16.0d;
-    private static final int IDLE_CHANCE = 80;
+    private static final int IDLE_CHANCE = 60;
+    private static final int EXPLORE_CHANCE = 100;
     private static final double SPEED = 0.85d;
 
     private final CompanionEntity companion;
@@ -39,7 +44,8 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        if (companion.getRandom().nextInt(IDLE_CHANCE) != 0) {
+        int chance = companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
+        if (companion.getRandom().nextInt(chance) != 0) {
             return false;
         }
         wanted = pickWanderTarget();
@@ -79,11 +85,16 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (owner == null || owner.isSpectator() || owner.isSleeping()) {
             return false;
         }
-        // Only wander while the owner is standing around; exploring leaves MOVE to follow.
-        if (!companion.isOwnerStandingAround()) {
-            return false;
+        double dist = companion.distanceTo(owner);
+        if (CompanionFollowDistances.tooClose(dist)) {
+            return false; // follow goal steps back
         }
-        return companion.distanceTo(owner) <= CompanionFollowGoal.FOLLOW_START_DISTANCE;
+        if (companion.isOwnerStandingAround()) {
+            // Idle free wander — stay within the non-teleport wander envelope.
+            return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
+        }
+        // Exploring: stroll in comfort / mid band; follow owns MOVE beyond FOLLOW_START.
+        return dist <= CompanionFollowDistances.FOLLOW_START;
     }
 
     private Vec3 pickWanderTarget() {
@@ -91,28 +102,50 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (owner == null) {
             return null;
         }
+        boolean idle = companion.isOwnerStandingAround();
+        double minR = idle
+                ? CompanionFollowDistances.IDLE_WANDER_MIN
+                : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
+        double maxR = idle
+                ? CompanionFollowDistances.IDLE_WANDER_MAX
+                : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();
-        for (int attempt = 0; attempt < 12; attempt++) {
+        for (int attempt = 0; attempt < 16; attempt++) {
             double angle = companion.getRandom().nextDouble() * Math.PI * 2.0d;
-            double radius = MIN_RADIUS + companion.getRandom().nextDouble() * (MAX_RADIUS - MIN_RADIUS);
+            double radius = minR + companion.getRandom().nextDouble() * (maxR - minR);
             double x = owner.getX() + Math.cos(angle) * radius;
             double z = owner.getZ() + Math.sin(angle) * radius;
             BlockPos pos = BlockPos.containing(x, owner.getY(), z);
-            // Prefer solid ground underfoot / avoid water.
+            if (!isChunkLoaded(level, pos)) {
+                continue;
+            }
             BlockPos stand = findStandable(level, pos, 3);
-            if (stand == null) {
+            if (stand == null || !isChunkLoaded(level, stand)) {
                 continue;
             }
             if (!level.getFluidState(stand).isEmpty() || !level.getFluidState(stand.above()).isEmpty()) {
                 continue;
             }
+            // Never pick a spot inside personal space.
+            if (owner.distanceToSqr(stand.getX() + 0.5d, stand.getY(), stand.getZ() + 0.5d)
+                    < CompanionFollowDistances.MIN_PERSONAL_SPACE * CompanionFollowDistances.MIN_PERSONAL_SPACE) {
+                continue;
+            }
             Vec3 candidate = Vec3.atBottomCenterOf(stand);
-            // Soft bias: DefaultRandomPos validates pathability when possible.
             Vec3 validated = DefaultRandomPos.getPosTowards(
-                    companion, 10, 7, candidate, (float) (Math.PI / 2.0d));
-            return validated != null ? validated : candidate;
+                    companion, 12, 7, candidate, (float) (Math.PI / 2.0d));
+            Vec3 chosen = validated != null ? validated : candidate;
+            if (!isChunkLoaded(level, BlockPos.containing(chosen))) {
+                continue;
+            }
+            return chosen;
         }
         return null;
+    }
+
+    private static boolean isChunkLoaded(Level level, BlockPos pos) {
+        return level.hasChunkAt(pos)
+                && level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
     private static BlockPos findStandable(Level level, BlockPos around, int verticalSearch) {

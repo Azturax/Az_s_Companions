@@ -10,13 +10,11 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Casual stroll near the owner while they are standing around (idle ~2.5s).
- * Lower priority than follow — disabled while the owner is exploring.
+ * Casual stroll near the owner (idle free wander 24–40, or comfort-ring stroll while exploring).
  */
 public final class FabricWanderNearOwnerGoal extends Goal {
-    private static final double MIN_RADIUS = 8.0d;
-    private static final double MAX_RADIUS = 16.0d;
-    private static final int IDLE_CHANCE = 80;
+    private static final int IDLE_CHANCE = 60;
+    private static final int EXPLORE_CHANCE = 100;
     private static final double SPEED = 0.85d;
 
     private final FabricCompanionEntity companion;
@@ -37,7 +35,8 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        if (companion.getRandom().nextInt(IDLE_CHANCE) != 0) {
+        int chance = companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
+        if (companion.getRandom().nextInt(chance) != 0) {
             return false;
         }
         wanted = pickWanderTarget();
@@ -80,10 +79,14 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (owner == null || owner.isSleeping()) {
             return false;
         }
-        if (!companion.isOwnerStandingAround()) {
+        double dist = companion.distanceTo(owner);
+        if (CompanionFollowDistances.tooClose(dist)) {
             return false;
         }
-        return companion.distanceTo(owner) <= FabricFollowOwnerGoal.FOLLOW_START_DISTANCE;
+        if (companion.isOwnerStandingAround()) {
+            return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
+        }
+        return dist <= CompanionFollowDistances.FOLLOW_START;
     }
 
     private Vec3 pickWanderTarget() {
@@ -91,26 +94,49 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (owner == null) {
             return null;
         }
+        boolean idle = companion.isOwnerStandingAround();
+        double minR = idle
+                ? CompanionFollowDistances.IDLE_WANDER_MIN
+                : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
+        double maxR = idle
+                ? CompanionFollowDistances.IDLE_WANDER_MAX
+                : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();
-        for (int attempt = 0; attempt < 12; attempt++) {
+        for (int attempt = 0; attempt < 16; attempt++) {
             double angle = companion.getRandom().nextDouble() * Math.PI * 2.0d;
-            double radius = MIN_RADIUS + companion.getRandom().nextDouble() * (MAX_RADIUS - MIN_RADIUS);
+            double radius = minR + companion.getRandom().nextDouble() * (maxR - minR);
             double x = owner.getX() + Math.cos(angle) * radius;
             double z = owner.getZ() + Math.sin(angle) * radius;
             BlockPos pos = BlockPos.containing(x, owner.getY(), z);
+            if (!isChunkLoaded(level, pos)) {
+                continue;
+            }
             BlockPos stand = findStandable(level, pos, 3);
-            if (stand == null) {
+            if (stand == null || !isChunkLoaded(level, stand)) {
                 continue;
             }
             if (!level.getFluidState(stand).isEmpty() || !level.getFluidState(stand.above()).isEmpty()) {
                 continue;
             }
+            if (owner.distanceToSqr(stand.getX() + 0.5d, stand.getY(), stand.getZ() + 0.5d)
+                    < CompanionFollowDistances.MIN_PERSONAL_SPACE * CompanionFollowDistances.MIN_PERSONAL_SPACE) {
+                continue;
+            }
             Vec3 candidate = Vec3.atBottomCenterOf(stand);
             Vec3 validated = DefaultRandomPos.getPosTowards(
-                    companion, 10, 7, candidate, (float) (Math.PI / 2.0d));
-            return validated != null ? validated : candidate;
+                    companion, 12, 7, candidate, (float) (Math.PI / 2.0d));
+            Vec3 chosen = validated != null ? validated : candidate;
+            if (!isChunkLoaded(level, BlockPos.containing(chosen))) {
+                continue;
+            }
+            return chosen;
         }
         return null;
+    }
+
+    private static boolean isChunkLoaded(Level level, BlockPos pos) {
+        return level.hasChunkAt(pos)
+                && level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
     private static BlockPos findStandable(Level level, BlockPos around, int verticalSearch) {

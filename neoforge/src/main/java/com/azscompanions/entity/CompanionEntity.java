@@ -291,14 +291,19 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void safeTeleportNear(BlockPos target) {
-        for (int i = 0; i < 8; i++) {
-            BlockPos candidate = target.offset(random.nextInt(3) - 1, 0, random.nextInt(3) - 1);
+        // Keep personal space — land in the preferred follow ring, not on the owner's feet.
+        int ring = (int) Math.round(CompanionFollowDistances.PREFERRED_DISTANCE);
+        for (int i = 0; i < 12; i++) {
+            double angle = random.nextDouble() * Math.PI * 2.0d;
+            int ox = (int) Math.round(Math.cos(angle) * ring);
+            int oz = (int) Math.round(Math.sin(angle) * ring);
+            BlockPos candidate = target.offset(ox, 0, oz);
             if (level().getBlockState(candidate).isAir() && level().getBlockState(candidate.below()).isSolid()) {
                 teleportTo(candidate.getX() + 0.5, candidate.getY(), candidate.getZ() + 0.5);
                 return;
             }
         }
-        teleportTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
+        teleportTo(target.getX() + ring + 0.5, target.getY(), target.getZ() + 0.5);
     }
 
     @Override

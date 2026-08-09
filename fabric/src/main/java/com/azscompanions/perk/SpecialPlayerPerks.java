@@ -1,7 +1,6 @@
 package com.azscompanions.perk;
 
 import com.azscompanions.AzsCompanionsConstants;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -14,7 +13,7 @@ import java.util.UUID;
 
 /**
  * UUID-gated perks (Fabric):
- * flight + glow, and always-visible {@code meow} nametag.
+ * flight + glow, and client-side Kon ears cosmetic (see {@link #hasKonEars}).
  */
 public final class SpecialPlayerPerks {
     private static final int GLOW_DURATION_TICKS = 100;
@@ -35,12 +34,13 @@ public final class SpecialPlayerPerks {
         return player != null && isSpecial(player.getUUID());
     }
 
-    public static boolean isMeowNametag(UUID uuid) {
-        return uuid != null && AzsCompanionsConstants.MEOW_NAMETAG_PLAYER_UUID.equals(uuid);
+    /** Client cosmetic Kon ears for this UUID (render layer; synced by UUID check). */
+    public static boolean hasKonEars(UUID uuid) {
+        return uuid != null && AzsCompanionsConstants.KON_EARS_PLAYER_UUID.equals(uuid);
     }
 
-    public static boolean isMeowNametag(Player player) {
-        return player != null && isMeowNametag(player.getUUID());
+    public static boolean hasKonEars(Player player) {
+        return player != null && hasKonEars(player.getUUID());
     }
 
     /** True when the owner is in creative/survival flight or elytra gliding. */
@@ -60,9 +60,6 @@ public final class SpecialPlayerPerks {
             }
             ensureGlow(player);
         }
-        if (isMeowNametag(player)) {
-            ensureMeowNametag(player);
-        }
     }
 
     public static void applyCompanionPerks(Mob companion, UUID ownerUuid) {
@@ -72,16 +69,12 @@ public final class SpecialPlayerPerks {
             if (owner != null && isOwnerActivelyFlying(owner)) {
                 companion.setNoGravity(true);
             } else if (owner != null) {
-                // Runs every companion tick so landing works even if follow goal stopped.
                 landCompanionNearOwner(companion, owner);
             } else if (companion.isNoGravity()) {
                 companion.setNoGravity(false);
             }
         } else if (companion.isNoGravity()) {
             companion.setNoGravity(false);
-        }
-        if (isMeowNametag(ownerUuid)) {
-            ensureMeowNametag(companion);
         }
     }
 
@@ -125,7 +118,6 @@ public final class SpecialPlayerPerks {
             return true;
         }
 
-        // Strong pull so the companion cannot drift near the 5-block edge.
         double speed = dist > 3.0d ? 0.72d : (dist > 1.5d ? 0.52d : 0.38d);
         companion.setDeltaMovement(delta.scale(1.0d / len).scale(speed));
         companion.hasImpulse = true;
@@ -137,7 +129,6 @@ public final class SpecialPlayerPerks {
         if (companion.isNoGravity()) {
             companion.setNoGravity(false);
         }
-        // Cancel leftover hover velocity and snap down if still floating above the grounded owner.
         boolean floatingAbove = !companion.onGround() && companion.getY() > owner.getY() + 1.25d;
         if (floatingAbove || companion.distanceTo(owner) > FLIGHT_KEEP_RADIUS) {
             companion.teleportTo(owner.getX() + 0.5d, owner.getY(), owner.getZ() + 0.5d);
@@ -166,17 +157,6 @@ public final class SpecialPlayerPerks {
         companion.setDeltaMovement(Vec3.ZERO);
         companion.hasImpulse = true;
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
-    }
-
-    private static void ensureMeowNametag(LivingEntity entity) {
-        Component meow = Component.literal(AzsCompanionsConstants.MEOW_NAMETAG);
-        if (entity.getCustomName() == null
-                || !AzsCompanionsConstants.MEOW_NAMETAG.equals(entity.getCustomName().getString())) {
-            entity.setCustomName(meow);
-        }
-        if (!entity.isCustomNameVisible()) {
-            entity.setCustomNameVisible(true);
-        }
     }
 
     private static void ensureGlow(LivingEntity entity) {

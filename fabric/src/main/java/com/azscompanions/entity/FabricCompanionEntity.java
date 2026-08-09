@@ -143,7 +143,14 @@ public class FabricCompanionEntity extends PathfinderMob {
             if (isOwnerExploring() && (getTarget() == null || !getTarget().isAlive())) {
                 Player owner = getOwner();
                 if (owner != null && distanceTo(owner) > FabricFollowOwnerGoal.TELEPORT_DISTANCE) {
-                    teleportTo(owner.getX(), owner.getY(), owner.getZ());
+                    net.minecraft.world.phys.Vec3 away = position().subtract(owner.position());
+                    if (away.horizontalDistanceSqr() < 1.0e-4d) {
+                        away = new net.minecraft.world.phys.Vec3(1.0d, 0.0d, 0.0d);
+                    }
+                    net.minecraft.world.phys.Vec3 offset = new net.minecraft.world.phys.Vec3(away.x, 0.0d, away.z)
+                            .normalize()
+                            .scale(CompanionFollowDistances.PREFERRED_DISTANCE);
+                    teleportTo(owner.getX() + offset.x, owner.getY(), owner.getZ() + offset.z);
                 }
             }
         }

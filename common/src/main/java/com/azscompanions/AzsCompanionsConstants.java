@@ -20,12 +20,10 @@ public final class AzsCompanionsConstants {
             UUID.fromString("4274c47f-d61f-4850-bf29-9e5c185db4ac");
 
     /**
-     * Special nametag player: always-visible display name {@code meow} (and companion if owned).
+     * Client cosmetic: cute Kon-style ears on this player's head (UUID-gated render layer).
      */
-    public static final UUID MEOW_NAMETAG_PLAYER_UUID =
+    public static final UUID KON_EARS_PLAYER_UUID =
             UUID.fromString("42901453-b2b5-4d95-9b7b-e0ed40da504f");
-
-    public static final String MEOW_NAMETAG = "meow";
 
     /**
      * Mister Wiggly: companion-of-companion dog sidekick while his companion is summoned.

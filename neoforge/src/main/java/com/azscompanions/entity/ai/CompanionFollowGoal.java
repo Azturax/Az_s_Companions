@@ -2,23 +2,24 @@ package com.azscompanions.entity.ai;
 
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
 /**
- * Loose ground follow while the owner is exploring. Starts only when far so companions
- * can fight/act nearby. Teleport is a last resort beyond the config leash — never while
- * attacking, and never while the owner is standing around (idle wander instead).
+ * Loose ground follow while the owner is exploring. Only closes the gap beyond
+ * {@link CompanionFollowDistances#FOLLOW_START}; stops in the preferred ring and
+ * never bee-lines onto the player. Teleport is a last resort beyond the leash —
+ * never while attacking, and never while the owner is standing around.
  */
 public final class CompanionFollowGoal extends Goal {
-    /** Begin pathing back to owner only beyond this distance (blocks). */
-    public static final double FOLLOW_START_DISTANCE = 32.0d;
-    /** Stop pathing once within this distance (blocks). */
-    public static final double FOLLOW_STOP_DISTANCE = 24.0d;
+    public static final double FOLLOW_START_DISTANCE = CompanionFollowDistances.FOLLOW_START;
+    public static final double FOLLOW_STOP_DISTANCE = CompanionFollowDistances.FOLLOW_STOP;
 
     private final CompanionEntity companion;
     private Player owner;
@@ -34,7 +35,6 @@ public final class CompanionFollowGoal extends Goal {
         if (companion.getMode() != CompanionMode.FOLLOW || companion.isSitting() || companion.isSleeping()) {
             return false;
         }
-        // Stay engaged in combat — do not steal MOVE from MeleeAttackGoal / teleport home.
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
@@ -42,15 +42,18 @@ public final class CompanionFollowGoal extends Goal {
         if (owner == null || owner.isSpectator() || owner.isSleeping()) {
             return false;
         }
-        // While the special owner is flying, keep follow active for tight airborne leash.
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
-        // Standing around → wander goal; do not hard-follow / teleport.
         if (companion.isOwnerStandingAround()) {
             return false;
         }
-        return companion.distanceTo(owner) > FOLLOW_START_DISTANCE;
+        double dist = companion.distanceTo(owner);
+        // Inside personal space: briefly engage to step back.
+        if (CompanionFollowDistances.tooClose(dist)) {
+            return true;
+        }
+        return CompanionFollowDistances.needsFollow(dist);
     }
 
     @Override
@@ -70,7 +73,11 @@ public final class CompanionFollowGoal extends Goal {
         if (companion.isOwnerStandingAround()) {
             return false;
         }
-        return companion.distanceTo(owner) > FOLLOW_STOP_DISTANCE;
+        double dist = companion.distanceTo(owner);
+        if (CompanionFollowDistances.tooClose(dist)) {
+            return true;
+        }
+        return dist > FOLLOW_STOP_DISTANCE;
     }
 
     @Override
@@ -100,12 +107,37 @@ public final class CompanionFollowGoal extends Goal {
         if (--timeToRecalcPath <= 0) {
             timeToRecalcPath = 10;
             double dist = companion.distanceTo(owner);
-            // Teleport only while exploring and truly beyond the leash — never while idle.
+            if (CompanionFollowDistances.tooClose(dist)) {
+                pathAwayFromOwner(CompanionFollowDistances.PREFERRED_DISTANCE);
+                return;
+            }
             if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
                 companion.safeTeleportNear(owner.blockPosition());
+            } else if (dist > FOLLOW_STOP_DISTANCE) {
+                // Path to a point in the preferred ring — never onto the owner's feet.
+                pathTowardPreferredRing();
             } else {
-                companion.getNavigation().moveTo(owner, 1.1d);
+                companion.getNavigation().stop();
             }
         }
+    }
+
+    private void pathTowardPreferredRing() {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(1.0d, 0.0d, 0.0d);
+        }
+        Vec3 target = owner.position().add(
+                new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE));
+        companion.getNavigation().moveTo(target.x, target.y, target.z, 1.05d);
+    }
+
+    private void pathAwayFromOwner(double desired) {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(1.0d, 0.0d, 0.0d);
+        }
+        Vec3 target = owner.position().add(new Vec3(away.x, 0.0d, away.z).normalize().scale(desired));
+        companion.getNavigation().moveTo(target.x, target.y, target.z, 1.0d);
     }
 }

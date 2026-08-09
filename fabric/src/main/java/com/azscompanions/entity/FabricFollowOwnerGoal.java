@@ -3,20 +3,19 @@ package com.azscompanions.entity;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
 /**
- * Loose ground follow while the owner is exploring. Teleport only beyond the leash when
- * exploring — never while attacking or while the owner is standing around.
+ * Loose ground follow while the owner is exploring. Only closes the gap beyond
+ * {@link CompanionFollowDistances#FOLLOW_START}; stops in the preferred ring and
+ * never bee-lines onto the player. Teleport only beyond the leash when exploring.
  */
 public final class FabricFollowOwnerGoal extends Goal {
-    /** Teleport-to-owner threshold for ground follow (blocks). */
-    public static final double TELEPORT_DISTANCE = 48.0d;
-    /** Begin pathing back to owner only beyond this distance (blocks). */
-    public static final double FOLLOW_START_DISTANCE = 32.0d;
-    /** Stop pathing once within this distance (blocks). */
-    public static final double FOLLOW_STOP_DISTANCE = 24.0d;
+    public static final double TELEPORT_DISTANCE = CompanionFollowDistances.TELEPORT_DISTANCE;
+    public static final double FOLLOW_START_DISTANCE = CompanionFollowDistances.FOLLOW_START;
+    public static final double FOLLOW_STOP_DISTANCE = CompanionFollowDistances.FOLLOW_STOP;
 
     private final FabricCompanionEntity companion;
     private Player owner;
@@ -45,7 +44,11 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (companion.isOwnerStandingAround()) {
             return false;
         }
-        return companion.distanceTo(owner) > FOLLOW_START_DISTANCE;
+        double dist = companion.distanceTo(owner);
+        if (CompanionFollowDistances.tooClose(dist)) {
+            return true;
+        }
+        return CompanionFollowDistances.needsFollow(dist);
     }
 
     @Override
@@ -65,7 +68,11 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (companion.isOwnerStandingAround()) {
             return false;
         }
-        return companion.distanceTo(owner) > FOLLOW_STOP_DISTANCE;
+        double dist = companion.distanceTo(owner);
+        if (CompanionFollowDistances.tooClose(dist)) {
+            return true;
+        }
+        return dist > FOLLOW_STOP_DISTANCE;
     }
 
     @Override
@@ -83,11 +90,45 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (--recalc <= 0) {
             recalc = 10;
             double dist = companion.distanceTo(owner);
+            if (CompanionFollowDistances.tooClose(dist)) {
+                pathAwayFromOwner(CompanionFollowDistances.PREFERRED_DISTANCE);
+                return;
+            }
             if (dist > TELEPORT_DISTANCE && companion.isOwnerExploring()) {
-                companion.teleportTo(owner.getX(), owner.getY(), owner.getZ());
+                teleportNearOwner();
+            } else if (dist > FOLLOW_STOP_DISTANCE) {
+                pathTowardPreferredRing();
             } else {
-                companion.getNavigation().moveTo(owner, 1.1d);
+                companion.getNavigation().stop();
             }
         }
+    }
+
+    private void pathTowardPreferredRing() {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(1.0d, 0.0d, 0.0d);
+        }
+        Vec3 target = owner.position().add(
+                new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE));
+        companion.getNavigation().moveTo(target.x, target.y, target.z, 1.05d);
+    }
+
+    private void pathAwayFromOwner(double desired) {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(1.0d, 0.0d, 0.0d);
+        }
+        Vec3 target = owner.position().add(new Vec3(away.x, 0.0d, away.z).normalize().scale(desired));
+        companion.getNavigation().moveTo(target.x, target.y, target.z, 1.0d);
+    }
+
+    private void teleportNearOwner() {
+        Vec3 away = companion.position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new Vec3(1.0d, 0.0d, 0.0d);
+        }
+        Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE);
+        companion.teleportTo(owner.getX() + offset.x, owner.getY(), owner.getZ() + offset.z);
     }
 }
