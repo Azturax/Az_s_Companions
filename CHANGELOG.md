@@ -17,6 +17,7 @@
 - Charm store/recall persists full appearance (name, skin, gender, size, proportions, home bed, etc.)
 - Charm Hello / Bye chat lines (owner only)
 - Loose follow: path starts at **32**, stops at **24**, teleport at **48**; stuck-recovery no longer snaps at 8. Teleport-to-owner disabled while fighting. Special flight perk keeps its 5-block airborne leash.
+- Casual **wander** near owner (8–16 blocks) when idle in FOLLOW; SIT/STAY (CCI) suppress wander/follow movement.
 - Ground potion loot: auto-pickup **beneficial only** (skip harmful + water/awkward neutrals); manually given harmful splash still handled by held-potion AI.
 
 ### Loaders

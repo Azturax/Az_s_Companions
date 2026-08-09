@@ -111,12 +111,14 @@ public class FabricCompanionEntity extends PathfinderMob {
     @Override
     protected void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
-        goalSelector.addGoal(1, new FabricCompanionSleepInBedGoal(this));
-        goalSelector.addGoal(2, new FabricPotionBehaviorGoal(this));
-        goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25d, true));
-        goalSelector.addGoal(4, new FabricFollowOwnerGoal(this));
-        goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(1, new FabricSitGoal(this));
+        goalSelector.addGoal(2, new FabricCompanionSleepInBedGoal(this));
+        goalSelector.addGoal(3, new FabricPotionBehaviorGoal(this));
+        goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25d, true));
+        goalSelector.addGoal(5, new FabricFollowOwnerGoal(this));
+        goalSelector.addGoal(6, new FabricWanderNearOwnerGoal(this));
+        goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new FabricOwnerDefendTargetGoal(this));
         targetSelector.addGoal(2, new HurtByTargetGoal(this));
@@ -126,7 +128,11 @@ public class FabricCompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel) {
-            if (getMode() != FabricCompanionMode.FOLLOW) {
+            // Preserve CCI/command SIT and STAY.
+            FabricCompanionMode mode = getMode();
+            if (mode != FabricCompanionMode.FOLLOW
+                    && mode != FabricCompanionMode.SIT
+                    && mode != FabricCompanionMode.STAY) {
                 setMode(FabricCompanionMode.FOLLOW);
             }
             taskQueue.cancelActive();

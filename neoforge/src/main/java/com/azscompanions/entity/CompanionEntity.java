@@ -6,7 +6,9 @@ import com.azscompanions.entity.ai.CompanionFollowGoal;
 import com.azscompanions.entity.ai.CompanionLookAtOwnerGoal;
 import com.azscompanions.entity.ai.CompanionOwnerDefendTargetGoal;
 import com.azscompanions.entity.ai.CompanionPotionBehaviorGoal;
+import com.azscompanions.entity.ai.CompanionSitGoal;
 import com.azscompanions.entity.ai.CompanionSleepInBedGoal;
+import com.azscompanions.entity.ai.CompanionWanderNearOwnerGoal;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.menu.CompanionInventoryMenu;
 import com.azscompanions.menu.CompanionManagementMenu;
@@ -165,17 +167,18 @@ public class CompanionEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
-        // Day: follow owner. Night: sleep in nearest Kon bed (home).
-        // Combat / potions temporarily outrank follow, then resume.
+        // Sit/stay stop movement; combat/potions/sleep outrank follow; wander when owner idle nearby.
         goalSelector.addGoal(0, new FloatGoal(this));
-        goalSelector.addGoal(1, new CompanionSleepInBedGoal(this));
-        goalSelector.addGoal(2, new CompanionPotionBehaviorGoal(this));
-        goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.25d, true));
-        goalSelector.addGoal(4, new CompanionFollowGoal(this));
-        goalSelector.addGoal(5, new OpenDoorGoal(this, true));
-        goalSelector.addGoal(6, new CompanionLookAtOwnerGoal(this));
-        goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(1, new CompanionSitGoal(this));
+        goalSelector.addGoal(2, new CompanionSleepInBedGoal(this));
+        goalSelector.addGoal(3, new CompanionPotionBehaviorGoal(this));
+        goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25d, true));
+        goalSelector.addGoal(5, new CompanionFollowGoal(this));
+        goalSelector.addGoal(6, new CompanionWanderNearOwnerGoal(this));
+        goalSelector.addGoal(7, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(8, new CompanionLookAtOwnerGoal(this));
+        goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new CompanionOwnerDefendTargetGoal(this));
         targetSelector.addGoal(2, new HurtByTargetGoal(this));
@@ -185,8 +188,11 @@ public class CompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel) {
-            // Follow-only: keep mode locked and clear any leftover task queue state.
-            if (getMode() != CompanionMode.FOLLOW || isSitting()) {
+            // Preserve CCI/command SIT and STAY; only clear leftover task-queue modes.
+            CompanionMode mode = getMode();
+            if (mode != CompanionMode.FOLLOW
+                    && mode != CompanionMode.SIT
+                    && mode != CompanionMode.STAY) {
                 setMode(CompanionMode.FOLLOW);
             }
             if (taskQueue.getActive() != null || !taskQueue.queued().isEmpty()) {
