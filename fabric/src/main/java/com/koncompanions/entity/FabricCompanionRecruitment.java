@@ -42,9 +42,9 @@ public final class FabricCompanionRecruitment {
         companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setOwner(player);
         companion.applyDefinition(definition);
+        companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
         level.addFreshEntity(companion);
-        companion.speakGreeting();
         return companion;
     }
 
@@ -60,7 +60,6 @@ public final class FabricCompanionRecruitment {
         companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setMode(FabricCompanionMode.FOLLOW);
         level.addFreshEntity(companion);
-        companion.speakGreeting();
         return companion;
     }
 }

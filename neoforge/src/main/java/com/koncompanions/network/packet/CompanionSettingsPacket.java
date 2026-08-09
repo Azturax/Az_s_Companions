@@ -2,6 +2,7 @@ package com.koncompanions.network.packet;
 
 import com.koncompanions.KonCompanions;
 import com.koncompanions.entity.CompanionEntity;
+import com.koncompanions.entity.CompanionGender;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -11,7 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client → server update for name, scale, skin, slim arms, and body proportions.
+ * Client → server update for name, scale, skin, slim arms, gender, and body proportions.
  */
 public record CompanionSettingsPacket(
         int entityId,
@@ -19,6 +20,7 @@ public record CompanionSettingsPacket(
         float scale,
         String skinPath,
         boolean slimArms,
+        boolean male,
         float bust,
         float waist,
         float hips,
@@ -31,6 +33,7 @@ public record CompanionSettingsPacket(
     public static final int FLAG_SKIN = 4;
     public static final int FLAG_SLIM = 8;
     public static final int FLAG_PROPORTIONS = 16;
+    public static final int FLAG_GENDER = 32;
 
     public static final Type<CompanionSettingsPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(KonCompanions.MOD_ID, "companion_settings"));
@@ -44,6 +47,7 @@ public record CompanionSettingsPacket(
         buf.writeFloat(packet.scale);
         buf.writeUtf(packet.skinPath == null ? "" : packet.skinPath, 256);
         buf.writeBoolean(packet.slimArms);
+        buf.writeBoolean(packet.male);
         buf.writeFloat(packet.bust);
         buf.writeFloat(packet.waist);
         buf.writeFloat(packet.hips);
@@ -58,6 +62,7 @@ public record CompanionSettingsPacket(
                 buf.readUtf(64),
                 buf.readFloat(),
                 buf.readUtf(256),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readFloat(),
                 buf.readFloat(),
@@ -112,6 +117,9 @@ public record CompanionSettingsPacket(
             }
             if ((packet.flags() & FLAG_SLIM) != 0) {
                 companion.setSlimArms(packet.slimArms());
+            }
+            if ((packet.flags() & FLAG_GENDER) != 0) {
+                companion.setGender(packet.male() ? CompanionGender.MALE : CompanionGender.FEMALE);
             }
             if ((packet.flags() & FLAG_PROPORTIONS) != 0) {
                 companion.setBust(packet.bust());

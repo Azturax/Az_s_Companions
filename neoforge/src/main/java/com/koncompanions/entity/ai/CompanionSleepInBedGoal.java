@@ -1,10 +1,10 @@
 package com.koncompanions.entity.ai;
 
-import com.koncompanions.block.KonBedBlock;
 import com.koncompanions.entity.CompanionEntity;
 import com.koncompanions.entity.CompanionMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BedBlock;
@@ -14,8 +14,8 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import java.util.EnumSet;
 
 /**
- * At night (or when the owner is sleeping), path to the nearest Kon bed and sleep.
- * Daytime: inactive so follow goal can run.
+ * At night (or when the owner is sleeping), path to the nearest bed and sleep.
+ * Accepts any {@link BedBlock} / {@code #minecraft:beds} head part (vanilla + Kon bed).
  */
 public final class CompanionSleepInBedGoal extends Goal {
     private static final int SEARCH_RADIUS = 48;
@@ -52,7 +52,7 @@ public final class CompanionSleepInBedGoal extends Goal {
         if (!shouldSleep(level)) {
             return false;
         }
-        if (bedPos == null || !isKonBedHead(level, bedPos)) {
+        if (bedPos == null || !isBedHead(level, bedPos)) {
             bedPos = resolveBed(level);
         }
         return bedPos != null;
@@ -105,7 +105,7 @@ public final class CompanionSleepInBedGoal extends Goal {
 
     private BlockPos resolveBed(ServerLevel level) {
         BlockPos home = companion.getHomeBedPos();
-        if (home != null && isKonBedHead(level, home)) {
+        if (home != null && isBedHead(level, home)) {
             return home;
         }
         if (home != null) {
@@ -119,7 +119,7 @@ public final class CompanionSleepInBedGoal extends Goal {
             for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
                 for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
                     cursor.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!isKonBedHead(level, cursor)) {
+                    if (!isBedHead(level, cursor)) {
                         continue;
                     }
                     int dist = origin.distManhattan(cursor);
@@ -137,9 +137,13 @@ public final class CompanionSleepInBedGoal extends Goal {
         return nearest;
     }
 
-    private static boolean isKonBedHead(ServerLevel level, BlockPos pos) {
+    /** True for the head half of any bed (vanilla colors, Kon bed, tagged beds). */
+    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof KonBedBlock)) {
+        if (!state.is(BlockTags.BEDS) && !(state.getBlock() instanceof BedBlock)) {
+            return false;
+        }
+        if (!(state.getBlock() instanceof BedBlock)) {
             return false;
         }
         return !state.hasProperty(BedBlock.PART) || state.getValue(BedBlock.PART) == BedPart.HEAD;

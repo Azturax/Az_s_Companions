@@ -58,17 +58,21 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
                           float netHeadYaw, float headPitch) {
         resetPartScales();
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+        boolean showBust = true;
         if (entity instanceof CompanionEntity companion) {
             if (ClientAppearanceDraft.matches(companion)) {
                 ClientAppearanceDraft d = ClientAppearanceDraft.ACTIVE;
-                applyProportions(d.bust, d.waist, d.hips, d.shoulders, d.bustOffset);
+                showBust = d.gender.showsBust();
+                applyProportions(d.bust, d.waist, d.hips, d.shoulders, d.bustOffset, showBust);
             } else {
+                showBust = companion.getGender().showsBust();
                 applyProportions(
                         companion.getBust(),
                         companion.getWaist(),
                         companion.getHips(),
                         companion.getShoulders(),
-                        companion.getBustOffset());
+                        companion.getBustOffset(),
+                        showBust);
             }
         } else {
             applyProportions(
@@ -76,9 +80,10 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
                     CompanionBodyProportions.DEFAULT_WAIST,
                     CompanionBodyProportions.DEFAULT_HIPS,
                     CompanionBodyProportions.DEFAULT_SHOULDERS,
-                    CompanionBodyProportions.DEFAULT_BUST_OFFSET);
+                    CompanionBodyProportions.DEFAULT_BUST_OFFSET,
+                    true);
         }
-        this.bust.visible = this.body.visible;
+        this.bust.visible = showBust && this.body.visible;
         this.bust.xRot = BUST_X_ROT;
     }
 
@@ -96,8 +101,10 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
 
     /**
      * Light proportion multipliers on vanilla parts; bust keeps its own scale/offset.
+     * Male presentation hides bust for a vanilla-like player silhouette.
      */
-    public void applyProportions(float bustSize, float waist, float hipSize, float shoulders, float bustOffset) {
+    public void applyProportions(float bustSize, float waist, float hipSize, float shoulders, float bustOffset,
+                                 boolean showBust) {
         float b = CompanionBodyProportions.clampBust(bustSize);
         float w = CompanionBodyProportions.clampWaist(waist);
         float h = CompanionBodyProportions.clampHips(hipSize);
@@ -108,12 +115,19 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
         this.body.xScale = 0.96f + (w - 1.0f) * 0.35f;
         this.body.zScale = 0.98f + (w - 1.0f) * 0.15f;
 
-        this.bust.xScale = 0.92f + (b - 1.0f) * 0.8f;
-        this.bust.yScale = 0.94f + (b - 1.0f) * 0.5f;
-        this.bust.zScale = 0.92f + (b - 1.0f) * 0.85f;
-        this.bust.y = BUST_PIVOT_Y + o * 0.12f;
-        this.bust.z = -o * 0.75f;
-        this.bust.xRot = BUST_X_ROT;
+        if (showBust) {
+            this.bust.xScale = 0.92f + (b - 1.0f) * 0.8f;
+            this.bust.yScale = 0.94f + (b - 1.0f) * 0.5f;
+            this.bust.zScale = 0.92f + (b - 1.0f) * 0.85f;
+            this.bust.y = BUST_PIVOT_Y + o * 0.12f;
+            this.bust.z = -o * 0.75f;
+            this.bust.xRot = BUST_X_ROT;
+        } else {
+            this.bust.xScale = this.bust.yScale = this.bust.zScale = 0.0f;
+            this.bust.y = BUST_PIVOT_Y;
+            this.bust.z = 0.0f;
+            this.bust.xRot = BUST_X_ROT;
+        }
 
         // Hips slider widens legs slightly instead of a sculpted hip mesh.
         float legX = 0.98f + (h - 1.0f) * 0.35f;

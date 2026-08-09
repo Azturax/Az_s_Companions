@@ -2,7 +2,6 @@ package com.koncompanions.entity;
 
 import com.koncompanions.config.ServerConfig;
 import com.koncompanions.registry.ModEntities;
-import com.koncompanions.voice.DialogueCategory;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -43,9 +42,9 @@ public final class CompanionRecruitment {
         companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setOwner(player);
         companion.applyDefinition(definition);
+        companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
         level.addFreshEntity(companion);
-        companion.speak(DialogueCategory.GREETING);
         return companion;
     }
 
@@ -63,7 +62,6 @@ public final class CompanionRecruitment {
         companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setMode(CompanionMode.FOLLOW);
         level.addFreshEntity(companion);
-        companion.speak(DialogueCategory.GREETING);
         return companion;
     }
 }

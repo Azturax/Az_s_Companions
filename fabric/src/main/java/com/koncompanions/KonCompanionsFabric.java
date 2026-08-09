@@ -3,7 +3,6 @@ package com.koncompanions;
 import com.koncompanions.command.FabricCompanionCommands;
 import com.koncompanions.data.FabricCompanionDefinitionLoader;
 import com.koncompanions.entity.FabricBuiltinCompanions;
-import com.koncompanions.event.FabricCompanionChatEvents;
 import com.koncompanions.network.FabricNetworking;
 import com.koncompanions.platform.LoaderPlatform;
 import com.koncompanions.registry.FabricModBlockEntities;
@@ -49,8 +48,6 @@ public final class KonCompanionsFabric implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 FabricCompanionCommands.register(dispatcher));
-
-        FabricCompanionChatEvents.register();
 
         ResourceLocation desertPyramid = ResourceLocation.withDefaultNamespace("chests/desert_pyramid");
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {

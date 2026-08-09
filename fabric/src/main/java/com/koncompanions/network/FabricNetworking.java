@@ -1,6 +1,7 @@
 package com.koncompanions.network;
 
 import com.koncompanions.KonCompanionsFabric;
+import com.koncompanions.entity.CompanionGender;
 import com.koncompanions.entity.FabricCompanionEntity;
 import com.koncompanions.entity.FabricCompanionRecruitment;
 import com.koncompanions.menu.FabricRadialCommandMenu;
@@ -71,6 +72,9 @@ public final class FabricNetworking {
                     if ((payload.flags() & SettingsPayload.FLAG_SLIM) != 0) {
                         companion.setSlimArms(payload.slimArms());
                     }
+                    if ((payload.flags() & SettingsPayload.FLAG_GENDER) != 0) {
+                        companion.setGender(payload.male() ? CompanionGender.MALE : CompanionGender.FEMALE);
+                    }
                     if ((payload.flags() & SettingsPayload.FLAG_PROPORTIONS) != 0) {
                         companion.setBust(payload.bust());
                         companion.setWaist(payload.waist());
@@ -114,6 +118,7 @@ public final class FabricNetworking {
             float scale,
             String skinPath,
             boolean slimArms,
+            boolean male,
             float bust,
             float waist,
             float hips,
@@ -126,6 +131,7 @@ public final class FabricNetworking {
         public static final int FLAG_SKIN = 4;
         public static final int FLAG_SLIM = 8;
         public static final int FLAG_PROPORTIONS = 16;
+        public static final int FLAG_GENDER = 32;
 
         public static final Type<SettingsPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(KonCompanionsFabric.MOD_ID, "companion_settings"));
@@ -139,6 +145,7 @@ public final class FabricNetworking {
             buf.writeFloat(p.scale);
             buf.writeUtf(p.skinPath == null ? "" : p.skinPath, 256);
             buf.writeBoolean(p.slimArms);
+            buf.writeBoolean(p.male);
             buf.writeFloat(p.bust);
             buf.writeFloat(p.waist);
             buf.writeFloat(p.hips);
@@ -149,7 +156,8 @@ public final class FabricNetworking {
 
         private static SettingsPayload read(RegistryFriendlyByteBuf buf) {
             return new SettingsPayload(
-                    buf.readVarInt(), buf.readUtf(64), buf.readFloat(), buf.readUtf(256), buf.readBoolean(),
+                    buf.readVarInt(), buf.readUtf(64), buf.readFloat(), buf.readUtf(256),
+                    buf.readBoolean(), buf.readBoolean(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
                     buf.readVarInt());
         }

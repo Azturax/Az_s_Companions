@@ -49,7 +49,7 @@ public final class CompanionCharmItem extends Item {
             CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
             if (created != null) {
                 CharmData.bind(stack, created.getUUID());
-                grantKonBedOnce(player, stack);
+                created.sayHello();
                 player.displayClientMessage(Component.translatable("message.koncompanions.charm_bound"), true);
             }
             return;
@@ -57,6 +57,7 @@ public final class CompanionCharmItem extends Item {
 
         CompanionEntity living = findBoundCompanion(level, player, bound);
         if (living != null) {
+            living.sayBye();
             var entityTag = new net.minecraft.nbt.CompoundTag();
             living.saveWithoutId(entityTag);
             CharmData.storeCompanion(stack, entityTag, bound);
@@ -70,6 +71,7 @@ public final class CompanionCharmItem extends Item {
             if (stored != null) {
                 CompanionEntity spawned = CompanionRecruitment.spawnFromStored(player, stored, bound);
                 if (spawned != null) {
+                    spawned.sayHello();
                     player.displayClientMessage(Component.translatable("message.koncompanions.charm_summoned"), true);
                 }
             }
@@ -80,19 +82,8 @@ public final class CompanionCharmItem extends Item {
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
+            created.sayHello();
             player.displayClientMessage(Component.translatable("message.koncompanions.charm_bound"), true);
-        }
-    }
-
-    /** First recruit only: give 1× Kon Bed and mark charm so resummons never spam beds. */
-    private static void grantKonBedOnce(ServerPlayer player, ItemStack charm) {
-        if (CharmData.hasGrantedBed(charm)) {
-            return;
-        }
-        CharmData.markBedGranted(charm);
-        ItemStack bed = new ItemStack(ModItems.KON_BED.get());
-        if (!player.getInventory().add(bed)) {
-            player.drop(bed, false);
         }
     }
 

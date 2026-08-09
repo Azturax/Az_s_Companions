@@ -1,7 +1,7 @@
 package com.koncompanions.event;
 
-import com.koncompanions.block.KonBedBlock;
 import com.koncompanions.entity.CompanionEntity;
+import com.koncompanions.entity.ai.CompanionSleepInBedGoal;
 import com.koncompanions.item.CompanionCharmItem;
 import com.koncompanions.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import java.util.Comparator;
 import java.util.List;
 
-/** World events: Kon bed becomes home; enforce single charm on pickup. */
+/** World events: any bed can become home; enforce single charm on pickup. */
 public final class CompanionGameEvents {
     private CompanionGameEvents() {
     }
@@ -31,14 +31,14 @@ public final class CompanionGameEvents {
             return;
         }
         BlockState state = event.getPlacedBlock();
-        if (!(state.getBlock() instanceof KonBedBlock)) {
+        if (!(state.getBlock() instanceof BedBlock)) {
             return;
         }
         BlockPos placed = event.getPos();
         BlockPos homeBed = placed;
         if (state.hasProperty(BedBlock.PART) && state.getValue(BedBlock.PART) == BedPart.FOOT) {
             BlockPos head = placed.relative(BedBlock.getConnectedDirection(state));
-            if (level.getBlockState(head).getBlock() instanceof KonBedBlock) {
+            if (level.getBlockState(head).getBlock() instanceof BedBlock) {
                 homeBed = head;
             }
         }
@@ -46,6 +46,9 @@ public final class CompanionGameEvents {
             return;
         }
         final BlockPos bed = homeBed;
+        if (!CompanionSleepInBedGoal.isBedHead(level, bed)) {
+            return;
+        }
         List<CompanionEntity> owned = level.getEntitiesOfClass(
                 CompanionEntity.class,
                 new AABB(bed).inflate(64),
@@ -56,6 +59,30 @@ public final class CompanionGameEvents {
         if (nearest != null) {
             nearest.setHomeBedPos(bed);
             nearest.setHomePos(bed);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockBroken(BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        BlockState state = event.getState();
+        if (!(state.getBlock() instanceof BedBlock)) {
+            return;
+        }
+        BlockPos broken = event.getPos();
+        BlockPos head = broken;
+        if (state.hasProperty(BedBlock.PART) && state.getValue(BedBlock.PART) == BedPart.FOOT) {
+            head = broken.relative(BedBlock.getConnectedDirection(state));
+        }
+        final BlockPos bedHead = head;
+        List<CompanionEntity> nearby = level.getEntitiesOfClass(
+                CompanionEntity.class,
+                new AABB(bedHead).inflate(64),
+                c -> bedHead.equals(c.getHomeBedPos()) || broken.equals(c.getHomeBedPos()));
+        for (CompanionEntity companion : nearby) {
+            companion.setHomeBedPos(null);
         }
     }
 

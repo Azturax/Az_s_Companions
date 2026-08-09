@@ -211,6 +211,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 editScale,
                 skin == null ? "" : skin,
                 editSlim,
+                c.isMale(),
                 editBust,
                 editWaist,
                 editHips,

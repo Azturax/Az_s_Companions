@@ -5,6 +5,7 @@ import com.koncompanions.client.CompanionSkinTextures;
 import com.koncompanions.client.SkinImportService;
 import com.koncompanions.entity.CompanionBodyProportions;
 import com.koncompanions.entity.CompanionEntity;
+import com.koncompanions.entity.CompanionGender;
 import com.koncompanions.network.packet.CompanionSettingsPacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -134,18 +135,42 @@ public final class CompanionCreatorScreen extends Screen {
                     .bounds(rightX + 32, row, 28, 20).build());
         } else if (category == Category.BODY) {
             int y = contentY + 8;
+            int half = (rightW - 6) / 2;
+            addRenderableWidget(Button.builder(
+                    Component.literal(draft.gender == CompanionGender.FEMALE ? "[Female]" : "Female"),
+                    b -> {
+                        draft.gender = CompanionGender.FEMALE;
+                        init();
+                    }).bounds(rightX, y, half, 20).build());
+            addRenderableWidget(Button.builder(
+                    Component.literal(draft.gender == CompanionGender.MALE ? "[Male]" : "Male"),
+                    b -> {
+                        draft.gender = CompanionGender.MALE;
+                        init();
+                    }).bounds(rightX + half + 6, y, half, 20).build());
+
+            y += 26;
             addSlider("Size", y, () -> draft.scale, v -> draft.scale = v,
                     CompanionEntity.MIN_BODY_SCALE, CompanionEntity.MAX_BODY_SCALE);
-            addSlider("Bust", y + 26, () -> draft.bust, v -> draft.bust = v,
-                    CompanionBodyProportions.MIN_BUST, CompanionBodyProportions.MAX_BUST);
-            addSlider("Waist", y + 52, () -> draft.waist, v -> draft.waist = v,
-                    CompanionBodyProportions.MIN_WAIST, CompanionBodyProportions.MAX_WAIST);
-            addSlider("Hips", y + 78, () -> draft.hips, v -> draft.hips = v,
-                    CompanionBodyProportions.MIN_HIPS, CompanionBodyProportions.MAX_HIPS);
-            addSlider("Shoulders", y + 104, () -> draft.shoulders, v -> draft.shoulders = v,
-                    CompanionBodyProportions.MIN_SHOULDERS, CompanionBodyProportions.MAX_SHOULDERS);
-            addSlider("Bust shape", y + 130, () -> draft.bustOffset, v -> draft.bustOffset = v,
-                    CompanionBodyProportions.MIN_BUST_OFFSET, CompanionBodyProportions.MAX_BUST_OFFSET);
+            if (draft.gender.showsBust()) {
+                addSlider("Bust", y + 26, () -> draft.bust, v -> draft.bust = v,
+                        CompanionBodyProportions.MIN_BUST, CompanionBodyProportions.MAX_BUST);
+                addSlider("Waist", y + 52, () -> draft.waist, v -> draft.waist = v,
+                        CompanionBodyProportions.MIN_WAIST, CompanionBodyProportions.MAX_WAIST);
+                addSlider("Hips", y + 78, () -> draft.hips, v -> draft.hips = v,
+                        CompanionBodyProportions.MIN_HIPS, CompanionBodyProportions.MAX_HIPS);
+                addSlider("Shoulders", y + 104, () -> draft.shoulders, v -> draft.shoulders = v,
+                        CompanionBodyProportions.MIN_SHOULDERS, CompanionBodyProportions.MAX_SHOULDERS);
+                addSlider("Bust shape", y + 130, () -> draft.bustOffset, v -> draft.bustOffset = v,
+                        CompanionBodyProportions.MIN_BUST_OFFSET, CompanionBodyProportions.MAX_BUST_OFFSET);
+            } else {
+                addSlider("Waist", y + 26, () -> draft.waist, v -> draft.waist = v,
+                        CompanionBodyProportions.MIN_WAIST, CompanionBodyProportions.MAX_WAIST);
+                addSlider("Hips", y + 52, () -> draft.hips, v -> draft.hips = v,
+                        CompanionBodyProportions.MIN_HIPS, CompanionBodyProportions.MAX_HIPS);
+                addSlider("Shoulders", y + 78, () -> draft.shoulders, v -> draft.shoulders = v,
+                        CompanionBodyProportions.MIN_SHOULDERS, CompanionBodyProportions.MAX_SHOULDERS);
+            }
         } else if (category == Category.CONFIRM) {
             addRenderableWidget(Button.builder(Component.literal("Save Appearance"), b -> commitAndClose())
                     .bounds(rightX, contentY + 24, rightW, 22).build());
@@ -246,13 +271,14 @@ public final class CompanionCreatorScreen extends Screen {
         syncEditBoxesToDraft();
         int flags = CompanionSettingsPacket.FLAG_NAME | CompanionSettingsPacket.FLAG_SCALE
                 | CompanionSettingsPacket.FLAG_SKIN | CompanionSettingsPacket.FLAG_SLIM
-                | CompanionSettingsPacket.FLAG_PROPORTIONS;
+                | CompanionSettingsPacket.FLAG_PROPORTIONS | CompanionSettingsPacket.FLAG_GENDER;
         PacketDistributor.sendToServer(new CompanionSettingsPacket(
                 companion.getId(),
                 draft.name,
                 draft.scale,
                 draft.skinPath,
                 draft.slimArms,
+                draft.gender.isMale(),
                 draft.bust,
                 draft.waist,
                 draft.hips,
@@ -331,14 +357,14 @@ public final class CompanionCreatorScreen extends Screen {
         if (category == Category.NAME) {
             graphics.drawString(font, "Display name", rightX, contentY, 0xA0A0A0, false);
         } else if (category == Category.BODY) {
-            graphics.drawString(font, "Size & proportions", rightX, contentY - 12, 0xA0A0A0, false);
+            graphics.drawString(font, "Gender, size & proportions", rightX, contentY - 12, 0xA0A0A0, false);
         } else if (category == Category.SKIN) {
             graphics.drawString(font, "Skin path / import", rightX, contentY, 0xA0A0A0, false);
             graphics.drawWordWrap(font,
                     Component.literal("Import a 64x64 PNG, or cycle local skins with < >."),
                     rightX, contentY + 96, rightW, 0xA0A0A0);
         } else if (category == Category.CONFIRM) {
-            graphics.drawWordWrap(font, Component.literal("Save applies name, skin, and body proportions."),
+            graphics.drawWordWrap(font, Component.literal("Save applies name, skin, gender, and body proportions."),
                     rightX, contentY, rightW, 0xA0A0A0);
         }
 

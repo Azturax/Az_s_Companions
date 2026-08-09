@@ -1,8 +1,11 @@
 package com.koncompanions.client;
 
 import com.koncompanions.KonCompanions;
+import com.koncompanions.entity.CompanionEntity;
+import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -13,12 +16,12 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Resolves classic Minecraft 64×64 (or legacy 64×32) player skins for companions.
- * Supports resource locations and local files under {@code config/koncompanions/skins/}
- * via skinPath prefix {@code local:filename.png}. URL downloads are disabled.
+ * Supports resource locations, {@code local:filename.png}, and {@code player:<uuid>}.
  */
 @OnlyIn(Dist.CLIENT)
 public final class CompanionSkinTextures {
@@ -30,15 +33,59 @@ public final class CompanionSkinTextures {
     private CompanionSkinTextures() {
     }
 
+    public static ResourceLocation resolve(CompanionEntity entity) {
+        String skinPath = entity.getSkinPath();
+        if (skinPath == null || skinPath.isBlank()) {
+            if (entity.isKonNamed()) {
+                return DEFAULT_KON;
+            }
+            UUID owner = entity.getOwnerUuid();
+            if (owner != null) {
+                return resolvePlayer(owner);
+            }
+            return DEFAULT_KON;
+        }
+        return resolve(skinPath);
+    }
+
     public static ResourceLocation resolve(String skinPath) {
         if (skinPath == null || skinPath.isBlank()) {
             return DEFAULT_KON;
+        }
+        if (skinPath.startsWith("player:")) {
+            try {
+                return resolvePlayer(UUID.fromString(skinPath.substring("player:".length()).trim()));
+            } catch (IllegalArgumentException ex) {
+                return DEFAULT_KON;
+            }
         }
         if (skinPath.startsWith("local:")) {
             return resolveLocal(skinPath.substring("local:".length()));
         }
         ResourceLocation parsed = ResourceLocation.tryParse(skinPath);
         return parsed != null ? parsed : DEFAULT_KON;
+    }
+
+    private static ResourceLocation resolvePlayer(UUID uuid) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() != null) {
+            var info = mc.getConnection().getPlayerInfo(uuid);
+            if (info != null) {
+                PlayerSkin skin = info.getSkin();
+                if (skin != null && skin.texture() != null) {
+                    return skin.texture();
+                }
+            }
+        }
+        if (mc.player != null && uuid.equals(mc.player.getUUID())) {
+            PlayerSkin skin = mc.player.getSkin();
+            if (skin != null && skin.texture() != null) {
+                return skin.texture();
+            }
+        }
+        GameProfile profile = new GameProfile(uuid, "companion");
+        PlayerSkin skin = mc.getSkinManager().getInsecureSkin(profile);
+        return skin != null && skin.texture() != null ? skin.texture() : DEFAULT_KON;
     }
 
     private static ResourceLocation resolveLocal(String fileName) {
@@ -61,7 +108,6 @@ public final class CompanionSkinTextures {
                 KonCompanions.LOGGER.warn("Companion skin {} is not classic MC skin size (got {}x{})",
                         file, image.getWidth(), image.getHeight());
             }
-            // DynamicTexture takes ownership of the NativeImage — do not close it here.
             DynamicTexture texture = new DynamicTexture(image);
             Minecraft.getInstance().getTextureManager().register(id, texture);
             return id;

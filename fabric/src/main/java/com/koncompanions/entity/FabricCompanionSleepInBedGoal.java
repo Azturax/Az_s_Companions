@@ -1,8 +1,8 @@
 package com.koncompanions.entity;
 
-import com.koncompanions.block.FabricKonBedBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BedBlock;
@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 
 import java.util.EnumSet;
 
+/** Night sleep in nearest bed head (vanilla beds + Kon bed). */
 public final class FabricCompanionSleepInBedGoal extends Goal {
     private static final int SEARCH_RADIUS = 48;
 
@@ -40,7 +41,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level) || !shouldSleep(level)) {
             return false;
         }
-        if (bedPos == null || !isKonBedHead(level, bedPos)) {
+        if (bedPos == null || !isBedHead(level, bedPos)) {
             bedPos = resolveBed(level);
         }
         return bedPos != null;
@@ -93,7 +94,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
 
     private BlockPos resolveBed(ServerLevel level) {
         BlockPos home = companion.getHomeBedPos();
-        if (home != null && isKonBedHead(level, home)) {
+        if (home != null && isBedHead(level, home)) {
             return home;
         }
         if (home != null) {
@@ -107,7 +108,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
             for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
                 for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
                     cursor.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!isKonBedHead(level, cursor)) {
+                    if (!isBedHead(level, cursor)) {
                         continue;
                     }
                     int dist = origin.distManhattan(cursor);
@@ -125,9 +126,12 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         return nearest;
     }
 
-    private static boolean isKonBedHead(ServerLevel level, BlockPos pos) {
+    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (!(state.getBlock() instanceof FabricKonBedBlock)) {
+        if (!state.is(BlockTags.BEDS) && !(state.getBlock() instanceof BedBlock)) {
+            return false;
+        }
+        if (!(state.getBlock() instanceof BedBlock)) {
             return false;
         }
         return !state.hasProperty(BedBlock.PART) || state.getValue(BedBlock.PART) == BedPart.HEAD;

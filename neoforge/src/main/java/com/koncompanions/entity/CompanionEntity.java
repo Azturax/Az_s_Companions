@@ -2,7 +2,6 @@ package com.koncompanions.entity;
 
 import com.koncompanions.config.CommonConfig;
 import com.koncompanions.config.ServerConfig;
-import com.koncompanions.dialogue.CompanionChatMatcher;
 import com.koncompanions.entity.ai.CompanionFollowGoal;
 import com.koncompanions.entity.ai.CompanionLookAtOwnerGoal;
 import com.koncompanions.entity.ai.CompanionSleepInBedGoal;
@@ -11,6 +10,7 @@ import com.koncompanions.menu.CompanionInventoryMenu;
 import com.koncompanions.menu.CompanionManagementMenu;
 import com.koncompanions.menu.RadialCommandMenu;
 import com.koncompanions.network.packet.OpenCompanionCreatorPacket;
+import com.koncompanions.registry.ModItems;
 import com.koncompanions.task.TaskQueue;
 import com.koncompanions.util.ProtectionHelper;
 import com.koncompanions.voice.DialogueCategory;
@@ -24,7 +24,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,6 +43,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -73,6 +73,8 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_SLIM_ARMS =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_GENDER =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> DATA_BUST =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_WAIST =
@@ -103,9 +105,8 @@ public class CompanionEntity extends PathfinderMob {
     private String voiceProfile = "kon_soft";
     private String pronouns = "she/her";
     private String behaviorStyle = "gentle";
-    /** Game time of last chat reply (cooldown). */
-    private long lastChatReplyGameTime = Long.MIN_VALUE;
-    private static final int CHAT_REPLY_COOLDOWN_TICKS = 30; // 1.5s
+    /** Once Kon-identity bed grant has been given to the owner. */
+    private boolean konBedGranted;
     // skinPath / bodyScale / slimArms live in synched entity data
 
     public CompanionEntity(EntityType<? extends CompanionEntity> type, Level level) {
@@ -137,6 +138,7 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_BODY_SCALE, DEFAULT_BODY_SCALE);
         builder.define(DATA_SKIN_PATH, "");
         builder.define(DATA_SLIM_ARMS, false);
+        builder.define(DATA_GENDER, CompanionGender.FEMALE.getSerializedName());
         builder.define(DATA_BUST, CompanionBodyProportions.DEFAULT_BUST);
         builder.define(DATA_WAIST, CompanionBodyProportions.DEFAULT_WAIST);
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
@@ -325,26 +327,24 @@ public class CompanionEntity extends PathfinderMob {
         return getDefinition().displayName();
     }
 
-    /**
-     * Reply to owner chat if a keyword matches, or if the message addresses Kon by name.
-     * @return true if a reply was spoken
-     */
-    public boolean tryReplyToChat(String message) {
+    /** Owner chat line when the companion appears via charm. */
+    public void sayHello() {
+        sayOwnerChatLine("dialogue.koncompanions.hello");
+    }
+
+    /** Owner chat line when the companion is stored via charm. */
+    public void sayBye() {
+        sayOwnerChatLine("dialogue.koncompanions.bye");
+    }
+
+    private void sayOwnerChatLine(String langKey) {
         if (level().isClientSide) {
-            return false;
+            return;
         }
-        long now = level().getGameTime();
-        if (now - lastChatReplyGameTime < CHAT_REPLY_COOLDOWN_TICKS) {
-            return false;
+        if (getOwner() instanceof ServerPlayer owner) {
+            String line = Component.translatable(langKey).getString();
+            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
         }
-        var key = CompanionChatMatcher.match(message, getChatDisplayName());
-        if (key.isEmpty()) {
-            return false;
-        }
-        String line = Component.translatable(key.get()).getString();
-        lastChatReplyGameTime = now;
-        VoiceService.get().speak(this, DialogueCategory.IDLE, line);
-        return true;
     }
 
     public CompanionDefinition getDefinition() {
@@ -495,6 +495,19 @@ public class CompanionEntity extends PathfinderMob {
         entityData.set(DATA_SLIM_ARMS, slim);
     }
 
+    public CompanionGender getGender() {
+        return CompanionGender.byName(entityData.get(DATA_GENDER));
+    }
+
+    public void setGender(CompanionGender gender) {
+        CompanionGender value = gender == null ? CompanionGender.FEMALE : gender;
+        entityData.set(DATA_GENDER, value.getSerializedName());
+    }
+
+    public boolean isMale() {
+        return getGender().isMale();
+    }
+
     public float getBodyScale() {
         return entityData.get(DATA_BODY_SCALE);
     }
@@ -526,8 +539,58 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void setCustomDisplayName(String name) {
-        entityData.set(DATA_CUSTOM_NAME_OVERRIDE, name);
-        setCustomName(Component.literal(name));
+        boolean wasKon = isKonNamed();
+        String trimmed = name == null ? "" : name.trim();
+        entityData.set(DATA_CUSTOM_NAME_OVERRIDE, trimmed);
+        if (!trimmed.isEmpty()) {
+            setCustomName(Component.literal(trimmed));
+        }
+        if (isKonNamed() && !wasKon) {
+            applyKonSpecialDefaults();
+        }
+    }
+
+    /** Case-insensitive check: companion is the special Kon character. */
+    public boolean isKonNamed() {
+        String override = entityData.get(DATA_CUSTOM_NAME_OVERRIDE);
+        if (override != null && !override.isBlank()) {
+            return override.trim().equalsIgnoreCase("Kon");
+        }
+        return false;
+    }
+
+    /**
+     * First charm summon defaults: player's username + player's skin reference.
+     * If the player is literally named Kon, Kon special defaults apply instead.
+     */
+    public void applyOwnerAppearanceDefaults(ServerPlayer player) {
+        String playerName = player.getGameProfile().getName();
+        setCustomDisplayName(playerName);
+        if (!isKonNamed()) {
+            setSkinPath("player:" + player.getUUID());
+        }
+    }
+
+    /** Kon skin + one-time Kon Bed grant when the companion becomes named Kon. */
+    public void applyKonSpecialDefaults() {
+        CompanionDefinition def = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
+        setSkinPath(def.defaultSkin().toString());
+        grantKonBedToOwnerOnce();
+    }
+
+    private void grantKonBedToOwnerOnce() {
+        if (konBedGranted || level().isClientSide) {
+            return;
+        }
+        if (!(getOwner() instanceof ServerPlayer player)) {
+            return;
+        }
+        konBedGranted = true;
+        ItemStack bed = new ItemStack(ModItems.KON_BED.get());
+        if (!player.getInventory().add(bed)) {
+            player.drop(bed, false);
+        }
+        player.displayClientMessage(Component.translatable("message.koncompanions.kon_bed_granted"), true);
     }
 
     public float getBust() {
@@ -589,6 +652,8 @@ public class CompanionEntity extends PathfinderMob {
         tag.putString("VoiceProfile", voiceProfile);
         tag.putString("SkinPath", getSkinPath());
         tag.putBoolean("SlimArms", isSlimArms());
+        tag.putString("Gender", getGender().getSerializedName());
+        tag.putBoolean("KonBedGranted", konBedGranted);
         tag.putFloat("BodyScale", getBodyScale());
         tag.putFloat("Bust", getBust());
         tag.putFloat("Waist", getWaist());
@@ -647,6 +712,12 @@ public class CompanionEntity extends PathfinderMob {
         if (tag.contains("SlimArms")) {
             setSlimArms(tag.getBoolean("SlimArms"));
         }
+        if (tag.contains("Gender")) {
+            setGender(CompanionGender.byName(tag.getString("Gender")));
+        } else {
+            setGender(CompanionGender.FEMALE);
+        }
+        konBedGranted = tag.contains("KonBedGranted") && tag.getBoolean("KonBedGranted");
         if (tag.contains("BodyScale")) {
             setBodyScale(tag.getFloat("BodyScale"));
         } else {

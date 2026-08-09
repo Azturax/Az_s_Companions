@@ -42,13 +42,14 @@ public final class FabricCompanionCharmItem extends Item {
             FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
             if (created != null) {
                 FabricCharmData.bind(stack, created.getUUID());
-                grantKonBedOnce(player, stack);
+                created.sayHello();
                 player.displayClientMessage(Component.translatable("message.koncompanions.charm_bound"), true);
             }
             return;
         }
         FabricCompanionEntity living = findBound(level, player, bound);
         if (living != null) {
+            living.sayBye();
             var tag = new net.minecraft.nbt.CompoundTag();
             living.saveWithoutId(tag);
             FabricCharmData.storeCompanion(stack, tag, bound);
@@ -61,6 +62,7 @@ public final class FabricCompanionCharmItem extends Item {
             if (stored != null) {
                 FabricCompanionEntity spawned = FabricCompanionRecruitment.spawnFromStored(player, stored, bound);
                 if (spawned != null) {
+                    spawned.sayHello();
                     player.displayClientMessage(Component.translatable("message.koncompanions.charm_summoned"), true);
                 }
             }
@@ -69,19 +71,8 @@ public final class FabricCompanionCharmItem extends Item {
         FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
         if (created != null) {
             FabricCharmData.bind(stack, created.getUUID());
+            created.sayHello();
             player.displayClientMessage(Component.translatable("message.koncompanions.charm_bound"), true);
-        }
-    }
-
-    /** First recruit only: give 1× Kon Bed and mark charm so resummons never spam beds. */
-    private static void grantKonBedOnce(ServerPlayer player, ItemStack charm) {
-        if (FabricCharmData.hasGrantedBed(charm)) {
-            return;
-        }
-        FabricCharmData.markBedGranted(charm);
-        ItemStack bed = new ItemStack(FabricModItems.KON_BED);
-        if (!player.getInventory().add(bed)) {
-            player.drop(bed, false);
         }
     }
 

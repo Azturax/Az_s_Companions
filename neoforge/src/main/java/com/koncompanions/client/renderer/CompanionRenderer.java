@@ -33,6 +33,6 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
 
     @Override
     public ResourceLocation getTextureLocation(CompanionEntity entity) {
-        return CompanionSkinTextures.resolve(entity.getSkinPath());
+        return CompanionSkinTextures.resolve(entity);
     }
 }

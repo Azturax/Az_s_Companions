@@ -1,8 +1,8 @@
 package com.koncompanions.entity;
 
-import com.koncompanions.dialogue.CompanionChatMatcher;
 import com.koncompanions.entity.inventory.FabricCompanionInventory;
 import com.koncompanions.menu.FabricCompanionInventoryMenu;
+import com.koncompanions.registry.FabricModItems;
 import com.koncompanions.task.FabricTaskQueue;
 // Radial menu entry points removed (follow-only UX).
 import net.minecraft.core.BlockPos;
@@ -49,6 +49,8 @@ public class FabricCompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_SLIM =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_GENDER =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> DATA_BUST =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_WAIST =
@@ -67,8 +69,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     private BlockPos homePos;
     private BlockPos homeBedPos;
     private String voiceProfile = "kon_soft";
-    private long lastChatReplyGameTime = Long.MIN_VALUE;
-    private static final int CHAT_REPLY_COOLDOWN_TICKS = 30;
+    private boolean konBedGranted;
 
     public FabricCompanionEntity(EntityType<? extends FabricCompanionEntity> type, Level level) {
         super(type, level);
@@ -92,6 +93,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         builder.define(DATA_BODY_SCALE, DEFAULT_BODY_SCALE);
         builder.define(DATA_SKIN_PATH, "");
         builder.define(DATA_SLIM, false);
+        builder.define(DATA_GENDER, CompanionGender.FEMALE.getSerializedName());
         builder.define(DATA_BUST, CompanionBodyProportions.DEFAULT_BUST);
         builder.define(DATA_WAIST, CompanionBodyProportions.DEFAULT_WAIST);
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
@@ -171,24 +173,22 @@ public class FabricCompanionEntity extends PathfinderMob {
         return getDefinition().displayName();
     }
 
-    public boolean tryReplyToChat(String message) {
+    public void sayHello() {
+        sayOwnerChatLine("dialogue.koncompanions.hello");
+    }
+
+    public void sayBye() {
+        sayOwnerChatLine("dialogue.koncompanions.bye");
+    }
+
+    private void sayOwnerChatLine(String langKey) {
         if (level().isClientSide) {
-            return false;
+            return;
         }
-        long now = level().getGameTime();
-        if (now - lastChatReplyGameTime < CHAT_REPLY_COOLDOWN_TICKS) {
-            return false;
+        if (getOwner() instanceof ServerPlayer owner) {
+            String line = Component.translatable(langKey).getString();
+            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
         }
-        var key = CompanionChatMatcher.match(message, getChatDisplayName());
-        if (key.isEmpty()) {
-            return false;
-        }
-        String line = Component.translatable(key.get()).getString();
-        lastChatReplyGameTime = now;
-        if (getOwner() instanceof ServerPlayer sp) {
-            sp.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
-        }
-        return true;
     }
 
     public FabricCompanionDefinition getDefinition() {
@@ -273,6 +273,19 @@ public class FabricCompanionEntity extends PathfinderMob {
         entityData.set(DATA_SLIM, slim);
     }
 
+    public CompanionGender getGender() {
+        return CompanionGender.byName(entityData.get(DATA_GENDER));
+    }
+
+    public void setGender(CompanionGender gender) {
+        CompanionGender value = gender == null ? CompanionGender.FEMALE : gender;
+        entityData.set(DATA_GENDER, value.getSerializedName());
+    }
+
+    public boolean isMale() {
+        return getGender().isMale();
+    }
+
     public float getBodyScale() {
         return entityData.get(DATA_BODY_SCALE);
     }
@@ -288,8 +301,48 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public void setCustomDisplayName(String name) {
-        entityData.set(DATA_NAME, name);
-        setCustomName(Component.literal(name));
+        boolean wasKon = isKonNamed();
+        String trimmed = name == null ? "" : name.trim();
+        entityData.set(DATA_NAME, trimmed);
+        if (!trimmed.isEmpty()) {
+            setCustomName(Component.literal(trimmed));
+        }
+        if (isKonNamed() && !wasKon) {
+            applyKonSpecialDefaults();
+        }
+    }
+
+    public boolean isKonNamed() {
+        String override = entityData.get(DATA_NAME);
+        return override != null && !override.isBlank() && override.trim().equalsIgnoreCase("Kon");
+    }
+
+    public void applyOwnerAppearanceDefaults(ServerPlayer player) {
+        setCustomDisplayName(player.getGameProfile().getName());
+        if (!isKonNamed()) {
+            setSkinPath("player:" + player.getUUID());
+        }
+    }
+
+    public void applyKonSpecialDefaults() {
+        FabricCompanionDefinition def = FabricCompanionRegistry.getOrKon(FabricCompanionRegistry.KON_ID);
+        setSkinPath(def.defaultSkin().toString());
+        grantKonBedToOwnerOnce();
+    }
+
+    private void grantKonBedToOwnerOnce() {
+        if (konBedGranted || level().isClientSide) {
+            return;
+        }
+        if (!(getOwner() instanceof ServerPlayer player)) {
+            return;
+        }
+        konBedGranted = true;
+        ItemStack bed = new ItemStack(FabricModItems.KON_BED);
+        if (!player.getInventory().add(bed)) {
+            player.drop(bed, false);
+        }
+        player.displayClientMessage(Component.translatable("message.koncompanions.kon_bed_granted"), true);
     }
 
     public float getBust() {
@@ -351,6 +404,8 @@ public class FabricCompanionEntity extends PathfinderMob {
         tag.putString("SkinPath", getSkinPath());
         tag.putString("CustomNameOverride", entityData.get(DATA_NAME));
         tag.putBoolean("SlimArms", isSlimArms());
+        tag.putString("Gender", getGender().getSerializedName());
+        tag.putBoolean("KonBedGranted", konBedGranted);
         tag.putFloat("BodyScale", getBodyScale());
         tag.putFloat("Bust", getBust());
         tag.putFloat("Waist", getWaist());
@@ -389,11 +444,20 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (tag.contains("SkinPath")) {
             setSkinPath(tag.getString("SkinPath"));
         }
+        konBedGranted = tag.contains("KonBedGranted") && tag.getBoolean("KonBedGranted");
         if (tag.contains("CustomNameOverride") && !tag.getString("CustomNameOverride").isEmpty()) {
-            setCustomDisplayName(tag.getString("CustomNameOverride"));
+            // Load name without re-triggering Kon special grants.
+            String override = tag.getString("CustomNameOverride");
+            entityData.set(DATA_NAME, override);
+            setCustomName(Component.literal(override));
         }
         if (tag.contains("SlimArms")) {
             setSlimArms(tag.getBoolean("SlimArms"));
+        }
+        if (tag.contains("Gender")) {
+            setGender(CompanionGender.byName(tag.getString("Gender")));
+        } else {
+            setGender(CompanionGender.FEMALE);
         }
         setBodyScale(tag.contains("BodyScale") ? tag.getFloat("BodyScale") : DEFAULT_BODY_SCALE);
         setBust(tag.contains("Bust") ? tag.getFloat("Bust") : CompanionBodyProportions.DEFAULT_BUST);

@@ -30,6 +30,6 @@ public final class FabricCompanionRenderer
 
     @Override
     public ResourceLocation getTextureLocation(FabricCompanionEntity entity) {
-        return FabricCompanionSkinTextures.resolve(entity.getSkinPath());
+        return FabricCompanionSkinTextures.resolve(entity);
     }
 }

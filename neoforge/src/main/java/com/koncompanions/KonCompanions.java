@@ -10,7 +10,6 @@ import com.koncompanions.config.CommonConfig;
 import com.koncompanions.config.ServerConfig;
 import com.koncompanions.data.CompanionDefinitionReloadListener;
 import com.koncompanions.network.ModNetworking;
-import com.koncompanions.event.CompanionChatEvents;
 import com.koncompanions.event.CompanionGameEvents;
 import com.koncompanions.registry.ModBlockEntities;
 import com.koncompanions.registry.ModBlocks;
@@ -67,7 +66,6 @@ public final class KonCompanions {
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onServerStarting);
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
-        NeoForge.EVENT_BUS.register(CompanionChatEvents.class);
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         container.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);

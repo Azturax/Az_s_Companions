@@ -2,6 +2,7 @@ package com.koncompanions.client;
 
 import com.koncompanions.entity.CompanionBodyProportions;
 import com.koncompanions.entity.CompanionEntity;
+import com.koncompanions.entity.CompanionGender;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -21,6 +22,7 @@ public final class ClientAppearanceDraft {
     public float scale = CompanionEntity.DEFAULT_BODY_SCALE;
     public String skinPath = "";
     public boolean slimArms;
+    public CompanionGender gender = CompanionGender.FEMALE;
     public float bust = CompanionBodyProportions.DEFAULT_BUST;
     public float waist = CompanionBodyProportions.DEFAULT_WAIST;
     public float hips = CompanionBodyProportions.DEFAULT_HIPS;
@@ -39,6 +41,7 @@ public final class ClientAppearanceDraft {
         d.scale = entity.getBodyScale();
         d.skinPath = entity.getSkinPath() == null ? "" : entity.getSkinPath();
         d.slimArms = entity.isSlimArms();
+        d.gender = entity.getGender();
         d.bust = entity.getBust();
         d.waist = entity.getWaist();
         d.hips = entity.getHips();
