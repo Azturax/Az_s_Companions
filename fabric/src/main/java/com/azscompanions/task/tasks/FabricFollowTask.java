@@ -27,11 +27,11 @@ public final class FabricFollowTask extends FabricCompanionTask {
             return Result.RUNNING;
         }
         double dist = companion.distanceTo(owner);
-        if (dist > FabricFollowOwnerGoal.TELEPORT_DISTANCE) {
+        if (dist > FabricFollowOwnerGoal.TELEPORT_DISTANCE && companion.isOwnerExploring()) {
             companion.teleportTo(owner.getX(), owner.getY(), owner.getZ());
             return Result.RUNNING;
         }
-        if (dist > 4.0d) {
+        if (dist > 4.0d && companion.isOwnerExploring()) {
             companion.getNavigation().moveTo(owner, 1.1d);
             return Result.RUNNING;
         }

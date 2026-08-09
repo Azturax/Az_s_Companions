@@ -28,9 +28,9 @@ public final class FollowOwnerTask extends CompanionTask {
             return TaskTickResult.RUNNING;
         }
         double dist = companion.distanceTo(owner);
-        if (dist > CommonConfig.TELEPORT_DISTANCE.get()) {
+        if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
             companion.safeTeleportNear(owner.blockPosition());
-        } else if (dist > 4.0d) {
+        } else if (dist > 4.0d && companion.isOwnerExploring()) {
             companion.getNavigation().moveTo(owner, 1.1d);
         }
         setProgress(100);

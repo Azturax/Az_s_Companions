@@ -7,8 +7,8 @@ import net.minecraft.world.entity.player.Player;
 import java.util.EnumSet;
 
 /**
- * Loose ground follow. Starts only when the owner is far, so companions can fight/act
- * nearby without bouncing back at ~10 blocks. Flight perk keeps its own 5-block leash.
+ * Loose ground follow while the owner is exploring. Teleport only beyond the leash when
+ * exploring — never while attacking or while the owner is standing around.
  */
 public final class FabricFollowOwnerGoal extends Goal {
     /** Teleport-to-owner threshold for ground follow (blocks). */
@@ -42,6 +42,9 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
+        if (companion.isOwnerStandingAround()) {
+            return false;
+        }
         return companion.distanceTo(owner) > FOLLOW_START_DISTANCE;
     }
 
@@ -58,6 +61,9 @@ public final class FabricFollowOwnerGoal extends Goal {
         }
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
+        }
+        if (companion.isOwnerStandingAround()) {
+            return false;
         }
         return companion.distanceTo(owner) > FOLLOW_STOP_DISTANCE;
     }
@@ -77,7 +83,7 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (--recalc <= 0) {
             recalc = 10;
             double dist = companion.distanceTo(owner);
-            if (dist > TELEPORT_DISTANCE) {
+            if (dist > TELEPORT_DISTANCE && companion.isOwnerExploring()) {
                 companion.teleportTo(owner.getX(), owner.getY(), owner.getZ());
             } else {
                 companion.getNavigation().moveTo(owner, 1.1d);

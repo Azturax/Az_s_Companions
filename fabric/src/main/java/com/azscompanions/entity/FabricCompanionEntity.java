@@ -71,6 +71,7 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     private final FabricCompanionInventory inventory = new FabricCompanionInventory();
     private final FabricTaskQueue taskQueue = new FabricTaskQueue(this);
+    private final OwnerActivityTracker ownerActivity = new OwnerActivityTracker();
     private final Set<UUID> trusted = new HashSet<>();
     private UUID ownerUuid;
     private BlockPos homePos;
@@ -136,15 +137,62 @@ public class FabricCompanionEntity extends PathfinderMob {
                 setMode(FabricCompanionMode.FOLLOW);
             }
             taskQueue.cancelActive();
+            tickOwnerActivity();
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
-            // Ground leash teleport — skipped while fighting so combat stays engaged.
-            if (getTarget() == null || !getTarget().isAlive()) {
+            // Ground leash teleport — only while exploring, never mid-fight or while idle.
+            if (isOwnerExploring() && (getTarget() == null || !getTarget().isAlive())) {
                 Player owner = getOwner();
                 if (owner != null && distanceTo(owner) > FabricFollowOwnerGoal.TELEPORT_DISTANCE) {
                     teleportTo(owner.getX(), owner.getY(), owner.getZ());
                 }
             }
         }
+    }
+
+    private void tickOwnerActivity() {
+        Player owner = getOwner();
+        if (owner == null) {
+            ownerActivity.reset();
+            return;
+        }
+        ownerActivity.tick(owner.getX(), owner.getZ());
+    }
+
+    public boolean isOwnerStandingAround() {
+        return ownerActivity.isStandingAround();
+    }
+
+    public boolean isOwnerExploring() {
+        return ownerActivity.isExploring();
+    }
+
+    @Override
+    public boolean isInvulnerableTo(net.minecraft.world.damagesource.DamageSource source) {
+        if (CompanionHazardImmunity.ignores(source.typeHolder().unwrapKey()
+                .map(key -> key.location().getPath())
+                .orElse(""))) {
+            return true;
+        }
+        return super.isInvulnerableTo(source);
+    }
+
+    @Override
+    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (source.getEntity() instanceof Player player && (isOwnedBy(player) || trusted.contains(player.getUUID()))) {
+            return false;
+        }
+        if (isInvulnerableTo(source)) {
+            return false;
+        }
+        return super.hurt(source, amount);
+    }
+
+    @Override
+    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
+        if (!(target instanceof LivingEntity living) || !canAttackTarget(living)) {
+            return false;
+        }
+        return super.doHurtTarget(target);
     }
 
     @Override
@@ -246,10 +294,16 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (target instanceof FabricCompanionEntity) {
             return false;
         }
-        // Hostiles / attackers only — peaceful animals only if they hurt owner/companion.
+        // Never pick random passives. Hostiles only if targeting us/owner or recent hurt link.
         if (!target.getType().getCategory().isFriendly()) {
-            return true;
+            if (target instanceof Mob mob && (mob.getTarget() == this || mob.getTarget() == getOwner())) {
+                return true;
+            }
+            return getLastHurtByMob() == target
+                    || target.getLastHurtByMob() == this
+                    || target.getLastHurtByMob() == getOwner();
         }
+        // Peaceful animals only if they hurt owner/companion.
         return target.getLastHurtByMob() == this || target.getLastHurtByMob() == getOwner();
     }
 

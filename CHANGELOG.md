@@ -10,9 +10,10 @@ Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 ### Gameplay
 - Companion Charm (desert pyramid loot): summon / store; **one companion per player**
 - First summon defaults to player name + player skin
-- Follow by day; casual **wander** near owner (8–16 blocks) when idle in FOLLOW; night sleep in nearest bed (any bed / Kon Bed)
-- Loose follow: path start **32**, stop **24**, teleport **48**; no teleport while fighting; stuck-recovery no longer snaps at 8
-- **Combat:** defend living attackers of the owner (ignores environmental damage); SIT/sleep suppress combat targeting
+- Follow by day; casual **wander** near owner (8–16 blocks) when owner is **standing around** (~2.5s still); night sleep in nearest bed (any bed / Kon Bed)
+- Owner **explore vs idle**: exploring → follow (path start **32**, stop **24**); teleport **48** only while exploring and not fighting; standing around → wander, **no teleport**
+- Environmental hazard immunity: fall, cactus, sweet berry bush, drowning, in-wall, campfire (still take combat damage)
+- **Combat:** defend living attackers of the owner only (not passives/environment); SIT/sleep suppress combat targeting
 - **Hands:** give items into main → offhand (swap if both full); empty-hand take
 - **Potions:** ground auto-pickup **beneficial only** (skip harmful + water/awkward neutrals); manually given harmful splash thrown at enemies
 - Customize (NeoForge): name, gender, Mojang skin, size/proportions; **Done** saves, Cancel discards

@@ -98,6 +98,7 @@ public class CompanionEntity extends PathfinderMob {
 
     private final CompanionInventory inventory = new CompanionInventory();
     private final TaskQueue taskQueue = new TaskQueue(this);
+    private final OwnerActivityTracker ownerActivity = new OwnerActivityTracker();
     private final Set<UUID> trustedPlayers = new HashSet<>();
     private final Set<String> permissions = new HashSet<>();
 
@@ -199,12 +200,37 @@ public class CompanionEntity extends PathfinderMob {
                 taskQueue.clear();
             }
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
+            tickOwnerActivity();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
             tickStuckRecovery();
             tickSurvival();
         }
+    }
+
+    private void tickOwnerActivity() {
+        Player owner = getOwner();
+        if (owner == null) {
+            ownerActivity.reset();
+            return;
+        }
+        ownerActivity.tick(owner.getX(), owner.getZ());
+    }
+
+    /** Shared idle/explore tracker for follow, wander, and teleport gates. */
+    public OwnerActivityTracker getOwnerActivity() {
+        return ownerActivity;
+    }
+
+    /** True when the owner has been mostly still (~2.5s) — wander, no teleport. */
+    public boolean isOwnerStandingAround() {
+        return ownerActivity.isStandingAround();
+    }
+
+    /** True when the owner is moving meaningfully — normal follow + long-range teleport. */
+    public boolean isOwnerExploring() {
+        return ownerActivity.isExploring();
     }
 
     @Override
@@ -223,13 +249,17 @@ public class CompanionEntity extends PathfinderMob {
             lastPos = position();
         }
         if (stuckTicks > CommonConfig.PATH_STUCK_TIMEOUT_TICKS.get() && CommonConfig.TELEPORT_WHEN_STUCK.get()) {
-            // Do not yank the companion home mid-fight.
+            // Do not yank the companion home mid-fight or while the owner is standing around.
             if (getTarget() != null && getTarget().isAlive()) {
                 stuckTicks = 0;
                 return;
             }
+            if (isOwnerStandingAround()) {
+                stuckTicks = 0;
+                return;
+            }
             Player owner = getOwner();
-            // Only snap home when truly beyond the ground leash (was 8 — caused ~10-block bounce).
+            // Only snap home when exploring and truly beyond the ground leash.
             if (owner != null && distanceTo(owner) > CommonConfig.TELEPORT_DISTANCE.get()) {
                 safeTeleportNear(owner.blockPosition());
                 stuckTicks = 0;
@@ -379,8 +409,21 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        if (CompanionHazardImmunity.ignores(source.typeHolder().unwrapKey()
+                .map(key -> key.location().getPath())
+                .orElse(""))) {
+            return true;
+        }
+        return super.isInvulnerableTo(source);
+    }
+
+    @Override
     public boolean hurt(DamageSource source, float amount) {
         if (source.getEntity() instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
+            return false;
+        }
+        if (isInvulnerableTo(source)) {
             return false;
         }
         boolean hurt = super.hurt(source, amount);

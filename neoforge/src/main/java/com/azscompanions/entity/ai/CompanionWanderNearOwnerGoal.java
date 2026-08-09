@@ -12,8 +12,8 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Casual stroll near the owner while in FOLLOW mode and not fighting/sleeping.
- * Lower priority than follow — only runs when the owner is nearby/idle.
+ * Casual stroll near the owner while they are standing around (idle ~2.5s).
+ * Lower priority than follow — disabled while the owner is exploring.
  */
 public final class CompanionWanderNearOwnerGoal extends Goal {
     private static final double MIN_RADIUS = 8.0d;
@@ -79,7 +79,10 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (owner == null || owner.isSpectator() || owner.isSleeping()) {
             return false;
         }
-        // Owner moved away — leave MOVE to CompanionFollowGoal.
+        // Only wander while the owner is standing around; exploring leaves MOVE to follow.
+        if (!companion.isOwnerStandingAround()) {
+            return false;
+        }
         return companion.distanceTo(owner) <= CompanionFollowGoal.FOLLOW_START_DISTANCE;
     }
 

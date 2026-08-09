@@ -10,8 +10,9 @@ import net.minecraft.world.entity.player.Player;
 import java.util.EnumSet;
 
 /**
- * Loose ground follow. Starts only when the owner is far, so companions can fight/act
- * nearby without bouncing back at ~10 blocks. Teleport is a last resort beyond the config leash.
+ * Loose ground follow while the owner is exploring. Starts only when far so companions
+ * can fight/act nearby. Teleport is a last resort beyond the config leash — never while
+ * attacking, and never while the owner is standing around (idle wander instead).
  */
 public final class CompanionFollowGoal extends Goal {
     /** Begin pathing back to owner only beyond this distance (blocks). */
@@ -45,6 +46,10 @@ public final class CompanionFollowGoal extends Goal {
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
+        // Standing around → wander goal; do not hard-follow / teleport.
+        if (companion.isOwnerStandingAround()) {
+            return false;
+        }
         return companion.distanceTo(owner) > FOLLOW_START_DISTANCE;
     }
 
@@ -61,6 +66,9 @@ public final class CompanionFollowGoal extends Goal {
         }
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
+        }
+        if (companion.isOwnerStandingAround()) {
+            return false;
         }
         return companion.distanceTo(owner) > FOLLOW_STOP_DISTANCE;
     }
@@ -92,7 +100,8 @@ public final class CompanionFollowGoal extends Goal {
         if (--timeToRecalcPath <= 0) {
             timeToRecalcPath = 10;
             double dist = companion.distanceTo(owner);
-            if (dist > CommonConfig.TELEPORT_DISTANCE.get()) {
+            // Teleport only while exploring and truly beyond the leash — never while idle.
+            if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
                 companion.safeTeleportNear(owner.blockPosition());
             } else {
                 companion.getNavigation().moveTo(owner, 1.1d);
