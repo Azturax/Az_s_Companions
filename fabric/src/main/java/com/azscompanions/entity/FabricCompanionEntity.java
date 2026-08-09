@@ -89,7 +89,10 @@ public class FabricCompanionEntity extends PathfinderMob {
                 .add(Attributes.MOVEMENT_SPEED, 0.32d)
                 .add(Attributes.ATTACK_DAMAGE, 4.0d)
                 .add(Attributes.FOLLOW_RANGE, 64.0d)
-                .add(Attributes.SCALE, DEFAULT_BODY_SCALE);
+                .add(Attributes.SCALE, DEFAULT_BODY_SCALE)
+                // Clear full 1-block steps at any body scale (0.5–3); vanilla step is only 0.6.
+                .add(Attributes.STEP_HEIGHT, CompanionMovementAttributes.STEP_HEIGHT)
+                .add(Attributes.JUMP_STRENGTH, CompanionMovementAttributes.JUMP_STRENGTH);
     }
 
     @Override
@@ -129,18 +132,21 @@ public class FabricCompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel) {
-            // Preserve CCI/command SIT and STAY.
+            // Preserve player/CCI command modes.
             FabricCompanionMode mode = getMode();
             if (mode != FabricCompanionMode.FOLLOW
                     && mode != FabricCompanionMode.SIT
-                    && mode != FabricCompanionMode.STAY) {
+                    && mode != FabricCompanionMode.STAY
+                    && mode != FabricCompanionMode.WANDER) {
                 setMode(FabricCompanionMode.FOLLOW);
             }
             taskQueue.cancelActive();
             tickOwnerActivity();
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
-            // Ground leash teleport — only while exploring, never mid-fight or while idle.
-            if (isOwnerExploring() && (getTarget() == null || !getTarget().isAlive())) {
+            // Ground leash teleport — FOLLOW only, exploring, never mid-fight or while idle.
+            if (getMode() == FabricCompanionMode.FOLLOW
+                    && isOwnerExploring()
+                    && (getTarget() == null || !getTarget().isAlive())) {
                 Player owner = getOwner();
                 if (owner != null && distanceTo(owner) > FabricFollowOwnerGoal.TELEPORT_DISTANCE) {
                     net.minecraft.world.phys.Vec3 away = position().subtract(owner.position());

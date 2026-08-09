@@ -44,7 +44,8 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        int chance = companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
+        boolean freeWander = companion.getMode() == CompanionMode.WANDER;
+        int chance = freeWander || companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
         if (companion.getRandom().nextInt(chance) != 0) {
             return false;
         }
@@ -75,7 +76,11 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
     }
 
     private boolean canWander() {
-        if (companion.getMode() != CompanionMode.FOLLOW || companion.isSitting() || companion.isSleeping()) {
+        CompanionMode mode = companion.getMode();
+        boolean freeWander = mode == CompanionMode.WANDER;
+        if ((!freeWander && mode != CompanionMode.FOLLOW)
+                || companion.isSitting()
+                || companion.isSleeping()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -89,8 +94,8 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (CompanionFollowDistances.tooClose(dist)) {
             return false; // follow goal steps back
         }
-        if (companion.isOwnerStandingAround()) {
-            // Idle free wander — stay within the non-teleport wander envelope.
+        if (freeWander || companion.isOwnerStandingAround()) {
+            // Explicit WANDER mode or owner idle — free wander envelope.
             return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
         }
         // Exploring: stroll in comfort / mid band; follow owns MOVE beyond FOLLOW_START.
@@ -102,11 +107,11 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (owner == null) {
             return null;
         }
-        boolean idle = companion.isOwnerStandingAround();
-        double minR = idle
+        boolean freeRing = companion.getMode() == CompanionMode.WANDER || companion.isOwnerStandingAround();
+        double minR = freeRing
                 ? CompanionFollowDistances.IDLE_WANDER_MIN
                 : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
-        double maxR = idle
+        double maxR = freeRing
                 ? CompanionFollowDistances.IDLE_WANDER_MAX
                 : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();

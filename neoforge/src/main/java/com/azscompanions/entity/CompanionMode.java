@@ -5,6 +5,8 @@ import net.minecraft.util.StringRepresentable;
 public enum CompanionMode implements StringRepresentable {
     FOLLOW("follow"),
     STAY("stay"),
+    /** Free idle wander near owner — no glued follow pathing. */
+    WANDER("wander"),
     PATROL("patrol"),
     GUARD("guard"),
     SIT("sit"),

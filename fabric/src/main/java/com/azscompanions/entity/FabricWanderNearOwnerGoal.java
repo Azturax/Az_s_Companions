@@ -35,7 +35,8 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        int chance = companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
+        boolean freeWander = companion.getMode() == FabricCompanionMode.WANDER;
+        int chance = freeWander || companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
         if (companion.getRandom().nextInt(chance) != 0) {
             return false;
         }
@@ -66,10 +67,12 @@ public final class FabricWanderNearOwnerGoal extends Goal {
     }
 
     private boolean canWander() {
-        if (companion.getMode() != FabricCompanionMode.FOLLOW || companion.isSleeping()) {
+        FabricCompanionMode mode = companion.getMode();
+        boolean freeWander = mode == FabricCompanionMode.WANDER;
+        if ((!freeWander && mode != FabricCompanionMode.FOLLOW) || companion.isSleeping()) {
             return false;
         }
-        if (companion.getMode() == FabricCompanionMode.SIT || companion.getMode() == FabricCompanionMode.STAY) {
+        if (mode == FabricCompanionMode.SIT || mode == FabricCompanionMode.STAY) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -83,7 +86,7 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (CompanionFollowDistances.tooClose(dist)) {
             return false;
         }
-        if (companion.isOwnerStandingAround()) {
+        if (freeWander || companion.isOwnerStandingAround()) {
             return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
         }
         return dist <= CompanionFollowDistances.FOLLOW_START;
@@ -94,11 +97,11 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (owner == null) {
             return null;
         }
-        boolean idle = companion.isOwnerStandingAround();
-        double minR = idle
+        boolean freeRing = companion.getMode() == FabricCompanionMode.WANDER || companion.isOwnerStandingAround();
+        double minR = freeRing
                 ? CompanionFollowDistances.IDLE_WANDER_MIN
                 : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
-        double maxR = idle
+        double maxR = freeRing
                 ? CompanionFollowDistances.IDLE_WANDER_MAX
                 : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();

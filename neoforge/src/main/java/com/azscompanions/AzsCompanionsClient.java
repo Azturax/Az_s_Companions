@@ -1,5 +1,6 @@
 package com.azscompanions;
 
+import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
@@ -21,6 +22,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 @Mod(value = AzsCompanions.MOD_ID, dist = Dist.CLIENT)
@@ -31,6 +33,11 @@ public final class AzsCompanionsClient {
         modBus.addListener(this::onRegisterLayers);
         modBus.addListener(this::onAddLayers);
         modBus.addListener(this::onRegisterScreens);
+        modBus.addListener(this::onRegisterKeys);
+    }
+
+    private void onRegisterKeys(RegisterKeyMappingsEvent event) {
+        event.register(ModKeyMappings.OPEN_RADIAL);
     }
 
     private void onClientSetup(FMLClientSetupEvent event) {

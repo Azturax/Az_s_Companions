@@ -41,11 +41,20 @@ Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 - First summon uses **your username + your skin**
 - **Follow** by day; casual **wander** when idle (**24–40** blocks, loaded chunks); at night sleeps in the **nearest bed**
 - Loose follow leash: personal space **2** / comfort **2–12** / preferred **~6** / start **32** / stop **8** / teleport **48**; no teleport while fighting or idle
+- **Scaled companions** step up **1 full block** at any body size (`STEP_HEIGHT` 1.0 + `JUMP_STRENGTH` 0.42)
 - **Defend** living attackers of the owner (not environmental damage)
 - **Hands:** right-click with an item to give (main → offhand → swap); empty hand takes back
 - **Potions:** auto-pickup **beneficial only**; give a harmful splash and they throw it at enemies
 - **Shift + right-click** — NeoForge: Customize · Fabric: inventory
 - UUID-gated **special perks** for a few owners (flight follow / glow / Kon ears)
+
+### Controls
+
+| Key (default) | Action |
+|---------------|--------|
+| **V** | Open companion **radial menu** (Options → Controls → *Az's Companions*) |
+
+Radial slices: **Follow** · **Stay** · **Wander** · **Emote** (submenu: **Wave**, **Cheer**). Applies to your nearest summoned companion within **64** blocks.
 
 ### Customize (NeoForge)
 

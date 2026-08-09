@@ -4,17 +4,25 @@ import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
 import com.azscompanions.registry.FabricModScreenHandlers;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
-/** Legacy radial menu; interact entry removed. Commands force follow-only. */
+/** Simple companion command radial — Follow / Stay / Wander / Emotes. */
 public final class FabricRadialCommandMenu extends AbstractContainerMenu {
     public enum Command {
-        FOLLOW, STAY, GATHER, STOP_TASK, OPEN_INVENTORY
+        FOLLOW,
+        STAY,
+        WANDER,
+        EMOTE_WAVE,
+        EMOTE_CHEER,
+        OPEN_INVENTORY
     }
 
     private final FabricCompanionEntity companion;
@@ -33,10 +41,45 @@ public final class FabricRadialCommandMenu extends AbstractContainerMenu {
         if (companion == null || !companion.isOwnedBy(player)) {
             return;
         }
-        companion.setMode(FabricCompanionMode.FOLLOW);
-        companion.getTaskQueue().cancelActive();
-        if (command == Command.OPEN_INVENTORY && player instanceof ServerPlayer serverPlayer) {
-            companion.openInventory(serverPlayer);
+        if (companion.distanceTo(player) > 64.0d) {
+            return;
+        }
+        switch (command) {
+            case FOLLOW -> {
+                companion.getTaskQueue().cancelActive();
+                companion.setMode(FabricCompanionMode.FOLLOW);
+            }
+            case STAY -> {
+                companion.getTaskQueue().cancelActive();
+                companion.setMode(FabricCompanionMode.STAY);
+            }
+            case WANDER -> {
+                companion.getTaskQueue().cancelActive();
+                companion.setMode(FabricCompanionMode.WANDER);
+            }
+            case EMOTE_WAVE -> {
+                companion.swing(InteractionHand.MAIN_HAND, true);
+                companion.speakGreeting();
+            }
+            case EMOTE_CHEER -> {
+                companion.swing(InteractionHand.MAIN_HAND, true);
+                companion.speakSuccess();
+                if (companion.level() instanceof ServerLevel serverLevel) {
+                    serverLevel.sendParticles(
+                            ParticleTypes.HEART,
+                            companion.getX(),
+                            companion.getY() + companion.getBbHeight() * 0.9d,
+                            companion.getZ(),
+                            6,
+                            0.35d, 0.25d, 0.35d,
+                            0.02d);
+                }
+            }
+            case OPEN_INVENTORY -> {
+                if (player instanceof ServerPlayer serverPlayer) {
+                    companion.openInventory(serverPlayer);
+                }
+            }
         }
     }
 
@@ -47,7 +90,7 @@ public final class FabricRadialCommandMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return companion != null && companion.isAlive() && companion.distanceTo(player) < 8.0d;
+        return companion != null && companion.isAlive() && companion.distanceTo(player) < 64.0d;
     }
 
     public static final class ExtendedProvider implements ExtendedScreenHandlerFactory<Integer> {
