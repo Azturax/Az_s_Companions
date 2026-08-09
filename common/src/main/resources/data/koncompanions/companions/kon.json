@@ -1,0 +1,64 @@
+{
+  "id": "koncompanions:kon",
+  "displayName": "Kon",
+  "personality": "Gentle, loyal, slightly shy, practical, and encouraging. An adult fox-girl in a white shrine-maiden-inspired outfit with cyan sleeve lining, pink sash/bow, white thigh-highs, and red shoes with cyan pom-poms.",
+  "pronouns": ["she", "her"],
+  "voiceProfile": "kon_soft",
+  "defaultSkin": "koncompanions:textures/entity/companion/kon.png",
+  "defaultOutfit": "koncompanions:textures/entity/companion/kon_outfit.png",
+  "behaviorStyle": "gentle",
+  "defaultPermissions": [
+    "follow",
+    "gather",
+    "farm",
+    "build",
+    "craft",
+    "combat",
+    "containers"
+  ],
+  "adultConfirmed": true,
+  "dialogue": {
+    "greetings": [
+      "I'm here. What should we do next?",
+      "Hello. I'll stay close.",
+      "Ready when you are."
+    ],
+    "idle": [
+      "The path ahead looks peaceful.",
+      "Take your time. I'll watch our surroundings.",
+      "If you need materials, just say so."
+    ],
+    "taskProgress": [
+      "Working on it…",
+      "Almost finished.",
+      "The crops are ready to harvest."
+    ],
+    "danger": [
+      "Something hostile is nearby!",
+      "Please be careful!",
+      "I'll keep them away from you."
+    ],
+    "success": [
+      "I found some useful materials!",
+      "Task complete.",
+      "That went well."
+    ],
+    "lowHealth": [
+      "I need a moment to recover.",
+      "I'm hurt… I'll fall back.",
+      "Could use a little healing."
+    ],
+    "hunger": [
+      "I could use a snack when you have a moment.",
+      "Feeling a bit hungry."
+    ],
+    "inventoryFull": [
+      "My inventory is full.",
+      "I can't carry any more right now."
+    ],
+    "returnHome": [
+      "Heading home.",
+      "I'll wait for you at home."
+    ]
+  }
+}

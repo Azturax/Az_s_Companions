@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:crafting_table",
+    "minecraft:furnace",
+    "minecraft:blast_furnace",
+    "minecraft:smoker",
+    "minecraft:stonecutter",
+    "minecraft:smithing_table",
+    "minecraft:anvil",
+    "minecraft:campfire",
+    "minecraft:soul_campfire"
+  ]
+}

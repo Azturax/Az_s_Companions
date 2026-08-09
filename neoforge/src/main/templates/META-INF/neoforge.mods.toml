@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/Azturax/My-Girlfriend-Kon/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Kon Companions Team"
+description='''
+Kon Companions adds wholesome adult AI companions for Minecraft.
+Find a Companion Charm, summon Kon, customize her, chat nearby,
+and let her follow you home to her Kon Bed.
+
+NeoForge jar for Minecraft 1.21.1 (Fabric jar available separately).
+All characters are explicitly adult, wholesome, and non-sexual.
+'''
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+# Accept NeoForge 21.1.x (MC 1.21.1) through 26.2.x (MC 26.2)
+versionRange="${neo_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+# Accept Minecraft 1.21.1 through 26.2
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"

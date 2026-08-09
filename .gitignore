@@ -1,0 +1,42 @@
+# gradle
+.gradle/
+build/
+out/
+repo/
+
+# eclipse
+*.launch
+.bin/
+.settings/
+.project
+.classpath
+
+# idea
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+.vscode/
+
+# minecraft
+run/
+runs/
+run-data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# generated
+src/generated/
+build/generated/
+
+# local secrets / imported skins (never commit player imports)
+local_skins/
+*.local.png
+
+# scratch / temp
+.tmp_bed/
+*.log

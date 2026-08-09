@@ -1,0 +1,56 @@
+{
+  "kon.greeting": {
+    "subtitle": "subtitle.koncompanions.kon.greeting",
+    "sounds": [
+      "minecraft:entity.fox.ambient"
+    ]
+  },
+  "kon.idle": {
+    "subtitle": "subtitle.koncompanions.kon.idle",
+    "sounds": [
+      "minecraft:entity.fox.sniff"
+    ]
+  },
+  "kon.task_progress": {
+    "subtitle": "subtitle.koncompanions.kon.task_progress",
+    "sounds": [
+      "minecraft:entity.fox.eat"
+    ]
+  },
+  "kon.danger": {
+    "subtitle": "subtitle.koncompanions.kon.danger",
+    "sounds": [
+      "minecraft:entity.fox.hurt"
+    ]
+  },
+  "kon.success": {
+    "subtitle": "subtitle.koncompanions.kon.success",
+    "sounds": [
+      "minecraft:entity.fox.ambient"
+    ]
+  },
+  "kon.low_health": {
+    "subtitle": "subtitle.koncompanions.kon.low_health",
+    "sounds": [
+      "minecraft:entity.fox.hurt"
+    ]
+  },
+  "kon.hunger": {
+    "subtitle": "subtitle.koncompanions.kon.hunger",
+    "sounds": [
+      "minecraft:entity.fox.sniff"
+    ]
+  },
+  "kon.inventory_full": {
+    "subtitle": "subtitle.koncompanions.kon.inventory_full",
+    "sounds": [
+      "minecraft:entity.fox.screech"
+    ]
+  },
+  "kon.return_home": {
+    "subtitle": "subtitle.koncompanions.kon.return_home",
+    "sounds": [
+      "minecraft:entity.fox.sleep"
+    ]
+  }
+}
