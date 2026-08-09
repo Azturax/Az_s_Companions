@@ -1,10 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Owner **explore vs idle**: exploring → follow; standing still (~2.5s) → wander without teleport
-- Environmental hazard immunity: fall, cactus, sweet berry bush, drowning, in-wall, campfire (still take combat damage)
-
 ## 0.1.0 — first public
 
 Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
@@ -15,8 +10,10 @@ Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 ### Gameplay
 - Companion Charm (desert pyramid loot): summon / store; **one companion per player**
 - First summon defaults to player name + player skin
-- Follow by day; casual **wander** near owner (8–16 blocks) when idle in FOLLOW; night sleep in nearest bed (any bed / Kon Bed)
-- Loose follow: path start **32**, stop **24**, teleport **48**; no teleport while fighting; stuck-recovery no longer snaps at 8
+- Follow by day; night sleep in nearest bed (any bed / Kon Bed)
+- Owner **explore vs idle**: exploring → loose follow; standing still (~2.5s) → free wander **24–40**, **no teleport / no approach**
+- Loose follow bands: personal space **2**, comfort stroll **2–12**, preferred **~6**, start **32**, stop **8**, teleport **48** (exploring only, never while fighting)
+- Environmental hazard immunity: fall, cactus, sweet berry bush, drowning, in-wall, campfire (still take combat damage)
 - **Combat:** defend living attackers of the owner (ignores environmental damage); SIT/sleep suppress combat targeting
 - **Hands:** give items into main → offhand (swap if both full); empty-hand take
 - **Potions:** ground auto-pickup **beneficial only** (skip harmful + water/awkward neutrals); manually given harmful splash thrown at enemies
@@ -26,7 +23,8 @@ Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 - Skins are Mojang-only (no local PNG import)
 - Charm store/recall persists appearance (name, skin, gender, size, proportions, home bed, etc.)
 - Charm Hello / Bye chat lines (owner only)
-- UUID-gated **special player perks** (flight follow / glow / nametag) for designated owners
+- UUID-gated **special player perks** (flight follow / glow / Kon ears) for designated owners
+- Kon ears cosmetic on UUID `42901453-b2b5-4d95-9b7b-e0ed40da504f` (client render layer; meow nametag removed)
 - SIT/STAY (CCI modes) suppress wander/follow movement
 
 ### Loaders / editions
