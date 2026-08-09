@@ -1,9 +1,12 @@
 # Architecture notes
 
+Az's Companions (mod id `azscompanions`). Public repo: [Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions).
+
 ## Authority
 
 - Task execution, inventory mutation, combat, block breaking, and recruitment are **server-side only**.
 - Clients render entities/GUIs and play voice/subtitles; they send intent packets (`RecruitCompanionPacket`, `RadialCommandPacket`).
+- CCI IMC outcomes arrive client-side; CCI edition bridges forward actions to the server.
 
 ## Companion data
 

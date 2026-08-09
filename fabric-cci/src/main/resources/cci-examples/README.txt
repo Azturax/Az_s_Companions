@@ -5,7 +5,9 @@ These JSON snippets are for iChun's Content Creator Integration (CCI).
 They are NOT auto-loaded. Copy the pieces you want into a CCI Event
 Configuration via the in-game CCI Editor, or merge into your CCI config files.
 
-Full guide: docs/CCI_STREAMING_GUIDE.md (in the source repo)
+Full guide: docs/CCI_STREAMING_GUIDE.md
+Repo / release: https://github.com/Azturax/Az_s_Companions
+                https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 
 Mod IDs
 -------

@@ -1,10 +1,12 @@
 # Az's Companions — Development Roadmap
 
+Public repo: [Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions) · Released: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0)
+
 All characters remain explicitly adult, wholesome, and non-sexual across every phase.
 
-## Phase 1 — MVP (current scaffold)
+## Phase 1 — MVP (shipped as 0.1.0)
 
-**Goal:** Recruit Kon, follow/stay/guard basics, inventory, selection UI, server-authoritative tasks.
+**Goal:** Charm companion, follow/wander/sleep, defend, hands/potions, customize, CCI editions.
 
 - [x] NeoForge Gradle project (1.21.1)
 - [x] `CompanionEntity` with ownership, trust, permissions, home

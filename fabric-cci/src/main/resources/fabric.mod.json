@@ -8,9 +8,9 @@
     "Az"
   ],
   "contact": {
-    "homepage": "https://github.com/Azturax/My-Girlfriend-Kon",
-    "sources": "https://github.com/Azturax/My-Girlfriend-Kon",
-    "issues": "https://github.com/Azturax/My-Girlfriend-Kon/issues"
+    "homepage": "https://github.com/Azturax/Az_s_Companions",
+    "sources": "https://github.com/Azturax/Az_s_Companions",
+    "issues": "https://github.com/Azturax/Az_s_Companions/issues"
   },
   "license": "${mod_license}",
   "icon": "assets/azscompanions/textures/gui/kon_card.png",
