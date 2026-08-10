@@ -244,3 +244,52 @@ EMF looks for modded models roughly at:
 - Common: `FancyAnimCompat`, `FancyAnimSettings`, `FancyAnimConfigIO`
 - NeoForge: `FancyAnimCompatModule`, `FancyAnimClientBridge`; renderers `CompanionRenderer` / `CompanionMobFormRenderer`
 - Fabric: `FabricFancyAnimCompat`; renderers `FabricCompanionRenderer` / `CompanionMobFormRenderer`
+
+---
+
+## Dynamic lighting (LambDynamicLights / RyoamicLights / similar)
+
+Package: `com.azscompanions.compat.dynamiclights`. Soft-deps only — the mod loads with no lighting mods installed.
+
+Companions are `LivingEntity` / `PathfinderMob` and expose main-hand + off-hand (and armor) through `getItemBySlot`. Dynamic-light mods that scan living entities for light-emitting items therefore see held torches, soul torches, lanterns, etc. the same way they see a player or zombie holding one.
+
+### Hooked / detected mods (1.21.1 Fabric + NeoForge)
+
+| Mod | Mod ID(s) | How torch light works with companions |
+|-----|-----------|----------------------------------------|
+| **LambDynamicLights** | `lambdynlights` (`lambdynlights_api`) | Client mixin on `LivingEntity` reads equipment luminance (incl. our hand slots). Held torch/lantern → entity glow. No custom entity JSON required for held items. |
+| **RyoamicLights** | `ryoamiclights` | LDL-style fork; same living-entity hand scan when present. Optional legacy `DynamicLightHandlers` registration via reflection. |
+| **Dynamic Lights** (various ports) | `dynamiclights` / `dynamic_lights` | Soft-detect + log; ports that scan `LivingEntity` hands pick up companions automatically. |
+
+**Placed torches:** companions place real torch/lantern *blocks* while tasking — those use vanilla block light, not the dynamic-lights client mod.
+
+### Config
+
+| Loader | Where |
+|--------|-------|
+| NeoForge | Client config → `[dynamicLights]` |
+| Fabric | `config/azscompanions-dynamiclights.json` |
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `dynamicLightsCompat` | `true` | Detect lighting mods, log once, and attempt optional legacy `DynamicLightHandlers` registration for `azscompanions:companion`. Does **not** unload third-party mixins — turn those mods off (or their entity/item settings) if you want no held-item glow at all. |
+
+### Fabric JSON example
+
+```json
+{
+  "dynamicLightsCompat": true
+}
+```
+
+### Player tips
+
+- Give the companion a torch/lantern in **main or off hand** (tasks auto-prefer torch off-hand when dark).
+- Ensure the lighting mod’s entity / held-item options are enabled (LDL: Video settings / Mod Menu → Entities / items as needed).
+- Works with **no** dynamic-light mods installed (vanilla block light only for placed torches).
+
+### Code entry points
+
+- Common: `DynamicLightsCompat`, `DynamicLightsSettings`, `DynamicLightsConfigIO`, `DynamicLightsMods`, `DynamicLightsLegacyHooks`
+- NeoForge: `DynamicLightsCompatModule`, `DynamicLightsClientBridge` via `CompatBootstrap`
+- Fabric: `FabricDynamicLightsCompat` from `AzsCompanionsFabricClient`

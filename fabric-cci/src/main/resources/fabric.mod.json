@@ -44,7 +44,9 @@
     "journeymap": "*",
     "xaerominimap": "*",
     "xaeroworldmap": "*",
-    "ftbchunks": "*"
+    "ftbchunks": "*",
+    "lambdynlights": "*",
+    "ryoamiclights": "*"
   },
   "custom": {
     "azscompanions:support": {

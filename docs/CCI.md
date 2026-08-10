@@ -88,7 +88,7 @@ Ownership: CCI summons / leaders / children are **owned by the streamer player**
 | Ask / AI chat | Same ownership gate as in-game `/ask` / `/az ask [Name]`. |
 | Chat listen | `player` = streamer’s chat; `global` = nearby chat may react; strangers get social-safe actions only |
 | Ask | `/ask` / `/az ask` — **requires server AI config** (no client LLM) |
-| Name mention | Removed / disabled (`nameListen` default off) |
+| Name mention | Removed (0.3.12 ask-only — use `/ask`) |
 | In-game commands | `/ask`, `/az ask`, `Name ask …` resolve names **per commanding player**. |
 
 See also [COMPANION_AI.md](COMPANION_AI.md#multiplayer-notes).
@@ -159,10 +159,10 @@ Setting persona on `companion_summon` / `companion_modify` with the same keys al
 
 | Subject | Aliases | Message | Effect |
 |---------|---------|---------|--------|
-| `companion_ask` | `companion_ai`, `ai_ask`, `ask` | `message=What should we build?` or bare text | LLM reply (+ actions if `enableAiActions`) |
+| `companion_ask` | `companion_ai`, `ai_ask`, `ask` | `message=What should we build?` or bare text | LLM **text** reply via server `/ask` path |
 | `companion_ai_status` | `ai_status` | ignored | Toast provider status (no companion required) |
-| `companion_ai_chat` | `ai_chat`, `stream_chat` | `message=hi;speaker=Alice` or bare chat | Same path as chat-listen reactions |
-| `companion_ai_config` | `ai_config`, `set_ai_config` | `chatListenMode=player;enableAiActions=true` | **Session** runtime overrides (not written to disk). Empty message → status toast |
+| `companion_ai_chat` | `ai_chat`, `stream_chat` | `message=hi;speaker=Alice` or bare chat | Explicit CCI chat feed (not auto-listen) |
+| `companion_ai_config` | `ai_config`, `set_ai_config` | (legacy keys ignored) | Status toast only — ask-only; `chatListenMode` / `enableAiActions` retired |
 
 When AI is **disabled**, ask/ai_chat toast an error; greet/wave/say fall back to canned text.
 
@@ -218,7 +218,7 @@ Children from `companion_interaction` / `companion_spawn_child` / cake:
 
 - **Owned** by the streamer; `LeaderUuid` points at parent leader.
 - **Inherit** parent attitude, team, form, skin, armor visibility; default scale **0.5**, name **Bit** (CCI can override).
-- **AI tools** work when `enableAiActions=true` (same mine/craft/build/move/play/inventory), soft-leashed to parent.
+- **AI tools / world puppeting** removed (ask is text dialogue only).
 - **`childAutonomy`:** `cling` | `balanced` | `curious` — leash + idle frequency (children chatter less than parents).
 - Idle may talk **to the parent** when cling/balanced.
 
@@ -250,7 +250,7 @@ Prefer structured IMC. Freeform chat without `key=value` is ignored (map your pl
 | File | Keys |
 |------|------|
 | `azscompanions-server.toml` / Fabric defaults | `maxCompanionsPerPlayer`, `maxChildCompanionsPerLeader` (default 3), `supportAmountPerCompanion` (default 100), combat, chat messages |
-| `azscompanions-ai.json` / `.toml` | `provider`, `baseUrl`, `model`, `apiKeyEnv` (`AZS_LLM_API_KEY`), `serverLlmOnly` (default true — shared server endpoint), `perCompanionMemory` / `memoryMaxMessages` (separate minds), `chatListenMode`, `idleChat`, `callPlayerWhenAway`, `enableAiActions`, `childAutonomy`, `childLeashRadius`, MCP block |
+| `azscompanions-ai.json` / `.toml` | `provider`, `baseUrl`, `model`, `apiKeyEnv` (`AZS_LLM_API_KEY`), `serverLlmOnly` (default true — shared server endpoint), `perCompanionMemory` / `memoryMaxMessages` (separate minds), `idleChat`, `callPlayerWhenAway`, `childAutonomy`, `childLeashRadius`, MCP block. Legacy `chatListenMode` / `nameListen` / `enableAiActions` ignored. |
 
 Full key reference + copy-paste setups (LM Studio, Ollama, **remote** OpenAI/OpenRouter/Groq, MCP, disabled): [COMPANION_AI.md](COMPANION_AI.md).
 
@@ -272,7 +272,7 @@ Examples ship **inside the CCI jar** under `cci-examples/` (not auto-loaded). Co
 | `imc-companion-rush.json` | rush / run at player |
 | `imc-companion-hide-seek.json` | hide-and-seek |
 | `imc-claim-chunk.json` | FTB claim at feet |
-| `imc-ai-config.json` | session chatListenMode / enableAiActions |
+| `imc-ai-config.json` | status toast only (ask-only; legacy session flags retired) |
 | `imc-companion-turn-evil.json` | playful evil |
 | `imc-companion-set-team.json` / `set-equipment.json` | team / gear |
 | `imc-teamfight-enable.json` | teamfight on |

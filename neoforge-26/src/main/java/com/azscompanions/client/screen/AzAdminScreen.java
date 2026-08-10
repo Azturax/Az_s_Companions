@@ -2,7 +2,6 @@ package com.azscompanions.client.screen;
 
 import com.azscompanions.admin.AdminAiConfigSnapshot;
 import com.azscompanions.admin.LlmProviderProfile;
-import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.network.packet.AdminActionPacket;
 import com.azscompanions.network.packet.AdminAiSavePacket;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -11,9 +10,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.neoforged.neoforge.network.PacketDistributor;
 
-/** Server-gated Az admin panel (NeoForge). */
+/** Server-gated Az admin panel (NeoForge 26.2). Profiles fill defaults; all fields stay editable. Ask-only. */
 public final class AzAdminScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
@@ -35,10 +33,8 @@ public final class AzAdminScreen extends Screen {
     private EditBox providerBox;
     private EditBox mcpUrlBox;
     private Button profileButton;
-    private Button listenButton;
-    private Button actionsButton;
     private Button serverLlmButton;
-    private Button nameListenButton;
+    private boolean syncingFields;
 
     public AzAdminScreen(AdminAiConfigSnapshot snap, String aiStatus, boolean chunkLoading,
                          boolean teamfight, String companionSummary) {
@@ -124,26 +120,29 @@ public final class AzAdminScreen extends Screen {
         addRenderableWidget(profileButton);
         y += 22;
 
-        boolean free = profile.allowsFreeProviderFields();
+        syncingFields = true;
         providerBox = new EditBox(font, bx, y, bw, 16, Component.literal("provider"));
         providerBox.setMaxLength(AdminAiConfigSnapshot.MAX_PROVIDER);
         providerBox.setValue(snap.provider());
-        providerBox.setEditable(free);
+        providerBox.setEditable(true);
         providerBox.setHint(Component.literal("provider"));
+        providerBox.setResponder(v -> onAiFieldEdited());
         addRenderableWidget(providerBox);
         y += 20;
 
         baseUrlBox = new EditBox(font, bx, y, bw, 16, Component.literal("baseUrl"));
         baseUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
         baseUrlBox.setValue(snap.baseUrl());
-        baseUrlBox.setEditable(free);
+        baseUrlBox.setEditable(true);
         baseUrlBox.setHint(Component.literal("baseUrl"));
+        baseUrlBox.setResponder(v -> onAiFieldEdited());
         addRenderableWidget(baseUrlBox);
         y += 20;
 
         modelBox = new EditBox(font, bx, y, bw, 16, Component.literal("model"));
         modelBox.setMaxLength(AdminAiConfigSnapshot.MAX_MODEL);
         modelBox.setValue(snap.model());
+        modelBox.setEditable(true);
         modelBox.setHint(Component.literal("model"));
         addRenderableWidget(modelBox);
         y += 20;
@@ -151,6 +150,7 @@ public final class AzAdminScreen extends Screen {
         apiKeyEnvBox = new EditBox(font, bx, y, bw, 16, Component.literal("apiKeyEnv"));
         apiKeyEnvBox.setMaxLength(AdminAiConfigSnapshot.MAX_ENV);
         apiKeyEnvBox.setValue(snap.apiKeyEnv());
+        apiKeyEnvBox.setEditable(true);
         apiKeyEnvBox.setHint(Component.literal("apiKeyEnv"));
         addRenderableWidget(apiKeyEnvBox);
         y += 20;
@@ -158,42 +158,52 @@ public final class AzAdminScreen extends Screen {
         languageBox = new EditBox(font, bx, y, (bw - 6) / 2, 16, Component.literal("lang"));
         languageBox.setMaxLength(AdminAiConfigSnapshot.MAX_LANG);
         languageBox.setValue(snap.inputLanguage());
+        languageBox.setEditable(true);
         languageBox.setHint(Component.literal("lang"));
         addRenderableWidget(languageBox);
 
         mcpUrlBox = new EditBox(font, bx + (bw - 6) / 2 + 6, y, (bw - 6) / 2, 16, Component.literal("mcpUrl"));
         mcpUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
         mcpUrlBox.setValue(snap.mcpUrl());
+        mcpUrlBox.setEditable(true);
         mcpUrlBox.setHint(Component.literal("mcpUrl"));
+        mcpUrlBox.setResponder(v -> onAiFieldEdited());
         addRenderableWidget(mcpUrlBox);
         y += 20;
-
-        listenButton = Button.builder(Component.literal("Listen: " + snap.chatListenMode()), b -> cycleListen())
-                .bounds(bx, y, (bw - 6) / 2, 18).build();
-        addRenderableWidget(listenButton);
-        actionsButton = Button.builder(Component.literal("AI actions: " + onOff(snap.enableAiActions())),
-                b -> {
-                    snap.setEnableAiActions(!snap.enableAiActions());
-                    actionsButton.setMessage(Component.literal("AI actions: " + onOff(snap.enableAiActions())));
-                }).bounds(bx + (bw - 6) / 2 + 6, y, (bw - 6) / 2, 18).build();
-        addRenderableWidget(actionsButton);
-        y += 22;
+        syncingFields = false;
 
         serverLlmButton = Button.builder(Component.literal("serverLlmOnly: " + onOff(snap.serverLlmOnly())),
                 b -> {
                     snap.setServerLlmOnly(!snap.serverLlmOnly());
                     serverLlmButton.setMessage(Component.literal("serverLlmOnly: " + onOff(snap.serverLlmOnly())));
-                }).bounds(bx, y, (bw - 6) / 2, 18).build();
+                }).bounds(bx, y, bw, 18).build();
         addRenderableWidget(serverLlmButton);
-        nameListenButton = Button.builder(Component.literal("nameListen: " + onOff(snap.nameListen())),
-                b -> {
-                    snap.setNameListen(!snap.nameListen());
-                    nameListenButton.setMessage(Component.literal("nameListen: " + onOff(snap.nameListen())));
-                }).bounds(bx + (bw - 6) / 2 + 6, y, (bw - 6) / 2, 18).build();
-        addRenderableWidget(nameListenButton);
 
         addRenderableWidget(Button.builder(Component.literal("Save (restart required)"), b -> save())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
+    }
+
+    private void onAiFieldEdited() {
+        if (syncingFields) {
+            return;
+        }
+        if (providerBox != null) {
+            snap.setProvider(providerBox.getValue());
+        }
+        if (baseUrlBox != null) {
+            snap.setBaseUrl(baseUrlBox.getValue());
+        }
+        if (mcpUrlBox != null) {
+            snap.setMcpUrl(mcpUrlBox.getValue());
+        }
+        LlmProviderProfile detected = LlmProviderProfile.detect(snap);
+        if (detected != profile) {
+            profile = detected;
+            snap.setProfileId(profile.name().toLowerCase());
+            if (profileButton != null) {
+                profileButton.setMessage(Component.literal("Profile: " + profile.label()));
+            }
+        }
     }
 
     private void cycleProfile() {
@@ -205,30 +215,12 @@ public final class AzAdminScreen extends Screen {
         init();
     }
 
-    private void cycleListen() {
-        ChatListenMode cur = ChatListenMode.fromConfig(snap.chatListenMode());
-        ChatListenMode next = switch (cur) {
-            case OFF -> ChatListenMode.PLAYER;
-            case PLAYER -> ChatListenMode.GLOBAL;
-            case GLOBAL -> ChatListenMode.OFF;
-        };
-        snap.setChatListenMode(next.configName());
-        if (listenButton != null) {
-            listenButton.setMessage(Component.literal("Listen: " + snap.chatListenMode()));
-        }
-    }
-
     private void save() {
-        if (providerBox != null && profile.allowsFreeProviderFields()) {
+        if (providerBox != null) {
             snap.setProvider(providerBox.getValue());
         }
-        if (baseUrlBox != null && profile.allowsFreeProviderFields()) {
+        if (baseUrlBox != null) {
             snap.setBaseUrl(baseUrlBox.getValue());
-        } else if (!profile.allowsFreeProviderFields() && profile.baseUrlOrNull() != null) {
-            snap.setBaseUrl(profile.baseUrlOrNull());
-            if (profile.providerOrNull() != null) {
-                snap.setProvider(profile.providerOrNull().name().toLowerCase());
-            }
         }
         if (modelBox != null) {
             snap.setModel(modelBox.getValue());
@@ -242,6 +234,7 @@ public final class AzAdminScreen extends Screen {
         if (mcpUrlBox != null) {
             snap.setMcpUrl(mcpUrlBox.getValue());
         }
+        profile = LlmProviderProfile.detect(snap);
         snap.setProfileId(profile.name().toLowerCase());
         ClientPacketDistributor.sendToServer(new AdminAiSavePacket(snap.toWireJson()));
         onClose();
@@ -259,7 +252,7 @@ public final class AzAdminScreen extends Screen {
         int py = (height - panelH) / 2;
         graphics.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, PANEL_EDGE);
         graphics.fill(px, py, px + panelW, py + panelH, PANEL_BG);
-        graphics.text(font, tab == Tab.OVERVIEW ? "Az Admin" : "AI config → disk (restart)",
+        graphics.text(font, tab == Tab.OVERVIEW ? "Az Admin" : "AI config → disk (restart) · /ask only",
                 px + 12, py - 12, 0xFFFFFF, false);
     }
 

@@ -95,6 +95,7 @@ public final class AzsCompanions {
         if (event.getConfig().getSpec() == ClientConfig.SPEC) {
             com.azscompanions.compat.map.MapCompatModule.trySyncClientSettings();
             com.azscompanions.compat.fancyanim.FancyAnimCompatModule.trySyncClientSettings();
+            com.azscompanions.compat.dynamiclights.DynamicLightsCompatModule.trySyncClientSettings();
         }
     }
 

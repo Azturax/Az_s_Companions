@@ -1,7 +1,6 @@
 package com.azscompanions.compat.cci;
 
 import com.azscompanions.AzsCompanionsFabric;
-import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.CompanionAiChatSupport;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.FabricCompanionAiAsk;
@@ -389,32 +388,9 @@ public final class FabricCciCompanionActions {
     }
 
     private static void applyAiConfig(ServerPlayer player, CciCompanionParams params) {
-        var runtime = CompanionAiRuntime.get();
-        var settings = runtime.settings().copy();
-        boolean changed = false;
-        String listenRaw = params.chatListenModeRawOrNull();
-        if (listenRaw != null && !listenRaw.isBlank()) {
-            settings.setChatListenMode(ChatListenMode.fromConfig(listenRaw));
-            changed = true;
-        }
-        Boolean aiActions = params.enableAiActionsOrNull();
-        if (aiActions != null) {
-            settings.setEnableAiActions(aiActions);
-            changed = true;
-        }
-        if (!changed) {
-            toast(player, "Companion AI",
-                    "Status: " + FabricCompanionAiAsk.status()
-                            + " | chatListen=" + settings.chatListenMode().configName()
-                            + " enableAiActions=" + settings.enableAiActions()
-                            + " (set chatListenMode= / enableAiActions=)");
-            return;
-        }
-        runtime.applySettings(settings);
         toast(player, "Companion AI",
-                "Session updated: chatListen=" + settings.chatListenMode().configName()
-                        + " enableAiActions=" + settings.enableAiActions()
-                        + " (runtime only — not written to disk)");
+                "Status: " + FabricCompanionAiAsk.status()
+                        + " | ask-only (/ask). chatListen/nameListen/enableAiActions retired in 0.3.12.");
     }
 
     /**

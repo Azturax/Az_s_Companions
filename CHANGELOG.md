@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.12
+
+Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.12) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Admin AI Config — editable profiles
+- Selecting any Profile (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled, Custom…) still **fills defaults**, then **all fields stay editable**: `provider`, `baseUrl`, `model`, `apiKeyEnv`, `inputLanguage`, `mcpUrl`, `serverLlmOnly`.
+- Tweaking `provider` / `baseUrl` / `mcpUrl` away from a preset switches the label to **Custom...**.
+- Save still writes `azscompanions-ai.json` / `.toml` + restart message (Fabric + NeoForge + NeoForge 26.2 admin screens).
+
+### Ask-only AI chat
+- Removed **chatListenMode** auto chat react, **nameListen** name-mention wiring, and **enableAiActions** LLM world tools from runtime + admin UI.
+- Companions reply via **`/ask`** / **`/az ask`** only (plus CCI `companion_ask`). Kept **`serverLlmOnly`**.
+- Legacy config / CCI session keys for those three flags are **ignored**; admin toggles removed.
+
+### Dynamic lighting soft-compat
+- Optional soft-compat with LambDynamicLights / RyoamicLights / similar (`compat/dynamiclights`) — companions expose held torch/lantern light via LivingEntity hand slots; optional legacy API registration when those mods are present.
+- NeoForge client `[dynamicLights]`; Fabric `config/azscompanions-dynamiclights.json`. Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.12+1.21.1.jar` | `azscompanions-fabric-0.3.12+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.12+1.21.1.jar` | `azscompanions-fabric-cci-0.3.12+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.10
 
 Release: [v0.3.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.10) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

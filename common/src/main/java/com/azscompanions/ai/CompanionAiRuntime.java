@@ -341,8 +341,7 @@ public final class CompanionAiRuntime {
 
     public String statusLine() {
         CompanionAiSettings s = settings;
-        String listen = " chatListen=" + s.chatListenMode().configName()
-                + " nameListen=" + (s.nameListen() ? "on" : "off");
+        String listen = " ask-only";
         String idle = s.idleChat() ? " idleChat=on" : "";
         String call = s.callPlayerWhenAway() ? " callAway=on" : "";
         String shared = usesSharedServerLlm() ? " [server LLM shared]" : "";

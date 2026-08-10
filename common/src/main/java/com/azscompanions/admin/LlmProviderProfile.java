@@ -6,7 +6,8 @@ import java.util.Locale;
 
 /**
  * In-game admin presets for companion AI provider / base URL.
- * {@link #CUSTOM} leaves fields free; other entries fill provider + baseUrl (+ model placeholder).
+ * Presets fill defaults; every profile (including presets) leaves fields editable afterward.
+ * {@link #detect} maps edited provider/baseUrl/mcp back to a preset or {@link #CUSTOM}.
  */
 public enum LlmProviderProfile {
     DISABLED(
@@ -87,9 +88,12 @@ public enum LlmProviderProfile {
         return this == CUSTOM;
     }
 
-    /** When false, admin UI should treat provider/baseUrl as preset-locked. */
+    /**
+     * Always true — presets only seed values; the admin UI keeps provider/baseUrl (and other
+     * fields) editable after any profile selection.
+     */
     public boolean allowsFreeProviderFields() {
-        return this == CUSTOM;
+        return true;
     }
 
     public LlmProviderMode providerOrNull() {

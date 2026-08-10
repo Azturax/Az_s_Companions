@@ -54,7 +54,7 @@ Chat after a successful save:
 
 #### Provider profiles
 
-Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Custom...** unlocks free editing of provider / baseUrl.
+Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **All fields stay editable** after any preset (including Custom…). Tweaking `provider` / `baseUrl` / `mcpUrl` away from a preset switches the label to **Custom...**.
 
 | Profile | provider | baseUrl (default) |
 |---------|----------|-------------------|
@@ -68,6 +68,8 @@ Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Cu
 | MCP (HTTP) | `mcp` | mcp url `http://127.0.0.1:3001/mcp` |
 | Custom... | (yours) | (yours) |
 
-Also editable: `model`, `apiKeyEnv`, `inputLanguage`, `chatListenMode`, `enableAiActions`, `serverLlmOnly`, `nameListen`, `mcpUrl`. Prefer env API keys over putting secrets in the file.
+Also editable: `model`, `apiKeyEnv`, `inputLanguage`, `serverLlmOnly`, `mcpUrl`. Prefer env API keys over putting secrets in the file.
+
+**Ask-only (0.3.12+):** companions reply via **`/ask`** / **`/az ask`** only. Admin toggles for `chatListenMode`, `enableAiActions`, and `nameListen` are removed; legacy config keys are ignored.
 
 See [COMPANION_AI.md](COMPANION_AI.md) for full AI config reference.

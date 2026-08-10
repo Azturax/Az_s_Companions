@@ -1,7 +1,6 @@
 package com.azscompanions.compat.cci;
 
 import com.azscompanions.AzsCompanions;
-import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAiChatSupport;
 import com.azscompanions.ai.CompanionAiRuntime;
@@ -224,10 +223,6 @@ public final class CciCompanionActions {
             toast(player, "Companion AI", "Disabled — set provider in config/azscompanions-ai.toml on the server");
             return;
         }
-        ChatListenMode mode = CompanionAiRuntime.get().settings().chatListenMode();
-        if (!mode.listens() && mode != ChatListenMode.OFF) {
-            // still allow explicit CCI feed
-        }
         String speaker = params.getOr("speaker", params.getOr("name", player.getGameProfile().getName()));
         String text = params.first("message", "text", "chat", "raw");
         if (text == null || text.isBlank()) {
@@ -411,32 +406,9 @@ public final class CciCompanionActions {
     }
 
     private static void applyAiConfig(ServerPlayer player, CciCompanionParams params) {
-        var runtime = CompanionAiRuntime.get();
-        var settings = runtime.settings().copy();
-        boolean changed = false;
-        String listenRaw = params.chatListenModeRawOrNull();
-        if (listenRaw != null && !listenRaw.isBlank()) {
-            settings.setChatListenMode(ChatListenMode.fromConfig(listenRaw));
-            changed = true;
-        }
-        Boolean aiActions = params.enableAiActionsOrNull();
-        if (aiActions != null) {
-            settings.setEnableAiActions(aiActions);
-            changed = true;
-        }
-        if (!changed) {
-            toast(player, "Companion AI",
-                    "Status: " + CompanionAiAsk.status()
-                            + " | chatListen=" + settings.chatListenMode().configName()
-                            + " enableAiActions=" + settings.enableAiActions()
-                            + " (set chatListenMode= / enableAiActions=)");
-            return;
-        }
-        runtime.applySettings(settings);
         toast(player, "Companion AI",
-                "Session updated: chatListen=" + settings.chatListenMode().configName()
-                        + " enableAiActions=" + settings.enableAiActions()
-                        + " (runtime only — not written to disk)");
+                "Status: " + CompanionAiAsk.status()
+                        + " | ask-only (/ask). chatListen/nameListen/enableAiActions retired in 0.3.12.");
     }
 
     private static boolean applyAppearance(CompanionEntity companion, CciCompanionParams params,

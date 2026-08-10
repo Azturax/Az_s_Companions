@@ -30,10 +30,12 @@ Restart the game / server (or reload NeoForge config if your tooling supports it
 
 Ops / host / whitelist can open **`/az admin`** (or **`/az ai config`**) → **AI Config** tab:
 
-1. Pick a **Profile** (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled) or **Custom...**
-2. Edit `model` / `apiKeyEnv` / listen flags as needed
+1. Pick a **Profile** (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled) or **Custom...** — presets fill defaults; **all fields stay editable**
+2. Edit `provider` / `baseUrl` / `model` / `apiKeyEnv` / `mcpUrl` / `serverLlmOnly` as needed (tweaks that leave a preset → **Custom...**)
 3. **Save** writes `azscompanions-ai.json` / `.toml` on the **server**
 4. Chat confirms save; **restart** the server/game for the LLM client to pick up changes (no hot-reload in this slice)
+
+**Ask-only:** use **`/ask`** or **`/az ask`**. Auto chat listen, name-mention listen, and LLM world actions are removed (0.3.12+).
 
 Details + whitelist: [ADMIN.md](ADMIN.md).
 
@@ -59,7 +61,9 @@ Aliases accepted in config (map to the canonical value):
 
 ### Admin UI profiles
 
-In `/az admin` → AI Config, a profile cycle fills `provider` + `baseUrl` (and a model placeholder). **Custom...** unlocks free editing. Presets: Disabled, Local (LM Studio `…:1234/v1`), Local (Ollama `…:11434/v1`), OpenRouter, OpenAI, Groq, LiteLLM (`…:4000/v1`), MCP (HTTP). See [ADMIN.md](ADMIN.md).
+In `/az admin` → AI Config, a profile cycle fills `provider` + `baseUrl` (and a model placeholder). **Every field stays editable** after any preset; diverging from preset defaults shows **Custom...**. Presets: Disabled, Local (LM Studio `…:1234/v1`), Local (Ollama `…:11434/v1`), OpenRouter, OpenAI, Groq, LiteLLM (`…:4000/v1`), MCP (HTTP). See [ADMIN.md](ADMIN.md).
+
+Companions reply via **`/ask` / `/az ask` only** — no auto chat react, name-mention listen, or LLM world tools.
 
 ---
 

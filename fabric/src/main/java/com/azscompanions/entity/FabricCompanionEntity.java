@@ -554,8 +554,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         double leash = settings.effectiveChildLeashRadius();
         double dist = distanceTo(parent);
         if (dist <= leash) {
-            if (settings.enableAiActions()
-                    && settings.childAutonomy() == com.azscompanions.ai.ChildAutonomyMode.CURIOUS
+            if (settings.childAutonomy() == com.azscompanions.ai.ChildAutonomyMode.CURIOUS
                     && random.nextInt(40) == 0
                     && getMode() == FabricCompanionMode.FOLLOW) {
                 double a = random.nextDouble() * Math.PI * 2;

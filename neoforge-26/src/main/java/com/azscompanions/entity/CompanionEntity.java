@@ -531,7 +531,7 @@ public class CompanionEntity extends PathfinderMob {
         double leash = settings.effectiveChildLeashRadius();
         double dist = distanceTo(parent);
         if (dist <= leash) {
-            if (settings.childAutonomy().allowsCuriousWander() && settings.enableAiActions()
+            if (settings.childAutonomy().allowsCuriousWander()
                     && settings.childAutonomy() == ChildAutonomyMode.CURIOUS
                     && random.nextInt(40) == 0
                     && getMode() == CompanionMode.FOLLOW) {

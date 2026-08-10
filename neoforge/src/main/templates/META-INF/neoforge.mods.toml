@@ -84,3 +84,25 @@ type="optional"
 versionRange="*"
 ordering="NONE"
 side="BOTH"
+
+# Optional dynamic lighting (client) — soft-dep
+[[dependencies.${mod_id}]]
+modId="lambdynlights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="ryoamiclights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="dynamiclights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"

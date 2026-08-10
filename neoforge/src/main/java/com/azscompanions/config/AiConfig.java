@@ -141,13 +141,10 @@ public final class AiConfig {
         CENSOR_EXTRA_WORDS = builder.comment("Extra whole words to censor (case-insensitive).")
                 .defineListAllowEmpty("censorExtraWords", List.of(), () -> "", o -> o instanceof String);
         CHAT_LISTEN_MODE = builder.comment(
-                        "Non-mention auto-reply: off | player | global.",
-                        "Name-mention chat listen is retired (nameListen default false; unused).")
+                        "RETIRED (0.3.12): ignored. Companions reply only via /ask / /az ask.")
                 .define("chatListenMode", "off");
         NAME_LISTEN = builder.comment(
-                        "PRIMARY chat path (default true): say the companion's display name in normal chat",
-                        "(Kon, how are you? / Bit come here please) — no /ask slash required.",
-                        "Works even if chatListenMode is off. Owner vs stranger mode follows ownership.")
+                        "RETIRED (0.3.12): ignored. Name-mention chat listen removed.")
                 .define("nameListen", false);
         CHAT_REACT_RANGE = builder.comment("Max blocks for chat auto-react / name mentions.")
                 .defineInRange("chatReactRange", CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE, 8.0d, 128.0d);
@@ -167,7 +164,7 @@ public final class AiConfig {
         CALL_PLAYER_COOLDOWN_SECONDS = builder.defineInRange("callPlayerCooldownSeconds",
                 CompanionAiChatSupport.DEFAULT_CALL_PLAYER_COOLDOWN_SECONDS, 5, 600);
         ENABLE_AI_ACTIONS = builder.comment(
-                        "Allow LLM actions. Owners get full tools; strangers get limited social actions only.")
+                        "RETIRED (0.3.12): ignored. /ask is text dialogue only (no LLM world tools).")
                 .define("enableAiActions", false);
         AI_ACTION_REACH = builder.defineInRange("aiActionReach", 5, 2, 16);
         AI_ACTION_COOLDOWN_TICKS = builder.defineInRange("aiActionCooldownTicks", 10, 0, 100);
@@ -250,8 +247,9 @@ public final class AiConfig {
                 .setMemoryMaxMessages(MEMORY_MAX_MESSAGES.get())
                 .setCensorChat(CENSOR_CHAT.get())
                 .setCensorExtraWords(censorExtra)
-                .setChatListenMode(ChatListenMode.fromConfig(CHAT_LISTEN_MODE.get()))
-                .setNameListen(NAME_LISTEN.get())
+                // 0.3.12: chatListen / nameListen / enableAiActions retired — ask-only
+                .setChatListenMode(ChatListenMode.OFF)
+                .setNameListen(false)
                 .setChatReactRange(CHAT_REACT_RANGE.get())
                 .setChatReactCooldownSeconds(CHAT_REACT_COOLDOWN_SECONDS.get())
                 .setIdleChat(IDLE_CHAT.get())
@@ -261,7 +259,7 @@ public final class AiConfig {
                 .setCallPlayerAfterSeconds(CALL_PLAYER_AFTER_SECONDS.get())
                 .setCallPlayerDistance(CALL_PLAYER_DISTANCE.get())
                 .setCallPlayerCooldownSeconds(CALL_PLAYER_COOLDOWN_SECONDS.get())
-                .setEnableAiActions(ENABLE_AI_ACTIONS.get())
+                .setEnableAiActions(false)
                 .setAiActionReach(AI_ACTION_REACH.get())
                 .setAiActionCooldownTicks(AI_ACTION_COOLDOWN_TICKS.get())
                 .setChildAutonomy(ChildAutonomyMode.fromConfig(CHILD_AUTONOMY.get()))
@@ -317,8 +315,6 @@ public final class AiConfig {
         toml.append("memoryMaxMessages = ").append(s.memoryMaxMessages()).append("\n");
         toml.append("censorChat = ").append(s.censorChat()).append("\n");
         toml.append("censorExtraWords = ").append(stringListToml(s.censorExtraWords())).append("\n");
-        toml.append("chatListenMode = \"").append(esc(s.chatListenMode().configName())).append("\"\n");
-        toml.append("nameListen = ").append(s.nameListen()).append("\n");
         toml.append("chatReactRange = ").append(s.chatReactRange()).append("\n");
         toml.append("chatReactCooldownSeconds = ").append(s.chatReactCooldownSeconds()).append("\n");
         toml.append("idleChat = ").append(s.idleChat()).append("\n");
@@ -328,7 +324,6 @@ public final class AiConfig {
         toml.append("callPlayerAfterSeconds = ").append(s.callPlayerAfterSeconds()).append("\n");
         toml.append("callPlayerDistance = ").append(s.callPlayerDistance()).append("\n");
         toml.append("callPlayerCooldownSeconds = ").append(s.callPlayerCooldownSeconds()).append("\n");
-        toml.append("enableAiActions = ").append(s.enableAiActions()).append("\n");
         toml.append("aiActionReach = ").append(s.aiActionReach()).append("\n");
         toml.append("aiActionCooldownTicks = ").append(s.aiActionCooldownTicks()).append("\n");
         toml.append("childAutonomy = \"").append(esc(s.childAutonomy().configName())).append("\"\n");

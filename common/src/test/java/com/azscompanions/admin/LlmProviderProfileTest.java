@@ -19,7 +19,7 @@ class LlmProviderProfileTest {
         LlmProviderProfile.LOCAL_LM_STUDIO.applyTo(snap);
         assertEquals("local", snap.provider());
         assertEquals("http://127.0.0.1:1234/v1", snap.baseUrl());
-        assertFalse(LlmProviderProfile.LOCAL_LM_STUDIO.allowsFreeProviderFields());
+        assertTrue(LlmProviderProfile.LOCAL_LM_STUDIO.allowsFreeProviderFields());
 
         LlmProviderProfile.OPENROUTER.applyTo(snap);
         assertEquals("openai_compatible", snap.provider());
@@ -67,15 +67,16 @@ class LlmProviderProfileTest {
     @Test
     void mergeAndValidate() {
         CompanionAiSettings base = new CompanionAiSettings()
-                .setProvider(LlmProviderMode.DISABLED)
-                .setEnableAiActions(false);
+                .setProvider(LlmProviderMode.DISABLED);
         AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(base);
         snap.applyProfile(LlmProviderProfile.GROQ);
-        snap.setEnableAiActions(true);
+        snap.setServerLlmOnly(true);
         CompanionAiSettings merged = snap.mergeInto(base);
         assertEquals(LlmProviderMode.OPENAI_COMPATIBLE, merged.provider());
         assertTrue(merged.baseUrl().contains("groq"));
-        assertTrue(merged.enableAiActions());
+        assertFalse(merged.enableAiActions());
+        assertFalse(merged.nameListen());
+        assertEquals(com.azscompanions.ai.ChatListenMode.OFF, merged.chatListenMode());
         assertNull(snap.validate());
 
         snap.setBaseUrl("not-a-url");

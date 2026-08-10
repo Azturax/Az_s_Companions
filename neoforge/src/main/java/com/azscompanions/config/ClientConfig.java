@@ -60,7 +60,7 @@ public final class ClientConfig {
 
         builder.push("dynamicLights");
         DYNAMIC_LIGHTS_COMPAT = builder.comment(
-                        "Soft-compat with LambDynamicLights / RyoamicLights / similar: register companion entity light handlers when those mods are present.")
+                        "Soft-compat for LambDynamicLights / RyoamicLights / similar. Companions expose held torches via LivingEntity hand slots; enables optional legacy API registration when those mods are present.")
                 .define("dynamicLightsCompat", true);
         builder.pop();
 

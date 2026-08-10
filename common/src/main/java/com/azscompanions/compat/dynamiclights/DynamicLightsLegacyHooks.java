@@ -61,10 +61,16 @@ public final class DynamicLightsLegacyHooks {
                 Method makeLiving = handler.getMethod("makeLivingEntityHandler", handler);
                 // Zero-luminance extra handler — makeLivingEntityHandler merges held-item scanning.
                 Object empty = proxyEmptyHandler(handler);
+                if (empty == null) {
+                    return false;
+                }
                 livingHandler = makeLiving.invoke(null, empty);
             } catch (NoSuchMethodException noMake) {
                 // Some forks only expose registerDynamicLightHandler(EntityType, DynamicLightHandler)
                 livingHandler = proxyEmptyHandler(handler);
+            }
+            if (livingHandler == null) {
+                return false;
             }
 
             Method register = handlers.getMethod("registerDynamicLightHandler",

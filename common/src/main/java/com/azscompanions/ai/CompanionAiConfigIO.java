@@ -102,14 +102,7 @@ public final class CompanionAiConfigIO {
         } else if (root.has("filterProfanity")) {
             s.setCensorChat(root.get("filterProfanity").getAsBoolean());
         }
-        if (root.has("chatListenMode")) {
-            s.setChatListenMode(ChatListenMode.fromConfig(root.get("chatListenMode").getAsString()));
-        } else if (root.has("chatReaction")) {
-            s.setChatListenMode(ChatListenMode.fromConfig(root.get("chatReaction").getAsString()));
-        }
-        if (root.has("nameListen")) {
-            s.setNameListen(root.get("nameListen").getAsBoolean());
-        }
+        // Legacy keys ignored (0.3.12 ask-only): chatListenMode, chatReaction, nameListen
         if (root.has("chatReactRange")) {
             s.setChatReactRange(root.get("chatReactRange").getAsDouble());
         }
@@ -150,9 +143,7 @@ public final class CompanionAiConfigIO {
         if (root.has("callPlayerCooldownSeconds")) {
             s.setCallPlayerCooldownSeconds(root.get("callPlayerCooldownSeconds").getAsInt());
         }
-        if (root.has("enableAiActions")) {
-            s.setEnableAiActions(root.get("enableAiActions").getAsBoolean());
-        }
+        // Legacy key ignored (0.3.12): enableAiActions
         if (root.has("aiActionReach")) {
             s.setAiActionReach(root.get("aiActionReach").getAsInt());
         }
@@ -243,9 +234,10 @@ public final class CompanionAiConfigIO {
     public static JsonObject toJson(CompanionAiSettings s) {
         JsonObject root = new JsonObject();
         root.addProperty("_comment",
-                "Text dialogue AI. provider: disabled|local|openai_compatible|mcp (aliases: litellm, openrouter, …). "
-                        + "chatListenMode: off|player|global. Multiplayer: shared server LLM endpoint "
-                        + "(serverLlmOnly), separate minds per companion (perCompanionMemory). Prefer env API keys.");
+                "Text dialogue AI via /ask only. provider: disabled|local|openai_compatible|mcp "
+                        + "(aliases: litellm, openrouter, …). Multiplayer: shared server LLM endpoint "
+                        + "(serverLlmOnly), separate minds per companion (perCompanionMemory). Prefer env API keys. "
+                        + "Legacy chatListenMode/nameListen/enableAiActions are ignored.");
         root.addProperty("provider", s.provider().name().toLowerCase());
         root.addProperty("baseUrl", s.baseUrl());
         root.addProperty("model", s.model());
@@ -264,8 +256,6 @@ public final class CompanionAiConfigIO {
         root.addProperty("perCompanionMemory", s.perCompanionMemory());
         root.addProperty("memoryMaxMessages", s.memoryMaxMessages());
         root.addProperty("censorChat", s.censorChat());
-        root.addProperty("chatListenMode", s.chatListenMode().configName());
-        root.addProperty("nameListen", s.nameListen());
         root.addProperty("chatReactRange", s.chatReactRange());
         root.addProperty("chatReactCooldownSeconds", s.chatReactCooldownSeconds());
         JsonArray censorExtra = new JsonArray();
@@ -278,7 +268,6 @@ public final class CompanionAiConfigIO {
         root.addProperty("callPlayerAfterSeconds", s.callPlayerAfterSeconds());
         root.addProperty("callPlayerDistance", s.callPlayerDistance());
         root.addProperty("callPlayerCooldownSeconds", s.callPlayerCooldownSeconds());
-        root.addProperty("enableAiActions", s.enableAiActions());
         root.addProperty("aiActionReach", s.aiActionReach());
         root.addProperty("aiActionCooldownTicks", s.aiActionCooldownTicks());
         root.addProperty("childAutonomy", s.childAutonomy().configName());

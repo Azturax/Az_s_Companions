@@ -40,7 +40,9 @@
     "ftbchunks": "*",
     "essential": "*",
     "e4mc": "*",
-    "world-host": "*"
+    "world-host": "*",
+    "lambdynlights": "*",
+    "ryoamiclights": "*"
   },
   "custom": {
     "azscompanions:support": {
