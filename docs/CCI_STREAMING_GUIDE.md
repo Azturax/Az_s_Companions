@@ -36,6 +36,23 @@ Implemented in **both** `neoforge-cci` and `fabric-cci`. Unless noted, the compa
 | `companion_set_offhand` | `minecraft:shield` / `clear` | Set off hand |
 | `companion_set_armor` | `helmet=minecraft:iron_helmet;boots=…` | Set armor slots |
 | `companion_set_hand` / `companion_set_equipment` | `mainhand=…;offhand=…;helmet=…` | Any equipment keys |
+| `companion_modify` | `form=wolf;skin=Notch;name=Fluffy;attitude=passive` | Edit the **already called/summoned** companion (no new recruit) |
+| `companion_turn_evil` | `seconds=10` (optional, 5–15) | Playful temporary HOSTILE (~10s default), then restore prior attitude |
+
+**Modify (called / summoned companion)**
+
+- Requires an owned companion within ~96 blocks (charm-called or CCI-summoned).
+- Same keys as summon: `form`, `skin`/`player`, `name`, `attitude`, `team`, plus equipment slots.
+- Does **not** create a new companion — only updates the nearest owned one.
+- Fabric fallback: `/azscci companion_modify form=cat;name=Mochi`
+
+**Playful “turn evil”**
+
+- Temporary `HOSTILE` toward nearby players/mobs **except** the owner/trusted (same as normal hostile attitude).
+- Duration 5–15 seconds (default 10), then attitude restores automatically. Ownership/charm binding unchanged.
+- CCI: `companion_turn_evil` / aliases `turn_evil`, `go_evil`, `berserk`
+- Hidden in-game: right-click your companion with a **fermented spider eye** (consumes 1; ~10s).
+- Dialogue + smoke/angry particles on activate; purr + hearts when calming down.
 
 **Attitude**
 

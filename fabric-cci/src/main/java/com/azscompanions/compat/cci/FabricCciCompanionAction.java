@@ -20,7 +20,11 @@ public enum FabricCciCompanionAction {
     SET_EQUIPMENT,
     SET_MAINHAND,
     SET_OFFHAND,
-    SET_ARMOR;
+    SET_ARMOR,
+    /** Apply form/skin/name/attitude/team/gear to the owner's active called companion. */
+    MODIFY,
+    /** Brief playful HOSTILE burst, then restore prior attitude. */
+    TURN_EVIL;
 
     @Nullable
     public static FabricCciCompanionAction fromSubject(String subject) {
@@ -43,6 +47,9 @@ public enum FabricCciCompanionAction {
             case "companion_set_mainhand", "set_mainhand", "mainhand" -> SET_MAINHAND;
             case "companion_set_offhand", "set_offhand", "offhand" -> SET_OFFHAND;
             case "companion_set_armor", "set_armor", "armor" -> SET_ARMOR;
+            case "companion_modify", "modify", "companion_customize", "customize",
+                 "companion_edit", "edit", "set_appearance", "companion_set_appearance" -> MODIFY;
+            case "companion_turn_evil", "turn_evil", "go_evil", "berserk", "companion_berserk" -> TURN_EVIL;
             default -> null;
         };
     }

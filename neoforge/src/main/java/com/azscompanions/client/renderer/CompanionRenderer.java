@@ -16,8 +16,10 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
@@ -47,7 +49,7 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
         }
         if (!form.isPlayer()) {
             this.shadowRadius = 0.4f * entity.getBodyScale();
-            formRenderer.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+            formRenderer.render(entity, form, entityYaw, partialTicks, poseStack, buffer, packedLight);
             if (this.shouldShowName(entity)) {
                 this.renderNameTag(entity, entity.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
             }
@@ -75,6 +77,35 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
             return false;
         }
         return super.shouldShowName(entity);
+    }
+
+    /**
+     * Nametag Y from the form currently being rendered (including Customize draft), every frame —
+     * never reuse a previous form's attachment height after chicken↔player swaps.
+     */
+    @Override
+    protected void renderNameTag(CompanionEntity entity, Component displayName, PoseStack poseStack,
+                                 MultiBufferSource bufferSource, int packedLight, float partialTick) {
+        Vec3 attachment = entity.getAttachments().getNullable(
+                EntityAttachment.NAME_TAG, 0, entity.getViewYRot(partialTick));
+        double currentY = attachment != null ? attachment.y : entity.getBbHeight();
+        double desiredY = resolveNameTagBodyHeight(entity);
+        poseStack.pushPose();
+        poseStack.translate(0.0, desiredY - currentY, 0.0);
+        super.renderNameTag(entity, displayName, poseStack, bufferSource, packedLight, partialTick);
+        poseStack.popPose();
+    }
+
+    private static float resolveNameTagBodyHeight(CompanionEntity entity) {
+        CompanionForm form = entity.getForm();
+        float scale = entity.getBodyScale();
+        if (ClientAppearanceDraft.matches(entity)) {
+            if (ClientAppearanceDraft.ACTIVE.form != null) {
+                form = ClientAppearanceDraft.ACTIVE.form;
+            }
+            scale = ClientAppearanceDraft.ACTIVE.scale;
+        }
+        return form.height() * scale;
     }
 
     @Override

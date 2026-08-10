@@ -1,125 +1,228 @@
 package com.azscompanions.client.renderer;
 
-import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.FabricCompanionMode;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.WalkAnimationState;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+
+import java.lang.reflect.Field;
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
- * Renders non-player companion forms using vanilla mob models/textures.
+ * Renders non-player companion forms by delegating to vanilla mob renderers.
+ * Client-only proxy entities avoid ClassCastException in models that cast to Wolf/Fox/etc.,
+ * and LivingEntityRenderer supplies the correct upright orientation in world and GUI.
+ * Walk/attack state and equipment are copied each frame so vanilla layers animate and show items.
  */
 public final class CompanionMobFormRenderer {
-    private final EntityModel<LivingEntity> chicken;
-    private final EntityModel<LivingEntity> wolf;
-    private final EntityModel<LivingEntity> cat;
-    private final EntityModel<LivingEntity> cow;
-    private final EntityModel<LivingEntity> pig;
-    private final EntityModel<LivingEntity> sheep;
-    private final EntityModel<LivingEntity> fox;
-    private final EntityModel<LivingEntity> rabbit;
-    private final EntityModel<LivingEntity> bee;
-    private final EntityModel<LivingEntity> zombie;
-    private final EntityModel<LivingEntity> skeleton;
-    private final EntityModel<LivingEntity> spider;
-    private final EntityModel<LivingEntity> enderman;
-    private final EntityModel<LivingEntity> husk;
-    private final EntityModel<LivingEntity> stray;
+    private static final Field WALK_SPEED_OLD;
+    private static final Field WALK_POSITION;
 
-    @SuppressWarnings("unchecked")
+    static {
+        try {
+            WALK_SPEED_OLD = WalkAnimationState.class.getDeclaredField("speedOld");
+            WALK_POSITION = WalkAnimationState.class.getDeclaredField("position");
+            WALK_SPEED_OLD.setAccessible(true);
+            WALK_POSITION.setAccessible(true);
+        } catch (ReflectiveOperationException ex) {
+            throw new ExceptionInInitializerError(ex);
+        }
+    }
+
+    private final Map<CompanionForm, LivingEntity> visuals = new EnumMap<>(CompanionForm.class);
+    private final ItemInHandRenderer itemInHandRenderer;
+
     public CompanionMobFormRenderer(EntityRendererProvider.Context context) {
-        this.chicken = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.ChickenModel<>(context.bakeLayer(ModelLayers.CHICKEN));
-        this.wolf = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.WolfModel<>(context.bakeLayer(ModelLayers.WOLF));
-        this.cat = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.OcelotModel<>(context.bakeLayer(ModelLayers.CAT));
-        this.cow = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.CowModel<>(context.bakeLayer(ModelLayers.COW));
-        this.pig = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.PigModel<>(context.bakeLayer(ModelLayers.PIG));
-        this.sheep = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.SheepModel<>(context.bakeLayer(ModelLayers.SHEEP));
-        this.fox = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.FoxModel<>(context.bakeLayer(ModelLayers.FOX));
-        this.rabbit = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.RabbitModel<>(context.bakeLayer(ModelLayers.RABBIT));
-        this.bee = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.BeeModel<>(context.bakeLayer(ModelLayers.BEE));
-        this.zombie = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.ZombieModel<>(context.bakeLayer(ModelLayers.ZOMBIE));
-        this.skeleton = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.SkeletonModel<>(context.bakeLayer(ModelLayers.SKELETON));
-        this.spider = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.SpiderModel<>(context.bakeLayer(ModelLayers.SPIDER));
-        this.enderman = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.EndermanModel<>(context.bakeLayer(ModelLayers.ENDERMAN));
-        this.husk = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.ZombieModel<>(context.bakeLayer(ModelLayers.HUSK));
-        this.stray = (EntityModel<LivingEntity>) (EntityModel<?>) new net.minecraft.client.model.SkeletonModel<>(context.bakeLayer(ModelLayers.STRAY));
+        this.itemInHandRenderer = context.getItemInHandRenderer();
     }
 
-    public void render(FabricCompanionEntity entity, float entityYaw, float partialTicks, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight) {
-        CompanionForm form = entity.getForm();
-        if (form.isPlayer()) {
+    public void render(FabricCompanionEntity entity, CompanionForm form, float entityYaw, float partialTicks,
+                       PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+        if (form == null || form.isPlayer()) {
             return;
         }
-        EntityModel<LivingEntity> model = modelFor(form);
-        ResourceLocation texture = textureFor(form);
-        if (model == null || texture == null) {
+        Level level = entity.level();
+        if (level == null) {
+            return;
+        }
+        LivingEntity visual = visualFor(form, level);
+        if (visual == null) {
             return;
         }
 
-        poseStack.pushPose();
-        float bodyYaw = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
-        poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
-        float limbSwing = entity.walkAnimation.position(partialTicks);
-        float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
-        float ageInTicks = entity.tickCount + partialTicks;
-        float netHeadYaw = Mth.rotLerp(partialTicks, entity.yHeadRotO, entity.yHeadRot) - bodyYaw;
-        float headPitch = Mth.lerp(partialTicks, entity.xRotO, entity.getXRot());
+        syncVisual(entity, visual);
+        @SuppressWarnings("unchecked")
+        EntityRenderer<LivingEntity> renderer =
+                (EntityRenderer<LivingEntity>) (EntityRenderer<?>)
+                        Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(visual);
+        renderer.render(visual, entityYaw, partialTicks, poseStack, buffer, packedLight);
 
-        model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
-        model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
-        model.renderToBuffer(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);
-        poseStack.popPose();
+        if (!usesHumanoidHeldItems(form)) {
+            renderAnimalHeldItems(entity, form, poseStack, buffer, packedLight);
+        }
     }
 
-    private EntityModel<LivingEntity> modelFor(CompanionForm form) {
+    private LivingEntity visualFor(CompanionForm form, Level level) {
+        LivingEntity existing = visuals.get(form);
+        if (existing != null && existing.level() == level) {
+            return existing;
+        }
+        EntityType<? extends LivingEntity> type = vanillaType(form);
+        if (type == null) {
+            return null;
+        }
+        LivingEntity created = type.create(level);
+        if (created == null) {
+            return null;
+        }
+        if (created instanceof net.minecraft.world.entity.Mob mob) {
+            mob.setNoAi(true);
+        }
+        created.setSilent(true);
+        created.setCustomNameVisible(false);
+        created.setPose(Pose.STANDING);
+        visuals.put(form, created);
+        return created;
+    }
+
+    private static void syncVisual(FabricCompanionEntity source, LivingEntity visual) {
+        visual.tickCount = source.tickCount;
+        visual.setPosRaw(source.getX(), source.getY(), source.getZ());
+        visual.xo = source.xo;
+        visual.yo = source.yo;
+        visual.zo = source.zo;
+        visual.setYRot(source.getYRot());
+        visual.setXRot(source.getXRot());
+        visual.yRotO = source.yRotO;
+        visual.xRotO = source.xRotO;
+        visual.yBodyRot = source.yBodyRot;
+        visual.yBodyRotO = source.yBodyRotO;
+        visual.yHeadRot = source.yHeadRot;
+        visual.yHeadRotO = source.yHeadRotO;
+        copyWalkAnimation(source.walkAnimation, visual.walkAnimation);
+        visual.attackAnim = source.attackAnim;
+        visual.oAttackAnim = source.oAttackAnim;
+        visual.swinging = source.swinging;
+        visual.swingingArm = source.swingingArm;
+        visual.swingTime = source.swingTime;
+        visual.hurtTime = source.hurtTime;
+        visual.hurtDuration = source.hurtDuration;
+        visual.deathTime = source.deathTime;
+        visual.setDeltaMovement(source.getDeltaMovement());
+        visual.setPose(source.getPose() == Pose.SLEEPING ? Pose.STANDING : source.getPose());
+        visual.setShiftKeyDown(source.isShiftKeyDown());
+        visual.setSprinting(source.isSprinting());
+        visual.setSwimming(source.isSwimming());
+        visual.setCustomNameVisible(false);
+
+        boolean sitting = source.getMode() == FabricCompanionMode.SIT
+                || source.getMode() == FabricCompanionMode.STAY;
+        boolean aggressive = source.getTarget() != null && source.getTarget().isAlive() || source.swinging;
+        if (visual instanceof net.minecraft.world.entity.Mob mob) {
+            mob.setAggressive(aggressive);
+        }
+
+        var scaleAttr = visual.getAttribute(Attributes.SCALE);
+        if (scaleAttr != null) {
+            scaleAttr.setBaseValue(source.getBodyScale());
+        }
+
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack stack = source.getItemBySlot(slot);
+            if (!ItemStack.matches(visual.getItemBySlot(slot), stack)) {
+                visual.setItemSlot(slot, stack.copy());
+            }
+        }
+
+        if (visual instanceof TamableAnimal tamable) {
+            tamable.setInSittingPose(sitting);
+            tamable.setOrderedToSit(sitting);
+        }
+        if (visual instanceof Fox fox) {
+            fox.setSitting(sitting);
+            fox.setIsCrouching(source.isShiftKeyDown());
+        }
+    }
+
+    private static void copyWalkAnimation(WalkAnimationState from, WalkAnimationState to) {
+        to.setSpeed(from.speed());
+        try {
+            WALK_SPEED_OLD.setFloat(to, WALK_SPEED_OLD.getFloat(from));
+            WALK_POSITION.setFloat(to, WALK_POSITION.getFloat(from));
+        } catch (IllegalAccessException ignored) {
+        }
+    }
+
+    private void renderAnimalHeldItems(FabricCompanionEntity entity, CompanionForm form, PoseStack poseStack,
+                                       MultiBufferSource buffer, int packedLight) {
+        ItemStack main = entity.getMainHandItem();
+        ItemStack off = entity.getOffhandItem();
+        if (main.isEmpty() && off.isEmpty()) {
+            return;
+        }
+        float height = form.height() * entity.getBodyScale();
+        if (!main.isEmpty()) {
+            poseStack.pushPose();
+            poseStack.translate(0.28f, height * 0.45f, -0.05f);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
+            poseStack.scale(0.7f, 0.7f, 0.7f);
+            itemInHandRenderer.renderItem(entity, main, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,
+                    false, poseStack, buffer, packedLight);
+            poseStack.popPose();
+        }
+        if (!off.isEmpty()) {
+            poseStack.pushPose();
+            poseStack.translate(-0.28f, height * 0.45f, -0.05f);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
+            poseStack.scale(0.7f, 0.7f, 0.7f);
+            itemInHandRenderer.renderItem(entity, off, ItemDisplayContext.THIRD_PERSON_LEFT_HAND,
+                    true, poseStack, buffer, packedLight);
+            poseStack.popPose();
+        }
+    }
+
+    private static boolean usesHumanoidHeldItems(CompanionForm form) {
         return switch (form) {
-            case CHICKEN -> chicken;
-            case WOLF -> wolf;
-            case CAT -> cat;
-            case COW -> cow;
-            case PIG -> pig;
-            case SHEEP -> sheep;
-            case FOX -> fox;
-            case RABBIT -> rabbit;
-            case BEE -> bee;
-            case ZOMBIE -> zombie;
-            case SKELETON -> skeleton;
-            case SPIDER -> spider;
-            case ENDERMAN -> enderman;
-            case HUSK -> husk;
-            case STRAY -> stray;
-            default -> null;
+            case ZOMBIE, SKELETON, HUSK, STRAY, ENDERMAN -> true;
+            default -> false;
         };
     }
 
-    private static ResourceLocation textureFor(CompanionForm form) {
+    private static EntityType<? extends LivingEntity> vanillaType(CompanionForm form) {
         return switch (form) {
-            case CHICKEN -> ResourceLocation.withDefaultNamespace("textures/entity/chicken.png");
-            case WOLF -> ResourceLocation.withDefaultNamespace("textures/entity/wolf/wolf.png");
-            case CAT -> ResourceLocation.withDefaultNamespace("textures/entity/cat/tabby.png");
-            case COW -> ResourceLocation.withDefaultNamespace("textures/entity/cow/cow.png");
-            case PIG -> ResourceLocation.withDefaultNamespace("textures/entity/pig/pig.png");
-            case SHEEP -> ResourceLocation.withDefaultNamespace("textures/entity/sheep/sheep.png");
-            case FOX -> ResourceLocation.withDefaultNamespace("textures/entity/fox/fox.png");
-            case RABBIT -> ResourceLocation.withDefaultNamespace("textures/entity/rabbit/brown.png");
-            case BEE -> ResourceLocation.withDefaultNamespace("textures/entity/bee/bee.png");
-            case ZOMBIE -> ResourceLocation.withDefaultNamespace("textures/entity/zombie/zombie.png");
-            case SKELETON -> ResourceLocation.withDefaultNamespace("textures/entity/skeleton/skeleton.png");
-            case SPIDER -> ResourceLocation.withDefaultNamespace("textures/entity/spider/spider.png");
-            case ENDERMAN -> ResourceLocation.withDefaultNamespace("textures/entity/enderman/enderman.png");
-            case HUSK -> ResourceLocation.withDefaultNamespace("textures/entity/zombie/husk.png");
-            case STRAY -> ResourceLocation.withDefaultNamespace("textures/entity/skeleton/stray.png");
+            case CHICKEN -> EntityType.CHICKEN;
+            case WOLF -> EntityType.WOLF;
+            case CAT -> EntityType.CAT;
+            case COW -> EntityType.COW;
+            case PIG -> EntityType.PIG;
+            case SHEEP -> EntityType.SHEEP;
+            case FOX -> EntityType.FOX;
+            case RABBIT -> EntityType.RABBIT;
+            case BEE -> EntityType.BEE;
+            case ZOMBIE -> EntityType.ZOMBIE;
+            case SKELETON -> EntityType.SKELETON;
+            case SPIDER -> EntityType.SPIDER;
+            case ENDERMAN -> EntityType.ENDERMAN;
+            case HUSK -> EntityType.HUSK;
+            case STRAY -> EntityType.STRAY;
             default -> null;
         };
     }

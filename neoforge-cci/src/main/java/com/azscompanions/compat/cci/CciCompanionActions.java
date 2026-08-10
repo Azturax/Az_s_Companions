@@ -108,6 +108,13 @@ public final class CciCompanionActions {
             case SET_OFFHAND -> applySingleSlot(player, companion, "offhand",
                     params.first("offhand", "off", "item", "raw"));
             case SET_ARMOR, SET_EQUIPMENT -> applyEquipmentParams(player, companion, params, safe);
+            case MODIFY -> modify(player, companion, params);
+            case TURN_EVIL -> {
+                int seconds = params.durationSecondsOr(CompanionEntity.PLAYFUL_EVIL_DEFAULT_SECONDS);
+                companion.activatePlayfulEvil(seconds * 20);
+                toast(player, companion.getChatDisplayName(),
+                        "Going evil for " + seconds + "s! :D");
+            }
             default -> {
             }
         }
@@ -119,30 +126,87 @@ public final class CciCompanionActions {
             toast(player, "Summon failed", "Companion limit reached or spawn failed.");
             return;
         }
-        CompanionForm form = params.formOr(CompanionForm.PLAYER);
-        companion.setForm(form);
-        companion.setAttitude(attitude);
-        String team = params.teamOr("");
-        if (!team.isBlank()) {
-            companion.setTeamId(team);
-        }
-        String name = params.displayName();
-        if (name != null && !name.isBlank()) {
-            companion.setCustomDisplayName(name);
-        }
-        String skinUser = params.skinUsername();
-        if (form.isPlayer() && skinUser != null && !skinUser.isBlank()) {
-            resolveAndApplySkin(companion, skinUser);
-            if (name == null || name.isBlank()) {
-                companion.setCustomDisplayName(skinUser);
-            }
-        } else if (!form.isPlayer()) {
-            companion.setSkinPath("");
-        }
+        applyAppearance(companion, params, attitude, true);
         applyEquipmentParams(player, companion, params, null);
+        CompanionForm form = companion.getForm();
+        String team = companion.getTeamId();
         toast(player, companion.getChatDisplayName(),
                 "Summoned " + form.displayLabel() + " (" + attitude.serializedName().toLowerCase(Locale.ROOT) + ")"
-                        + (team.isBlank() ? "" : " team=" + team));
+                        + (team == null || team.isBlank() ? "" : " team=" + team));
+    }
+
+    /**
+     * Customize the owner's currently called / summoned companion in place
+     * (form, skin, name, attitude, team, equipment) — does not recruit a new one.
+     */
+    private static void modify(ServerPlayer player, CompanionEntity companion, CciCompanionParams params) {
+        CompanionAttitude attitude = params.has("attitude") || params.has("stance") || params.has("mode")
+                ? params.attitudeOr(companion.getAttitude())
+                : companion.getAttitude();
+        boolean changedAppearance = applyAppearance(companion, params, attitude, false);
+        boolean hadEquipmentKeys = params.has("mainhand") || params.has("main") || params.has("hand")
+                || params.has("offhand") || params.has("off")
+                || params.has("helmet") || params.has("head")
+                || params.has("chestplate") || params.has("chest")
+                || params.has("leggings") || params.has("legs")
+                || params.has("boots") || params.has("feet");
+        if (hadEquipmentKeys) {
+            applyEquipmentParams(player, companion, params, null);
+        }
+        if (changedAppearance || hadEquipmentKeys) {
+            toast(player, companion.getChatDisplayName(),
+                    "Modified — " + companion.getForm().displayLabel()
+                            + " / " + companion.getAttitude().serializedName().toLowerCase(Locale.ROOT));
+        } else {
+            toast(player, companion.getChatDisplayName(),
+                    "Nothing to modify. Use form=/skin=/name=/attitude=/team=/gear keys.");
+        }
+    }
+
+    private static boolean applyAppearance(CompanionEntity companion, CciCompanionParams params,
+                                           CompanionAttitude attitude, boolean forceAttitude) {
+        boolean changed = false;
+        boolean hasForm = params.has("form") || params.has("mob") || params.has("species");
+        CompanionForm form = hasForm || forceAttitude
+                ? params.formOr(forceAttitude ? CompanionForm.PLAYER : companion.getForm())
+                : companion.getForm();
+        if (hasForm || forceAttitude) {
+            companion.setForm(form);
+            changed = true;
+        }
+        if (forceAttitude || params.has("attitude") || params.has("stance") || params.has("mode")) {
+            companion.setAttitude(attitude);
+            changed = true;
+        }
+        if (params.has("team") || params.has("teamid") || params.has("squad")) {
+            String team = params.teamOr("");
+            companion.setTeamId(team);
+            changed = true;
+        }
+        String name = params.displayName();
+        if (name != null && !name.isBlank() && (params.has("name") || params.has("displayname"))) {
+            companion.setCustomDisplayName(name);
+            changed = true;
+        }
+        String skinUser = params.skinUsername();
+        if (skinUser != null && !skinUser.isBlank()) {
+            if (form.isPlayer() || hasForm) {
+                if (!form.isPlayer()) {
+                    companion.setForm(CompanionForm.PLAYER);
+                    form = CompanionForm.PLAYER;
+                }
+                resolveAndApplySkin(companion, skinUser);
+                if ((!params.has("name") && !params.has("displayname"))
+                        && (name == null || name.isBlank())) {
+                    companion.setCustomDisplayName(skinUser);
+                }
+                changed = true;
+            }
+        } else if (hasForm && !form.isPlayer()) {
+            companion.setSkinPath("");
+            changed = true;
+        }
+        return changed;
     }
 
     private static void applySingleSlot(ServerPlayer player, CompanionEntity companion, String slotKey, @Nullable String itemId) {

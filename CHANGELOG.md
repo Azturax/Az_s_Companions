@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.3.2
+
+Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fixes
+- **Inventory GUI:** `companion_inventory.png` panel fill is vanilla light gray (no solid black interiors); slot layout unchanged.
+- **Nametag height:** form/scale sync refreshes hitbox + name-tag attachment on clients; renderers recompute nametag Y from the **current** form/scale every frame (chicken↔player swaps no longer stick).
+- **Mob form animations:** proxy visuals copy walk limb position/speed, attack swing, and aggressive state each frame so animal/hostile forms walk/idle/attack like vanilla.
+- **Mob held items:** equipment synced to proxy (zombie/skeleton/armor layers); animals/spider get mainhand/offhand drawn via `ItemInHandRenderer`.
+
+### Customize
+- **Form tab:** when an animal/hostile is selected, a **Display name** field sets the companion custom name (same persistence as Name tab). Pecker default name still applies on first recruit.
+
+### CCI
+- **`companion_modify`:** edit the owner's currently called/summoned companion (form, skin, name, attitude, team, equipment) without recruiting a new one. Aliases: `modify`, `customize`, `edit`.
+- **`companion_turn_evil`:** playful temporary HOSTILE (5–15s, default 10) toward nearby non-owner targets, then restore prior attitude. Aliases: `turn_evil`, `go_evil`, `berserk`.
+- Hidden: right-click companion with a **fermented spider eye** → same playful evil burst (~10s). Ownership/charm unchanged.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.2+1.21.1.jar` | `azscompanions-fabric-0.3.2+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.2+1.21.1.jar` | `azscompanions-fabric-cci-0.3.2+1.21.1.jar` |
+
+## 0.3.1
+
+Release: [v0.3.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.1) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fixes
+- **Form crash:** non-player forms no longer pass `CompanionEntity` into vanilla models that cast to Wolf/Fox/etc. (`ClassCastException` in `CompanionMobFormRenderer`). Forms render via client-only proxy entities + vanilla mob renderers.
+- **Upside-down form preview:** animal/hostile Customize Form previews (and world forms) render upright with correct standing pose (no sleeping/sitting).
+- **Inventory GUI graphic:** custom `textures/gui/companion_inventory.png` sized for `194×220` layout — armor+shield column, 3×9 storage, 9-slot companion hotbar, gap, player inventory — replacing mismatched `generic_54` fills/blits.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.1+1.21.1.jar` | `azscompanions-fabric-0.3.1+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.1+1.21.1.jar` | `azscompanions-fabric-cci-0.3.1+1.21.1.jar` |
+
 ## 0.3.0
 
 Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

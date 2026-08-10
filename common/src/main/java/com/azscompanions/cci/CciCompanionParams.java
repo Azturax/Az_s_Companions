@@ -19,6 +19,8 @@ import java.util.Map;
  *   <li>{@code skin=Notch;team=blue}</li>
  *   <li>{@code mainhand=minecraft:diamond_sword}</li>
  *   <li>{@code helmet=minecraft:iron_helmet;offhand=clear}</li>
+ *   <li>{@code form=wolf;skin=Notch;name=Fluffy} ({@code companion_modify})</li>
+ *   <li>{@code seconds=10} ({@code companion_turn_evil})</li>
  *   <li>{@code red} (bare team for {@code companion_set_team})</li>
  * </ul>
  */
@@ -118,6 +120,29 @@ public final class CciCompanionParams {
 
     public String displayName() {
         return first("name", "displayname");
+    }
+
+    /**
+     * Duration in seconds for timed actions (e.g. playful evil). Clamped to 5–15.
+     * Accepts {@code seconds=} / {@code duration=} or a bare integer message.
+     */
+    public int durationSecondsOr(int fallback) {
+        String v = first("seconds", "duration", "secs", "time");
+        if (v == null) {
+            v = get("raw");
+        }
+        if (v == null || v.isBlank()) {
+            return clampDurationSeconds(fallback);
+        }
+        try {
+            return clampDurationSeconds(Integer.parseInt(v.trim()));
+        } catch (NumberFormatException ex) {
+            return clampDurationSeconds(fallback);
+        }
+    }
+
+    public static int clampDurationSeconds(int seconds) {
+        return Math.max(5, Math.min(15, seconds));
     }
 
     public String equipment(String slotKey) {

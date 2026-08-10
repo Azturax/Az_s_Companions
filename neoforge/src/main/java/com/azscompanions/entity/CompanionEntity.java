@@ -132,7 +132,13 @@ public class CompanionEntity extends PathfinderMob {
     private String behaviorStyle = "gentle";
     /** Once Kon-identity bed grant has been given to the owner. */
     private boolean konBedGranted;
+    /** Transient playful “turn evil” countdown (ticks). Not persisted. */
+    private int playfulEvilTicks;
+    private CompanionAttitude playfulEvilRestoreAttitude = CompanionAttitude.PASSIVE;
     // skinPath / bodyScale / slimArms live in synched entity data
+
+    /** Default playful-evil duration when no CCI {@code seconds=} is given. */
+    public static final int PLAYFUL_EVIL_DEFAULT_SECONDS = 10;
 
     public CompanionEntity(EntityType<? extends CompanionEntity> type, Level level) {
         super(type, level);
@@ -233,6 +239,7 @@ public class CompanionEntity extends PathfinderMob {
             tickOwnerActivity();
             tickHomeBedLeash();
             tickSleepPurr();
+            tickPlayfulEvil();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
@@ -488,12 +495,87 @@ public class CompanionEntity extends PathfinderMob {
 
         ItemStack held = player.getItemInHand(hand);
         if (!held.isEmpty()) {
+            // Hidden easter egg: fermented spider eye → brief playful HOSTILE burst.
+            if (held.is(net.minecraft.world.item.Items.FERMENTED_SPIDER_EYE)) {
+                return feedPlayfulEvil(serverPlayer, hand);
+            }
             if (isEdibleFood(held)) {
                 return feedFromPlayer(serverPlayer, hand);
             }
             return giveItemToHands(serverPlayer, hand, held);
         }
         return takeItemFromHands(serverPlayer, hand);
+    }
+
+    /**
+     * Brief playful “evil mode”: temporary {@link CompanionAttitude#HOSTILE} toward nearby
+     * non-owner targets, then auto-revert. Never attacks the owner. Ownership unchanged.
+     */
+    public void activatePlayfulEvil(int durationTicks) {
+        if (level().isClientSide) {
+            return;
+        }
+        int ticks = Math.max(5 * 20, Math.min(15 * 20, durationTicks));
+        if (playfulEvilTicks <= 0) {
+            playfulEvilRestoreAttitude = getAttitude();
+        }
+        playfulEvilTicks = ticks;
+        setAttitude(CompanionAttitude.HOSTILE);
+        CompanionMode mode = getMode();
+        if (mode == CompanionMode.SIT || mode == CompanionMode.STAY) {
+            setMode(CompanionMode.FOLLOW);
+        }
+        sayOwnerChatLine("dialogue.azscompanions.evil_on");
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.WARDEN_ANGRY, SoundSource.NEUTRAL,
+                0.35f, 1.4f + random.nextFloat() * 0.2f);
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.SMOKE,
+                    getX(), getY() + getBbHeight() * 0.8d, getZ(),
+                    12, 0.35d, 0.25d, 0.35d, 0.02d);
+            serverLevel.sendParticles(
+                    ParticleTypes.ANGRY_VILLAGER,
+                    getX(), getY() + getBbHeight() * 1.0d, getZ(),
+                    4, 0.25d, 0.15d, 0.25d, 0.0d);
+        }
+    }
+
+    public boolean isPlayfulEvil() {
+        return playfulEvilTicks > 0;
+    }
+
+    private void tickPlayfulEvil() {
+        if (playfulEvilTicks <= 0) {
+            return;
+        }
+        playfulEvilTicks--;
+        if (playfulEvilTicks > 0) {
+            return;
+        }
+        setAttitude(playfulEvilRestoreAttitude == null
+                ? CompanionAttitude.PASSIVE
+                : playfulEvilRestoreAttitude);
+        setTarget(null);
+        sayOwnerChatLine("dialogue.azscompanions.evil_off");
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL,
+                0.85f, 1.05f + random.nextFloat() * 0.1f);
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.HEART,
+                    getX(), getY() + getBbHeight() * 0.9d, getZ(),
+                    6, 0.35d, 0.25d, 0.35d, 0.02d);
+        }
+    }
+
+    private InteractionResult feedPlayfulEvil(ServerPlayer player, InteractionHand hand) {
+        if (!player.getAbilities().instabuild) {
+            ItemStack stack = player.getItemInHand(hand);
+            stack.shrink(1);
+            player.setItemInHand(hand, stack.isEmpty() ? ItemStack.EMPTY : stack);
+        }
+        activatePlayfulEvil(PLAYFUL_EVIL_DEFAULT_SECONDS * 20);
+        swing(InteractionHand.MAIN_HAND, true);
+        return InteractionResult.CONSUME;
     }
 
     private boolean isEdibleFood(ItemStack stack) {
@@ -885,6 +967,25 @@ public class CompanionEntity extends PathfinderMob {
         CompanionForm value = form == null ? CompanionForm.PLAYER : form;
         entityData.set(DATA_FORM, value.serializedName());
         refreshDimensions();
+    }
+
+    /**
+     * Form/scale are synched data — clients must refresh hitbox + {@link EntityAttachment#NAME_TAG}
+     * when they arrive, or nametag height sticks to the previous form after a swap.
+     */
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (DATA_FORM.equals(key)) {
+            refreshDimensions();
+        } else if (DATA_BODY_SCALE.equals(key)) {
+            float scale = getBodyScale();
+            var attr = getAttribute(Attributes.SCALE);
+            if (attr != null && (float) attr.getBaseValue() != scale) {
+                attr.setBaseValue(scale);
+            }
+            refreshDimensions();
+        }
     }
 
     public boolean isNameTagVisible() {

@@ -15,17 +15,22 @@ Chat / modes:
   companion_say / companion_greet / companion_wave
   companion_follow / companion_sit / companion_stay
 
-Attitude / teams / summon / gear:
+Attitude / teams / summon / gear / modify:
   companion_set_attitude     message = passive|hostile
   companion_set_team         message = team name or $username
   companion_summon           message = form=zombie;attitude=hostile;team=red;skin=Notch
   companion_summon_passive   message = form=chicken;team=blue
   companion_summon_hostile   message = form=skeleton;team=red
+  companion_modify           message = form=wolf;skin=Notch;name=Fluffy;attitude=passive
+                             (edits the owner's currently called/summoned companion)
+  companion_turn_evil        message = seconds=10   (5–15s playful HOSTILE, then revert)
   companion_set_mainhand     message = minecraft:diamond_sword | clear
   companion_set_offhand      message = minecraft:shield
   companion_set_armor        message = helmet=minecraft:iron_helmet;boots=minecraft:iron_boots
   companion_set_hand / companion_set_equipment
                              message = mainhand=…;offhand=…;helmet=…
+
+Hidden in-game: right-click companion with a fermented spider eye → same playful evil (~10s).
 
 Example files
 -------------
@@ -33,6 +38,8 @@ Example files
   imc-companion-set-team.json
   imc-companion-summon-hostile.json
   imc-companion-set-equipment.json
+  imc-companion-modify.json
+  imc-companion-turn-evil.json
   command-summon-wolf-alongside.json   (CCI-native /summon — not our bridge)
   command-azscci-greet-outcome.json    (Fabric /azscci fallback)
 

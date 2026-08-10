@@ -165,6 +165,18 @@ public final class CompanionCreatorScreen extends Screen {
             y += 14;
             y = addRightWrapped(y, "Current: " + draft.form.displayLabel(), 0xFFFFFF);
             y += 8;
+            if (!draft.form.isPlayer()) {
+                addRightLabel(y, "Display name", 0xA0A0A0);
+                y += 14;
+                nameBox = new EditBox(font, rightX, 0, rightW, 18, Component.literal("Name"));
+                nameBox.setMaxLength(32);
+                nameBox.setValue(draft.name == null ? "" : draft.name);
+                nameBox.setResponder(this::onFormNameEdited);
+                addRightWidget(nameBox, y, 18);
+                y += 24;
+                y = addRightWrapped(y, "Custom name for this mob companion (same as Name tab).", 0xA0A0A0);
+                y += 8;
+            }
             y = addFormGroupButtons(y, "Player", CompanionForm.FormGroup.PLAYER);
             y = addFormGroupButtons(y, "Animals", CompanionForm.FormGroup.ANIMAL);
             y = addFormGroupButtons(y, "Hostiles", CompanionForm.FormGroup.HOSTILE);
@@ -358,6 +370,12 @@ public final class CompanionCreatorScreen extends Screen {
         pendingNameSkinLookup = value == null ? "" : value.trim();
         nameSkinDebounceTicks = NAME_SKIN_DEBOUNCE_TICKS;
         skinStatusMessage = null;
+    }
+
+    /** Form-tab name field: persist custom name without Mojang skin lookup. */
+    private void onFormNameEdited(String value) {
+        draft.name = value;
+        pushLiveAppearance(CompanionSettingsPacket.FLAG_NAME);
     }
 
     @Override

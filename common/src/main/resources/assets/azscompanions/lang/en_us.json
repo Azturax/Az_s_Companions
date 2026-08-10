@@ -49,5 +49,7 @@
   "screen.azscompanions.creator": "Companion Customization",
   "screen.azscompanions.customize": "Customize",
   "dialogue.azscompanions.hello": "Hello!",
-  "dialogue.azscompanions.bye": "Bye!"
+  "dialogue.azscompanions.bye": "Bye!",
+  "dialogue.azscompanions.evil_on": "Hehe… time to be a little evil! :D",
+  "dialogue.azscompanions.evil_off": "Okay okay, I'm nice again~"
 }
