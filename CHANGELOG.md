@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### CCI — child / Bit companions
+- **`companion_spawn_child`** (aliases: `spawn_child`, `spawn_minion`, `spawn_bit`, …): spawn Bits under the nearest owned leader for team fights. Params: `form`, `name`, `count` (1–8), `size`, `attitude`, `team`, gear. Defaults: chicken / Bit / scale 0.5.
+- Cap: **6** children per leader (`maxChildCompanionsPerLeader`, max 8). Children excluded from `maxCompanionsPerPlayer`.
+- Shared API: `CompanionRecruitment.spawnChild` / `FabricCompanionRecruitment.spawnChild`.
+- In-game: right-click owned companion with **cake** → one Bit via the same helper (consumes cake; respects cap). Charm-dismiss clears Bits.
+
+## 0.3.4
+
+Release: [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fixes
+- **Player form armor:** companions render equipped helmet/chest/legs/boots (and elytra) via `HumanoidArmorLayer` / `ElytraLayer` like a normal player.
+- **Animal / spider armor:** inventory rejects humanoid plate armor on forms without armor layers; incompatible pieces move to backpack (or drop) on form change / load. **Wolf** can equip wolf armor in the chest slot (renders on the proxy via BODY).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.4+1.21.1.jar` | `azscompanions-fabric-0.3.4+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.4+1.21.1.jar` | `azscompanions-fabric-cci-0.3.4+1.21.1.jar` |
+
 ## 0.3.3
 
 Release: [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

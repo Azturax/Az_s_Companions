@@ -3,6 +3,7 @@ package com.azscompanions.menu;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.registry.FabricModScreenHandlers;
+import com.azscompanions.util.CompanionArmorRules;
 import com.mojang.datafixers.util.Pair;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.network.chat.Component;
@@ -14,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -110,7 +110,7 @@ public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
                 && companion.distanceTo(player) < 8.0d;
     }
 
-    private static final class ArmorSlot extends Slot {
+    private final class ArmorSlot extends Slot {
         private final EquipmentSlot type;
 
         ArmorSlot(FabricCompanionInventory inv, int index, int x, int y, EquipmentSlot type) {
@@ -120,7 +120,10 @@ public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof ArmorItem armor && armor.getType().getSlot() == type;
+            if (companion == null) {
+                return false;
+            }
+            return CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), type, stack);
         }
 
         @Override

@@ -9,6 +9,7 @@ import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.entity.inventory.CompanionInventory;
+import com.azscompanions.util.CompanionArmorRules;
 import me.ichun.mods.cci.api.CCIApi;
 import me.ichun.mods.cci.api.IApi;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -266,9 +267,12 @@ public final class CciCompanionActions {
             }
             stack = parsed.get();
         }
-        companion.getCompanionInventory().setStackInSlot(invSlot, stack);
-        // Mirror onto living equipment so render/combat see it.
         EquipmentSlot eq = equipmentSlot(slotKey);
+        if (!stack.isEmpty() && eq != null && eq.isArmor()
+                && !CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), eq, stack)) {
+            return false;
+        }
+        companion.getCompanionInventory().setStackInSlot(invSlot, stack);
         if (eq != null) {
             companion.setItemSlot(eq, stack.copy());
         }

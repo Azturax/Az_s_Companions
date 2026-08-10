@@ -6,6 +6,7 @@ import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import com.azscompanions.registry.FabricModItems;
 import com.azscompanions.task.FabricTaskQueue;
+import com.azscompanions.util.CompanionArmorRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -529,9 +530,17 @@ public class FabricCompanionEntity extends PathfinderMob {
             case MAINHAND -> inventory.getMainHand();
             case OFFHAND -> inventory.getOffHand();
             case HEAD -> inventory.getItem(FabricCompanionInventory.HEAD);
-            case CHEST -> inventory.getItem(FabricCompanionInventory.CHEST);
+            case CHEST -> {
+                ItemStack chest = inventory.getItem(FabricCompanionInventory.CHEST);
+                // Wolf armor lives in the chest UI slot but renders via BODY on wolf proxies.
+                yield CompanionArmorRules.isCanineArmor(chest) ? ItemStack.EMPTY : chest;
+            }
             case LEGS -> inventory.getItem(FabricCompanionInventory.LEGS);
             case FEET -> inventory.getItem(FabricCompanionInventory.FEET);
+            case BODY -> {
+                ItemStack chest = inventory.getItem(FabricCompanionInventory.CHEST);
+                yield CompanionArmorRules.isCanineArmor(chest) ? chest : super.getItemBySlot(slot);
+            }
             default -> super.getItemBySlot(slot);
         };
     }
@@ -545,6 +554,13 @@ public class FabricCompanionEntity extends PathfinderMob {
             case CHEST -> inventory.setItem(FabricCompanionInventory.CHEST, stack);
             case LEGS -> inventory.setItem(FabricCompanionInventory.LEGS, stack);
             case FEET -> inventory.setItem(FabricCompanionInventory.FEET, stack);
+            case BODY -> {
+                if (stack.isEmpty() || CompanionArmorRules.isCanineArmor(stack)) {
+                    inventory.setItem(FabricCompanionInventory.CHEST, stack);
+                } else {
+                    super.setItemSlot(slot, stack);
+                }
+            }
             default -> super.setItemSlot(slot, stack);
         }
     }
@@ -732,8 +748,40 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     public void setForm(CompanionForm form) {
         CompanionForm value = form == null ? CompanionForm.PLAYER : form;
+        CompanionForm previous = getForm();
         entityData.set(DATA_FORM, value.serializedName());
         refreshDimensions();
+        if (!level().isClientSide && previous != value) {
+            ejectIncompatibleArmor();
+        }
+    }
+
+    /** Move armor that this form cannot show into backpack (or drop) so slots stay honest. */
+    public void ejectIncompatibleArmor() {
+        if (level().isClientSide) {
+            return;
+        }
+        CompanionForm form = getForm();
+        int[] slots = {
+                FabricCompanionInventory.HEAD,
+                FabricCompanionInventory.CHEST,
+                FabricCompanionInventory.LEGS,
+                FabricCompanionInventory.FEET
+        };
+        EquipmentSlot[] uiSlots = {
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+        };
+        for (int i = 0; i < slots.length; i++) {
+            ItemStack stack = inventory.getItem(slots[i]);
+            if (stack.isEmpty() || CompanionArmorRules.mayPlaceInArmorSlot(form, uiSlots[i], stack)) {
+                continue;
+            }
+            inventory.setItem(slots[i], ItemStack.EMPTY);
+            ItemStack leftover = inventory.insertItemAuto(stack);
+            if (!leftover.isEmpty()) {
+                this.spawnAtLocation(leftover);
+            }
+        }
     }
 
     /**
@@ -1064,5 +1112,6 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (tag.contains("Inventory")) {
             inventory.fromTag(tag.getList("Inventory", CompoundTag.TAG_COMPOUND), level().registryAccess());
         }
+        ejectIncompatibleArmor();
     }
 }

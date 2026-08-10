@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3)
+- **Release:** [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4)
 - **Multi-version plan:** [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md)
 
 Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
@@ -14,10 +14,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.3+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.3+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.3+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.3+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.4+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.4+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.4+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.4+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -35,7 +35,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 
-## Gameplay (0.3.3)
+## Gameplay (0.3.4)
 
 - **Companion Charm** — desert pyramid chest loot; **one companion per player** (UUID-based; unloaded companions may not count toward the limit)
 - Charm **summon / store**; appear → `<Name> Hello!` · store → `<Name> Bye!` (owner only)
@@ -44,10 +44,11 @@ Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 - **Follow / Stay / Wander** — Stay never teleports (like sitting pets)
 - **Night sleep (Follow):** nearest usable empty bed within **48** blocks (horizontal + vertical); Kon-named prefer Kon beds
 - Customize **Form** tab: player or animal/hostile looks; **Nametag** show/hide
-- Inventory: armor+shield column, 9-slot hotbar, gapped player inv (plain slots)
+- Inventory: armor+shield column, 9-slot hotbar, gapped player inv (plain slots); player/humanoid forms show armor; animals reject plate armor (wolf accepts wolf armor)
 - Mojang skins can show the player's **cape**
 - **Defend** living attackers of the owner (not environmental damage); optional **HOSTILE** attitude / **teams** via CCI
 - UUID-gated **special perks** (flight follow / glow / Kon ears / Pecker chicken / Wiggly)
+- **Optional companion AI** (default off, **text dialogue**): local / OpenAI-compatible / MCP — see [docs/COMPANION_AI.md](docs/COMPANION_AI.md). `/azscompanions ask <message>` · `/azscompanions ai status`
 
 ### Customize
 

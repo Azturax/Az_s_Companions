@@ -18,6 +18,7 @@ import com.azscompanions.perk.MisterWigglySidekick;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import com.azscompanions.registry.ModItems;
 import com.azscompanions.task.TaskQueue;
+import com.azscompanions.util.CompanionArmorRules;
 import com.azscompanions.util.CompanionPotionHelper;
 import com.azscompanions.util.ProtectionHelper;
 import com.azscompanions.voice.DialogueCategory;
@@ -659,9 +660,17 @@ public class CompanionEntity extends PathfinderMob {
             case MAINHAND -> inventory.getMainHand();
             case OFFHAND -> inventory.getOffHand();
             case HEAD -> inventory.getStackInSlot(CompanionInventory.HEAD);
-            case CHEST -> inventory.getStackInSlot(CompanionInventory.CHEST);
+            case CHEST -> {
+                ItemStack chest = inventory.getStackInSlot(CompanionInventory.CHEST);
+                // Wolf armor lives in the chest UI slot but renders via BODY on wolf proxies.
+                yield CompanionArmorRules.isCanineArmor(chest) ? ItemStack.EMPTY : chest;
+            }
             case LEGS -> inventory.getStackInSlot(CompanionInventory.LEGS);
             case FEET -> inventory.getStackInSlot(CompanionInventory.FEET);
+            case BODY -> {
+                ItemStack chest = inventory.getStackInSlot(CompanionInventory.CHEST);
+                yield CompanionArmorRules.isCanineArmor(chest) ? chest : super.getItemBySlot(slot);
+            }
             default -> super.getItemBySlot(slot);
         };
     }
@@ -675,6 +684,13 @@ public class CompanionEntity extends PathfinderMob {
             case CHEST -> inventory.setStackInSlot(CompanionInventory.CHEST, stack);
             case LEGS -> inventory.setStackInSlot(CompanionInventory.LEGS, stack);
             case FEET -> inventory.setStackInSlot(CompanionInventory.FEET, stack);
+            case BODY -> {
+                if (stack.isEmpty() || CompanionArmorRules.isCanineArmor(stack)) {
+                    inventory.setStackInSlot(CompanionInventory.CHEST, stack);
+                } else {
+                    super.setItemSlot(slot, stack);
+                }
+            }
             default -> super.setItemSlot(slot, stack);
         }
     }
@@ -965,8 +981,40 @@ public class CompanionEntity extends PathfinderMob {
 
     public void setForm(CompanionForm form) {
         CompanionForm value = form == null ? CompanionForm.PLAYER : form;
+        CompanionForm previous = getForm();
         entityData.set(DATA_FORM, value.serializedName());
         refreshDimensions();
+        if (!level().isClientSide && previous != value) {
+            ejectIncompatibleArmor();
+        }
+    }
+
+    /** Move armor that this form cannot show into backpack (or drop) so slots stay honest. */
+    public void ejectIncompatibleArmor() {
+        if (level().isClientSide) {
+            return;
+        }
+        CompanionForm form = getForm();
+        int[] slots = {
+                CompanionInventory.HEAD,
+                CompanionInventory.CHEST,
+                CompanionInventory.LEGS,
+                CompanionInventory.FEET
+        };
+        EquipmentSlot[] uiSlots = {
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+        };
+        for (int i = 0; i < slots.length; i++) {
+            ItemStack stack = inventory.getStackInSlot(slots[i]);
+            if (stack.isEmpty() || CompanionArmorRules.mayPlaceInArmorSlot(form, uiSlots[i], stack)) {
+                continue;
+            }
+            inventory.setStackInSlot(slots[i], ItemStack.EMPTY);
+            ItemStack leftover = inventory.insertItemAuto(stack, false);
+            if (!leftover.isEmpty()) {
+                this.spawnAtLocation(leftover);
+            }
+        }
     }
 
     /**
@@ -1341,6 +1389,7 @@ public class CompanionEntity extends PathfinderMob {
         if (tag.contains("Inventory")) {
             inventory.load(tag.getCompound("Inventory"), level().registryAccess());
         }
+        ejectIncompatibleArmor();
         if (tag.contains("Tasks")) {
             taskQueue.load(tag.getCompound("Tasks"));
         }

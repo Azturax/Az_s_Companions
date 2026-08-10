@@ -58,6 +58,22 @@ public enum CompanionForm {
         return this == PLAYER;
     }
 
+    /**
+     * Forms that use vanilla humanoid armor layers (player mesh or zombie-family / skeleton / enderman proxies).
+     * True animals and spider have no humanoid armor layers — do not accept plate armor for them.
+     */
+    public boolean supportsHumanoidArmor() {
+        return switch (this) {
+            case PLAYER, ZOMBIE, SKELETON, HUSK, STRAY, ENDERMAN -> true;
+            default -> false;
+        };
+    }
+
+    /** Wolf form can wear {@code AnimalArmorItem} canine (wolf) armor via the chest inventory slot → BODY. */
+    public boolean supportsWolfArmor() {
+        return this == WOLF;
+    }
+
     public String serializedName() {
         return name().toLowerCase(Locale.ROOT);
     }

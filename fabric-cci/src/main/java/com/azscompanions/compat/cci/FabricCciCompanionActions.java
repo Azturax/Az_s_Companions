@@ -9,6 +9,7 @@ import com.azscompanions.entity.FabricCompanionMode;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.FabricCompanionRegistry;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
+import com.azscompanions.util.CompanionArmorRules;
 import me.ichun.mods.cci.api.CCIApi;
 import me.ichun.mods.cci.api.IApi;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -272,8 +273,12 @@ public final class FabricCciCompanionActions {
             }
             stack = parsed.get();
         }
-        companion.getCompanionInventory().setItem(invSlot, stack);
         EquipmentSlot eq = equipmentSlot(slotKey);
+        if (!stack.isEmpty() && eq != null && eq.isArmor()
+                && !CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), eq, stack)) {
+            return false;
+        }
+        companion.getCompanionInventory().setItem(invSlot, stack);
         if (eq != null) {
             companion.setItemSlot(eq, stack.copy());
         }

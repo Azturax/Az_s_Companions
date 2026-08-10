@@ -3,6 +3,7 @@ package com.azscompanions.menu;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.registry.ModMenus;
+import com.azscompanions.util.CompanionArmorRules;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -14,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
@@ -123,7 +123,7 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
                 && (companion.isOwnedBy(player) || companion.isTrusted(player));
     }
 
-    private static final class ArmorSlot extends SlotItemHandler {
+    private final class ArmorSlot extends SlotItemHandler {
         private final EquipmentSlot type;
 
         ArmorSlot(CompanionInventory inv, int index, int x, int y, EquipmentSlot type) {
@@ -133,7 +133,10 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.getItem() instanceof ArmorItem armor && armor.getType().getSlot() == type;
+            if (companion == null) {
+                return false;
+            }
+            return CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), type, stack);
         }
 
         @Override
