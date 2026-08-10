@@ -40,3 +40,6 @@ local_skins/
 # scratch / temp
 .tmp_bed/
 *.log
+
+# local tooling (portable CLI downloads)
+.tools/

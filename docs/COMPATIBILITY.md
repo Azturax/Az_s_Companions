@@ -1,6 +1,6 @@
 # Version compatibility
 
-Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0)) declares support for:
+Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1)) declares support for:
 
 - **Minecraft:** `1.21.1` → `26.2` (Maven range `[1.21.1,26.3)`)
 - **NeoForge:** `21.1.x` → `26.2.x` (Maven range `[21.1,26.3)`)
@@ -10,9 +10,9 @@ Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.1.0](ht
 
 | Loader | Module | Status |
 |--------|--------|--------|
-| NeoForge | `:neoforge` | Full 0.1.0 set (charm, customize, follow/wander/sleep, defend, hands, potions) |
+| NeoForge | `:neoforge` | Full 0.1.1 set (charm, customize, command menu, follow/wander/sleep, defend, hands, potions) |
 | NeoForge CCI | `:neoforge-cci` | Same + IMC bridge (needs CCI 1.13.0 + iChunUtil 1.0.3) |
-| Fabric | `:fabric` | Core 0.1.0 (charm, follow/wander/sleep, defend, hands, potions; Shift opens inventory) |
+| Fabric | `:fabric` | Core 0.1.1 (charm, customize, command menu, follow/wander/sleep, defend, hands, potions) |
 | Fabric CCI | `:fabric-cci` | Same + IMCOutcome mixin + `/azscci` (needs Fabric CCI 1.13.0 + iChunUtil 1.0.3) |
 
 ## Why two version properties?

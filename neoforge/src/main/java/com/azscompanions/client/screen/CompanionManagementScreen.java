@@ -6,7 +6,7 @@ import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.menu.CompanionManagementMenu;
 import com.azscompanions.network.packet.CompanionSettingsPacket;
-import com.azscompanions.network.packet.RadialCommandPacket;
+import com.azscompanions.network.packet.CompanionCommandPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -116,7 +116,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
             }).bounds(cx, cy + 72, 90, 18).build();
             addRenderableWidget(slimBtn);
             addRenderableWidget(Button.builder(Component.literal("Open Inventory"), b ->
-                    PacketDistributor.sendToServer(new RadialCommandPacket(c.getId(), "OPEN_INVENTORY"))
+                    PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx + 96, cy + 72, 100, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.BODY) {
             addPropControls("Bust", cy, () -> editBust, v -> editBust = v,
@@ -142,7 +142,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
             }).bounds(cx + 128, cy + 112, 110, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.INVENTORY) {
             addRenderableWidget(Button.builder(Component.literal("Open Inventory GUI"), b ->
-                    PacketDistributor.sendToServer(new RadialCommandPacket(c.getId(), "OPEN_INVENTORY"))
+                    PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx, cy, 140, 20).build());
         }
     }

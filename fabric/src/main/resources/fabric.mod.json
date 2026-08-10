@@ -13,7 +13,7 @@
     "issues": "https://github.com/Azturax/Az_s_Companions/issues"
   },
   "license": "${mod_license}",
-  "icon": "assets/azscompanions/textures/gui/kon_card.png",
+  "icon": "assets/azscompanions/textures/item/companion_charm.png",
   "environment": "*",
   "entrypoints": {
     "main": [

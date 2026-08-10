@@ -12,8 +12,7 @@ import com.azscompanions.entity.ai.CompanionWanderNearOwnerGoal;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.menu.CompanionInventoryMenu;
 import com.azscompanions.menu.CompanionManagementMenu;
-import com.azscompanions.menu.RadialCommandMenu;
-import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
+import com.azscompanions.network.packet.OpenCompanionMenuPacket;
 import com.azscompanions.perk.MisterWigglySidekick;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import com.azscompanions.registry.ModItems;
@@ -24,6 +23,7 @@ import com.azscompanions.voice.DialogueCategory;
 import com.azscompanions.voice.VoiceService;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -31,6 +31,8 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -57,6 +59,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -95,15 +98,15 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_BUST_OFFSET =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    /** Synced so client UI ownership checks work without looking at NBT. */
+    private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.OPTIONAL_UUID);
 
     private final CompanionInventory inventory = new CompanionInventory();
     private final TaskQueue taskQueue = new TaskQueue(this);
     private final OwnerActivityTracker ownerActivity = new OwnerActivityTracker();
     private final Set<UUID> trustedPlayers = new HashSet<>();
     private final Set<String> permissions = new HashSet<>();
-
-    @Nullable
-    private UUID ownerUuid;
     @Nullable
     private BlockPos homePos;
     @Nullable
@@ -167,6 +170,7 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
+        builder.define(DATA_OWNER, Optional.empty());
     }
 
     @Override
@@ -205,12 +209,58 @@ public class CompanionEntity extends PathfinderMob {
             }
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickOwnerActivity();
+            tickHomeBedLeash();
+            tickSleepPurr();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
             tickStuckRecovery();
             tickSurvival();
         }
+    }
+
+    /**
+     * Follow/Wander home-bed leash: if the owner is farther than {@link ServerConfig#HOME_BED_RADIUS}
+     * from the home bed, teleport to the owner. Stay ignores this rule.
+     */
+    private void tickHomeBedLeash() {
+        CompanionMode mode = getMode();
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT) {
+            return;
+        }
+        if (mode != CompanionMode.FOLLOW && mode != CompanionMode.WANDER) {
+            return;
+        }
+        if (getTarget() != null && getTarget().isAlive()) {
+            return;
+        }
+        if (isSleeping()) {
+            return;
+        }
+        Player owner = getOwner();
+        BlockPos bed = getHomeBedPos();
+        if (owner == null || bed == null) {
+            return;
+        }
+        double radius = ServerConfig.HOME_BED_RADIUS.get();
+        if (owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= radius * radius) {
+            return;
+        }
+        if (distanceTo(owner) > CompanionFollowDistances.PREFERRED_DISTANCE + 2.0d) {
+            safeTeleportNear(owner.blockPosition());
+        }
+    }
+
+    /** Soft cat purr every few seconds while asleep — audible to nearby players. */
+    private void tickSleepPurr() {
+        if (!isSleeping()) {
+            return;
+        }
+        // ~5s cadence, staggered by entity id so multiple companions don't sync.
+        if ((tickCount + getId()) % 100 != 0) {
+            return;
+        }
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL, 0.55f, 0.95f + random.nextFloat() * 0.15f);
     }
 
     private void tickOwnerActivity() {
@@ -235,6 +285,63 @@ public class CompanionEntity extends PathfinderMob {
     /** True when the owner is moving meaningfully — normal follow + long-range teleport. */
     public boolean isOwnerExploring() {
         return ownerActivity.isExploring();
+    }
+
+    /** Configured home-bed radius (NeoForge server config, default 35). */
+    public double getHomeBedRadius() {
+        return ServerConfig.HOME_BED_RADIUS.get();
+    }
+
+    /** True when a home bed is set and this companion is within the home-bed radius. */
+    public boolean isNearHomeBed() {
+        BlockPos bed = getHomeBedPos();
+        if (bed == null) {
+            return false;
+        }
+        double r = getHomeBedRadius();
+        return distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= r * r;
+    }
+
+    /** True when owner is farther than home-bed radius from the home bed. */
+    public boolean isOwnerFarFromHomeBed() {
+        Player owner = getOwner();
+        BlockPos bed = getHomeBedPos();
+        if (owner == null || bed == null) {
+            return false;
+        }
+        double r = getHomeBedRadius();
+        return owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) > r * r;
+    }
+
+    /**
+     * Follow/Wander: actively trail the owner (vs home-idle near bed).
+     * Stay/Sit never use this. No home bed → always follow when commanded.
+     */
+    public boolean shouldActivelyFollowOwner() {
+        CompanionMode mode = getMode();
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT) {
+            return false;
+        }
+        if (getHomeBedPos() == null) {
+            return mode == CompanionMode.FOLLOW || mode == CompanionMode.WANDER;
+        }
+        if (isOwnerFarFromHomeBed()) {
+            return true;
+        }
+        // Owner still near home: stay home-idle while companion is near the bed.
+        return !isNearHomeBed() && mode == CompanionMode.FOLLOW;
+    }
+
+    /** Home-idle / Wander near bed when bed exists and owner has not left the home radius. */
+    public boolean shouldHomeIdleNearBed() {
+        CompanionMode mode = getMode();
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT) {
+            return false;
+        }
+        if (getHomeBedPos() == null || isOwnerFarFromHomeBed()) {
+            return false;
+        }
+        return isNearHomeBed() && (mode == CompanionMode.FOLLOW || mode == CompanionMode.WANDER);
     }
 
     @Override
@@ -319,20 +426,53 @@ public class CompanionEntity extends PathfinderMob {
             return InteractionResult.PASS;
         }
         if (!isOwnedBy(player) && !isTrusted(player)) {
-            return InteractionResult.PASS;
+            player.displayClientMessage(Component.translatable("message.azscompanions.not_owner"), true);
+            return InteractionResult.CONSUME;
         }
 
-        // Shift + right-click opens Customize.
+        // Shift + right-click opens shared menu (Customize | Command | Inventory).
         if (player.isShiftKeyDown()) {
-            PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionCreatorPacket(getId()));
+            PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionMenuPacket(getId()));
             return InteractionResult.CONSUME;
         }
 
         ItemStack held = player.getItemInHand(hand);
         if (!held.isEmpty()) {
+            if (isEdibleFood(held)) {
+                return feedFromPlayer(serverPlayer, hand);
+            }
             return giveItemToHands(serverPlayer, hand, held);
         }
         return takeItemFromHands(serverPlayer, hand);
+    }
+
+    private boolean isEdibleFood(ItemStack stack) {
+        return !stack.isEmpty() && stack.getFoodProperties(this) != null;
+    }
+
+    /** Eat 1 food from the player's hand (survival), cheer with hearts; never equip the food. */
+    private InteractionResult feedFromPlayer(ServerPlayer player, InteractionHand hand) {
+        // Survival: always consume exactly one. Creative: optional no-consume.
+        if (!player.getAbilities().instabuild) {
+            ItemStack stack = player.getItemInHand(hand);
+            stack.shrink(1);
+            player.setItemInHand(hand, stack.isEmpty() ? ItemStack.EMPTY : stack);
+        }
+        heal(4.0f);
+        swing(InteractionHand.MAIN_HAND, true);
+        speak(DialogueCategory.SUCCESS);
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL, 0.8f, 1.1f);
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.HEART,
+                    getX(),
+                    getY() + getBbHeight() * 0.9d,
+                    getZ(),
+                    8,
+                    0.4d, 0.3d, 0.4d,
+                    0.02d);
+        }
+        return InteractionResult.CONSUME;
     }
 
     /**
@@ -405,10 +545,6 @@ public class CompanionEntity extends PathfinderMob {
         super.setItemSlot(slot, stack);
     }
 
-    public void openRadial(ServerPlayer player) {
-        player.openMenu(new RadialCommandMenu.Provider(this), buf -> buf.writeVarInt(getId()));
-    }
-
     public void openManagement(ServerPlayer player) {
         player.openMenu(new CompanionManagementMenu.Provider(this), buf -> buf.writeVarInt(getId()));
     }
@@ -462,7 +598,7 @@ public class CompanionEntity extends PathfinderMob {
         }
         if (target instanceof OwnableEntity ownable) {
             UUID petOwner = ownable.getOwnerUUID();
-            if (petOwner != null && (petOwner.equals(ownerUuid) || trustedPlayers.contains(petOwner))) {
+            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trustedPlayers.contains(petOwner))) {
                 return false;
             }
         }
@@ -515,6 +651,9 @@ public class CompanionEntity extends PathfinderMob {
         if (level().isClientSide) {
             return;
         }
+        if (!ServerConfig.COMPANION_CHAT_MESSAGES.get()) {
+            return;
+        }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
             owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
@@ -544,7 +683,8 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public boolean isOwnedBy(Player player) {
-        return ownerUuid != null && ownerUuid.equals(player.getUUID());
+        UUID owner = getOwnerUuid();
+        return owner != null && owner.equals(player.getUUID());
     }
 
     public boolean isTrusted(Player player) {
@@ -552,21 +692,26 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void setOwner(Player player) {
-        this.ownerUuid = player.getUUID();
+        setOwnerUuid(player.getUUID());
         trustedPlayers.add(player.getUUID());
+    }
+
+    public void setOwnerUuid(@Nullable UUID uuid) {
+        entityData.set(DATA_OWNER, Optional.ofNullable(uuid));
     }
 
     @Nullable
     public Player getOwner() {
-        if (ownerUuid == null || !(level() instanceof ServerLevel serverLevel)) {
+        UUID owner = getOwnerUuid();
+        if (owner == null || !(level() instanceof ServerLevel serverLevel)) {
             return null;
         }
-        return serverLevel.getServer().getPlayerList().getPlayer(ownerUuid);
+        return serverLevel.getServer().getPlayerList().getPlayer(owner);
     }
 
     @Nullable
     public UUID getOwnerUuid() {
-        return ownerUuid;
+        return entityData.get(DATA_OWNER).orElse(null);
     }
 
     public void addTrusted(UUID uuid) {
@@ -595,9 +740,12 @@ public class CompanionEntity extends PathfinderMob {
 
     public void setMode(CompanionMode mode) {
         entityData.set(DATA_MODE, mode.getSerializedName());
-        entityData.set(DATA_SITTING, mode == CompanionMode.SIT);
+        entityData.set(DATA_SITTING, mode == CompanionMode.SIT || mode == CompanionMode.STAY);
         if (mode != CompanionMode.TASK) {
             taskQueue.cancelActive("mode_changed");
+        }
+        if (mode == CompanionMode.FOLLOW || mode == CompanionMode.WANDER) {
+            getNavigation().stop();
         }
     }
 
@@ -821,8 +969,9 @@ public class CompanionEntity extends PathfinderMob {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        if (ownerUuid != null) {
-            tag.putUUID("Owner", ownerUuid);
+        UUID owner = getOwnerUuid();
+        if (owner != null) {
+            tag.putUUID("Owner", owner);
         }
         tag.putString("Definition", entityData.get(DATA_DEFINITION));
         tag.putString("Mode", entityData.get(DATA_MODE));
@@ -874,7 +1023,7 @@ public class CompanionEntity extends PathfinderMob {
             }
         }
         if (tag.hasUUID("Owner")) {
-            ownerUuid = tag.getUUID("Owner");
+            setOwnerUuid(tag.getUUID("Owner"));
         }
         if (tag.contains("Definition")) {
             entityData.set(DATA_DEFINITION, tag.getString("Definition"));

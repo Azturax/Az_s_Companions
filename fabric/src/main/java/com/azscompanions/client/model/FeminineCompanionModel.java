@@ -1,6 +1,7 @@
 package com.azscompanions.client.model;
 
 import com.azscompanions.AzsCompanionsFabric;
+import com.azscompanions.client.FabricClientAppearanceDraft;
 import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.FabricCompanionEntity;
 import net.minecraft.client.model.PlayerModel;
@@ -53,9 +54,15 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         boolean showBust = true;
         if (entity instanceof FabricCompanionEntity companion) {
-            showBust = companion.getGender().showsBust();
-            applyProportions(companion.getBust(), companion.getWaist(), companion.getHips(),
-                    companion.getShoulders(), companion.getBustOffset(), showBust);
+            if (FabricClientAppearanceDraft.matches(companion)) {
+                FabricClientAppearanceDraft d = FabricClientAppearanceDraft.ACTIVE;
+                showBust = d.gender.showsBust();
+                applyProportions(d.bust, d.waist, d.hips, d.shoulders, d.bustOffset, showBust);
+            } else {
+                showBust = companion.getGender().showsBust();
+                applyProportions(companion.getBust(), companion.getWaist(), companion.getHips(),
+                        companion.getShoulders(), companion.getBustOffset(), showBust);
+            }
         } else {
             applyProportions(
                     CompanionBodyProportions.DEFAULT_BUST,

@@ -1,6 +1,5 @@
 package com.azscompanions.client.screen;
 
-import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.entity.FabricCompanionDefinition;
 import com.azscompanions.entity.FabricCompanionEntity;
@@ -18,9 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class FabricCompanionSelectionScreen extends AbstractContainerScreen<FabricCompanionSelectionMenu> {
-    private static final ResourceLocation KON_CARD =
-            ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "textures/gui/kon_card.png");
-
     private final List<FabricCompanionDefinition> definitions = new ArrayList<>();
     private int selectedIndex;
 
@@ -30,12 +26,6 @@ public final class FabricCompanionSelectionScreen extends AbstractContainerScree
         this.imageHeight = 220;
         definitions.addAll(FabricCompanionRegistry.all());
         selectedIndex = 0;
-        for (int i = 0; i < definitions.size(); i++) {
-            if (definitions.get(i).id().equals(FabricCompanionRegistry.KON_ID)) {
-                selectedIndex = i;
-                break;
-            }
-        }
     }
 
     @Override
@@ -83,17 +73,16 @@ public final class FabricCompanionSelectionScreen extends AbstractContainerScree
         graphics.fill(x + 12, y + 28, x + 150, y + 170, 0xFF2B2B2B);
         graphics.fill(x + 162, y + 28, x + 308, y + 170, 0xFF2B2B2B);
         FabricCompanionDefinition selected = definitions.isEmpty() ? null : definitions.get(selectedIndex);
-        String name = selected == null ? "Kon" : selected.displayName();
+        String name = selected == null ? "Companion" : selected.displayName();
         String personality = selected == null
-                ? "Gentle, loyal, slightly shy, practical, and encouraging."
+                ? "A loyal companion who stays close, follows commands, and watches your back."
                 : selected.personality();
         graphics.drawString(font, title, x + 12, y + 10, 0xFFFFFF, false);
         graphics.drawString(font, name, x + 172, y + 40, 0xFFFFFF, false);
         graphics.drawWordWrap(font, Component.literal(personality), x + 172, y + 58, 126, 0xA0A0A0);
         graphics.drawString(font, "Status: Available", x + 172, y + 130, 0xA0A0A0, false);
-        if (selected == null || selected.id().equals(FabricCompanionRegistry.KON_ID)) {
-            graphics.blit(KON_CARD, x + 20, y + 36, 0, 0, 124, 124, 128, 128);
-        }
+        graphics.drawCenteredString(font, name.substring(0, 1).toUpperCase(), x + 81, y + 90, 0xE0E0E0);
+        graphics.drawCenteredString(font, "Preview", x + 81, y + 110, 0x808080);
     }
 
     @Override

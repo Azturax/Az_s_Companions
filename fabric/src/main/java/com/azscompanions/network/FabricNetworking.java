@@ -3,11 +3,12 @@ package com.azscompanions.network;
 import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.entity.CompanionGender;
 import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.FabricCompanionMode;
 import com.azscompanions.entity.FabricCompanionRecruitment;
-import com.azscompanions.menu.FabricRadialCommandMenu;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -21,25 +22,44 @@ public final class FabricNetworking {
 
     public static void register() {
         PayloadTypeRegistry.playC2S().register(RecruitPayload.TYPE, RecruitPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(RadialPayload.TYPE, RadialPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenMenuPayload.TYPE, OpenMenuPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> FabricCompanionRecruitment.recruit(context.player(), payload.definitionId())));
 
-        ServerPlayNetworking.registerGlobalReceiver(RadialPayload.TYPE, (payload, context) ->
+        ServerPlayNetworking.registerGlobalReceiver(MenuActionPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     Entity entity = player.level().getEntity(payload.entityId());
-                    if (!(entity instanceof FabricCompanionEntity companion)) {
+                    if (!(entity instanceof FabricCompanionEntity companion) || !companion.isOwnedBy(player)) {
+                        if (entity instanceof FabricCompanionEntity) {
+                            player.displayClientMessage(
+                                    Component.translatable("message.azscompanions.not_owner"),
+                                    true);
+                        }
                         return;
                     }
-                    try {
-                        FabricRadialCommandMenu.Command command =
-                                FabricRadialCommandMenu.Command.valueOf(payload.command());
-                        new FabricRadialCommandMenu(0, player.getInventory(), companion.getId())
-                                .runCommand(player, command);
-                    } catch (IllegalArgumentException ignored) {
+                    if (companion.distanceTo(player) > 64.0d) {
+                        return;
+                    }
+                    switch (payload.action()) {
+                        case "OPEN_INVENTORY" -> companion.openInventory(player);
+                        case "FOLLOW" -> {
+                            companion.setMode(FabricCompanionMode.FOLLOW);
+                            toastMode(player, companion, "message.azscompanions.mode_follow");
+                        }
+                        case "STAY" -> {
+                            companion.setMode(FabricCompanionMode.STAY);
+                            toastMode(player, companion, "message.azscompanions.mode_stay");
+                        }
+                        case "WANDER" -> {
+                            companion.setMode(FabricCompanionMode.WANDER);
+                            toastMode(player, companion, "message.azscompanions.mode_wander");
+                        }
+                        default -> {
+                        }
                     }
                 }));
 
@@ -85,11 +105,22 @@ public final class FabricNetworking {
                 }));
     }
 
-    public record RecruitPayload(String definitionId) implements CustomPacketPayload {
-        public static final Type<RecruitPayload> TYPE = new Type<>(
-                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "recruit"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RecruitPayload> CODEC =
-                StreamCodec.composite(ByteBufCodecs.STRING_UTF8, RecruitPayload::definitionId, RecruitPayload::new);
+    public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
+        ServerPlayNetworking.send(player, new OpenMenuPayload(companion.getId()));
+    }
+
+    private static void toastMode(ServerPlayer player, FabricCompanionEntity companion, String key) {
+        player.displayClientMessage(
+                Component.literal(companion.getChatDisplayName() + " — ")
+                        .append(Component.translatable(key)),
+                true);
+    }
+
+    public record OpenMenuPayload(int entityId) implements CustomPacketPayload {
+        public static final Type<OpenMenuPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_menu"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, OpenMenuPayload> CODEC =
+                StreamCodec.composite(ByteBufCodecs.VAR_INT, OpenMenuPayload::entityId, OpenMenuPayload::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -97,14 +128,26 @@ public final class FabricNetworking {
         }
     }
 
-    public record RadialPayload(int entityId, String command) implements CustomPacketPayload {
-        public static final Type<RadialPayload> TYPE = new Type<>(
-                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "radial"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RadialPayload> CODEC =
+    public record MenuActionPayload(int entityId, String action) implements CustomPacketPayload {
+        public static final Type<MenuActionPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "menu_action"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, MenuActionPayload> CODEC =
                 StreamCodec.composite(
-                        ByteBufCodecs.VAR_INT, RadialPayload::entityId,
-                        ByteBufCodecs.STRING_UTF8, RadialPayload::command,
-                        RadialPayload::new);
+                        ByteBufCodecs.VAR_INT, MenuActionPayload::entityId,
+                        ByteBufCodecs.STRING_UTF8, MenuActionPayload::action,
+                        MenuActionPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record RecruitPayload(String definitionId) implements CustomPacketPayload {
+        public static final Type<RecruitPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "recruit"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, RecruitPayload> CODEC =
+                StreamCodec.composite(ByteBufCodecs.STRING_UTF8, RecruitPayload::definitionId, RecruitPayload::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

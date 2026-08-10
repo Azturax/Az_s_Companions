@@ -1,6 +1,6 @@
 # Az's Companions — Development Roadmap
 
-Public repo: [Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions) · Released: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0)
+Public repo: [Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions) · Released: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1)
 
 All characters remain explicitly adult, wholesome, and non-sexual across every phase.
 
@@ -13,7 +13,7 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [x] Data-driven companion definitions (`data/*/companions/*.json`)
 - [x] Default companion: Kon (dialogue + personality + skin path)
 - [x] Companion Selection screen + craftable selector item + `/azscompanions`
-- [x] Management / inventory / radial command menus
+- [x] Management / inventory menus
 - [x] Task queue (priority, pause/resume, cancel, reports)
 - [x] Vanilla tasks: follow, stay, guard, gather, farm, chop, mine, combat, collect, deposit, build, craft, machine, sleep, home
 - [x] Datapack tags for crops, tools, food, containers, blacklist

@@ -2,11 +2,13 @@ package com.azscompanions.entity;
 
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.menu.FabricCompanionInventoryMenu;
+import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import com.azscompanions.registry.FabricModItems;
 import com.azscompanions.task.FabricTaskQueue;
-// Radial menu entry points removed (follow-only UX).
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -15,6 +17,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -36,6 +40,7 @@ import net.minecraft.world.level.Level;
 import com.azscompanions.config.FabricServerConfig;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -68,12 +73,14 @@ public class FabricCompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_BUST_OFFSET =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
+    /** Synced so client UI ownership checks work without looking at NBT. */
+    private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.OPTIONAL_UUID);
 
     private final FabricCompanionInventory inventory = new FabricCompanionInventory();
     private final FabricTaskQueue taskQueue = new FabricTaskQueue(this);
     private final OwnerActivityTracker ownerActivity = new OwnerActivityTracker();
     private final Set<UUID> trusted = new HashSet<>();
-    private UUID ownerUuid;
     private BlockPos homePos;
     private BlockPos homeBedPos;
     private String voiceProfile = "kon_soft";
@@ -110,6 +117,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
+        builder.define(DATA_OWNER, Optional.empty());
     }
 
     @Override
@@ -143,23 +151,105 @@ public class FabricCompanionEntity extends PathfinderMob {
             taskQueue.cancelActive();
             tickOwnerActivity();
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
-            // Ground leash teleport — FOLLOW only, exploring, never mid-fight or while idle.
-            if (getMode() == FabricCompanionMode.FOLLOW
+            tickSleepPurr();
+            tickHomeBedLeash();
+            // Ground leash teleport — only when actively following away from home.
+            if (shouldActivelyFollowOwner()
                     && isOwnerExploring()
                     && (getTarget() == null || !getTarget().isAlive())) {
                 Player owner = getOwner();
-                if (owner != null && distanceTo(owner) > FabricFollowOwnerGoal.TELEPORT_DISTANCE) {
-                    net.minecraft.world.phys.Vec3 away = position().subtract(owner.position());
-                    if (away.horizontalDistanceSqr() < 1.0e-4d) {
-                        away = new net.minecraft.world.phys.Vec3(1.0d, 0.0d, 0.0d);
-                    }
-                    net.minecraft.world.phys.Vec3 offset = new net.minecraft.world.phys.Vec3(away.x, 0.0d, away.z)
-                            .normalize()
-                            .scale(CompanionFollowDistances.PREFERRED_DISTANCE);
-                    teleportTo(owner.getX() + offset.x, owner.getY(), owner.getZ() + offset.z);
+                if (owner != null && distanceTo(owner) > CompanionFollowDistances.TELEPORT_DISTANCE) {
+                    safeTeleportNearOwner(owner);
                 }
             }
         }
+    }
+
+    private void tickHomeBedLeash() {
+        FabricCompanionMode mode = getMode();
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
+            return;
+        }
+        if (mode != FabricCompanionMode.FOLLOW && mode != FabricCompanionMode.WANDER) {
+            return;
+        }
+        if (getTarget() != null && getTarget().isAlive()) {
+            return;
+        }
+        if (isSleeping()) {
+            return;
+        }
+        Player owner = getOwner();
+        BlockPos bed = getHomeBedPos();
+        if (owner == null || bed == null) {
+            return;
+        }
+        double radius = FabricServerConfig.HOME_BED_RADIUS;
+        if (owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= radius * radius) {
+            return;
+        }
+        if (distanceTo(owner) > CompanionFollowDistances.PREFERRED_DISTANCE + 2.0d) {
+            safeTeleportNearOwner(owner);
+        }
+    }
+
+    public void safeTeleportNearOwner(Player owner) {
+        net.minecraft.world.phys.Vec3 away = position().subtract(owner.position());
+        if (away.horizontalDistanceSqr() < 1.0e-4d) {
+            away = new net.minecraft.world.phys.Vec3(1.0d, 0.0d, 0.0d);
+        }
+        net.minecraft.world.phys.Vec3 offset = new net.minecraft.world.phys.Vec3(away.x, 0.0d, away.z)
+                .normalize()
+                .scale(CompanionFollowDistances.PREFERRED_DISTANCE);
+        teleportTo(owner.getX() + offset.x, owner.getY(), owner.getZ() + offset.z);
+    }
+
+    public double getHomeBedRadius() {
+        return FabricServerConfig.HOME_BED_RADIUS;
+    }
+
+    public boolean isNearHomeBed() {
+        BlockPos bed = getHomeBedPos();
+        if (bed == null) {
+            return false;
+        }
+        double r = getHomeBedRadius();
+        return distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= r * r;
+    }
+
+    public boolean isOwnerFarFromHomeBed() {
+        Player owner = getOwner();
+        BlockPos bed = getHomeBedPos();
+        if (owner == null || bed == null) {
+            return false;
+        }
+        double r = getHomeBedRadius();
+        return owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) > r * r;
+    }
+
+    public boolean shouldActivelyFollowOwner() {
+        FabricCompanionMode mode = getMode();
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
+            return false;
+        }
+        if (getHomeBedPos() == null) {
+            return mode == FabricCompanionMode.FOLLOW || mode == FabricCompanionMode.WANDER;
+        }
+        if (isOwnerFarFromHomeBed()) {
+            return true;
+        }
+        return !isNearHomeBed() && mode == FabricCompanionMode.FOLLOW;
+    }
+
+    public boolean shouldHomeIdleNearBed() {
+        FabricCompanionMode mode = getMode();
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
+            return false;
+        }
+        if (getHomeBedPos() == null || isOwnerFarFromHomeBed()) {
+            return false;
+        }
+        return isNearHomeBed() && (mode == FabricCompanionMode.FOLLOW || mode == FabricCompanionMode.WANDER);
     }
 
     private void tickOwnerActivity() {
@@ -169,6 +259,17 @@ public class FabricCompanionEntity extends PathfinderMob {
             return;
         }
         ownerActivity.tick(owner.getX(), owner.getZ());
+    }
+
+    /** Soft cat purr every few seconds while asleep — audible to nearby players. */
+    private void tickSleepPurr() {
+        if (!isSleeping()) {
+            return;
+        }
+        if ((tickCount + getId()) % 100 != 0) {
+            return;
+        }
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL, 0.55f, 0.95f + random.nextFloat() * 0.15f);
     }
 
     public boolean isOwnerStandingAround() {
@@ -214,17 +315,53 @@ public class FabricCompanionEntity extends PathfinderMob {
             return InteractionResult.SUCCESS;
         }
         if (!(player instanceof ServerPlayer serverPlayer) || !isOwnedBy(player)) {
-            return InteractionResult.PASS;
+            if (!level().isClientSide) {
+                player.displayClientMessage(Component.translatable("message.azscompanions.not_owner"), true);
+            }
+            return InteractionResult.CONSUME;
         }
+        // Shift + right-click opens shared menu (Customize | Command | Inventory).
         if (player.isShiftKeyDown()) {
-            openInventory(serverPlayer);
+            FabricNetworking.openMenu(serverPlayer, this);
             return InteractionResult.CONSUME;
         }
         ItemStack held = player.getItemInHand(hand);
         if (!held.isEmpty()) {
+            if (isEdibleFood(held)) {
+                return feedFromPlayer(serverPlayer, hand);
+            }
             return giveItemToHands(serverPlayer, hand, held);
         }
         return takeItemFromHands(serverPlayer, hand);
+    }
+
+    private boolean isEdibleFood(ItemStack stack) {
+        return !stack.isEmpty() && stack.get(DataComponents.FOOD) != null;
+    }
+
+    /** Eat 1 food from the player's hand (survival), cheer with hearts; never equip the food. */
+    private InteractionResult feedFromPlayer(ServerPlayer player, InteractionHand hand) {
+        // Survival: always consume exactly one. Creative: optional no-consume.
+        if (!player.getAbilities().instabuild) {
+            ItemStack stack = player.getItemInHand(hand);
+            stack.shrink(1);
+            player.setItemInHand(hand, stack.isEmpty() ? ItemStack.EMPTY : stack);
+        }
+        heal(4.0f);
+        swing(InteractionHand.MAIN_HAND, true);
+        speakSuccess();
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL, 0.8f, 1.1f);
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.HEART,
+                    getX(),
+                    getY() + getBbHeight() * 0.9d,
+                    getZ(),
+                    8,
+                    0.4d, 0.3d, 0.4d,
+                    0.02d);
+        }
+        return InteractionResult.CONSUME;
     }
 
     private InteractionResult giveItemToHands(ServerPlayer player, InteractionHand hand, ItemStack held) {
@@ -300,7 +437,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
         if (target instanceof OwnableEntity ownable) {
             UUID petOwner = ownable.getOwnerUUID();
-            if (petOwner != null && (petOwner.equals(ownerUuid) || trusted.contains(petOwner))) {
+            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trusted.contains(petOwner))) {
                 return false;
             }
         }
@@ -365,6 +502,9 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (level().isClientSide) {
             return;
         }
+        if (!FabricServerConfig.COMPANION_CHAT_MESSAGES) {
+            return;
+        }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
             owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
@@ -386,23 +526,29 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public void setOwner(Player player) {
-        ownerUuid = player.getUUID();
+        setOwnerUuid(player.getUUID());
         trusted.add(player.getUUID());
     }
 
+    public void setOwnerUuid(UUID uuid) {
+        entityData.set(DATA_OWNER, Optional.ofNullable(uuid));
+    }
+
     public boolean isOwnedBy(Player player) {
-        return ownerUuid != null && ownerUuid.equals(player.getUUID());
+        UUID owner = getOwnerUuid();
+        return owner != null && owner.equals(player.getUUID());
     }
 
     public Player getOwner() {
-        if (ownerUuid == null || !(level() instanceof ServerLevel serverLevel)) {
+        UUID owner = getOwnerUuid();
+        if (owner == null || !(level() instanceof ServerLevel serverLevel)) {
             return null;
         }
-        return serverLevel.getServer().getPlayerList().getPlayer(ownerUuid);
+        return serverLevel.getServer().getPlayerList().getPlayer(owner);
     }
 
     public UUID getOwnerUuid() {
-        return ownerUuid;
+        return entityData.get(DATA_OWNER).orElse(null);
     }
 
     public FabricCompanionMode getMode() {
@@ -411,6 +557,7 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     public void setMode(FabricCompanionMode mode) {
         entityData.set(DATA_MODE, mode.name());
+        getNavigation().stop();
     }
 
     public FabricCompanionInventory getCompanionInventory() {
@@ -576,8 +723,9 @@ public class FabricCompanionEntity extends PathfinderMob {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        if (ownerUuid != null) {
-            tag.putUUID("Owner", ownerUuid);
+        UUID owner = getOwnerUuid();
+        if (owner != null) {
+            tag.putUUID("Owner", owner);
         }
         tag.putString("Definition", entityData.get(DATA_DEFINITION));
         tag.putString("Mode", entityData.get(DATA_MODE));
@@ -613,7 +761,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             }
         }
         if (tag.hasUUID("Owner")) {
-            ownerUuid = tag.getUUID("Owner");
+            setOwnerUuid(tag.getUUID("Owner"));
         }
         if (tag.contains("Definition")) {
             entityData.set(DATA_DEFINITION, tag.getString("Definition"));

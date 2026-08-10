@@ -8,9 +8,8 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Loose ground follow while the owner is exploring. Only closes the gap beyond
- * {@link CompanionFollowDistances#FOLLOW_START}; stops in the preferred ring and
- * never bee-lines onto the player. Teleport only beyond the leash when exploring.
+ * Follow owner when commanded and not home-idle near the bed.
+ * Home-bed rule: {@link CompanionFollowDistances#HOME_BED_RADIUS}.
  */
 public final class FabricFollowOwnerGoal extends Goal {
     public static final double TELEPORT_DISTANCE = CompanionFollowDistances.TELEPORT_DISTANCE;
@@ -28,7 +27,18 @@ public final class FabricFollowOwnerGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (companion.getMode() != FabricCompanionMode.FOLLOW || companion.isSleeping()) {
+        FabricCompanionMode mode = companion.getMode();
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
+            return false;
+        }
+        if (mode != FabricCompanionMode.FOLLOW && mode != FabricCompanionMode.WANDER) {
+            return false;
+        }
+        if (mode == FabricCompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()
+                && companion.getHomeBedPos() != null) {
+            return false;
+        }
+        if (companion.isSleeping() || !companion.shouldActivelyFollowOwner()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -41,22 +51,23 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
-        if (companion.isOwnerStandingAround()) {
-            return false;
-        }
         double dist = companion.distanceTo(owner);
         if (CompanionFollowDistances.tooClose(dist)) {
             return true;
         }
-        return CompanionFollowDistances.needsFollow(dist);
+        return CompanionFollowDistances.needsFollow(dist)
+                || companion.isOwnerFarFromHomeBed()
+                || dist > FOLLOW_STOP_DISTANCE;
     }
 
     @Override
     public boolean canContinueToUse() {
         if (owner == null
-                || companion.getMode() != FabricCompanionMode.FOLLOW
                 || companion.isSleeping()
-                || owner.isSleeping()) {
+                || owner.isSleeping()
+                || companion.getMode() == FabricCompanionMode.STAY
+                || companion.getMode() == FabricCompanionMode.SIT
+                || !companion.shouldActivelyFollowOwner()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -64,9 +75,6 @@ public final class FabricFollowOwnerGoal extends Goal {
         }
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
-        }
-        if (companion.isOwnerStandingAround()) {
-            return false;
         }
         double dist = companion.distanceTo(owner);
         if (CompanionFollowDistances.tooClose(dist)) {
@@ -95,7 +103,7 @@ public final class FabricFollowOwnerGoal extends Goal {
                 return;
             }
             if (dist > TELEPORT_DISTANCE && companion.isOwnerExploring()) {
-                teleportNearOwner();
+                companion.safeTeleportNearOwner(owner);
             } else if (dist > FOLLOW_STOP_DISTANCE) {
                 pathTowardPreferredRing();
             } else {
@@ -121,14 +129,5 @@ public final class FabricFollowOwnerGoal extends Goal {
         }
         Vec3 target = owner.position().add(new Vec3(away.x, 0.0d, away.z).normalize().scale(desired));
         companion.getNavigation().moveTo(target.x, target.y, target.z, 1.0d);
-    }
-
-    private void teleportNearOwner() {
-        Vec3 away = companion.position().subtract(owner.position());
-        if (away.horizontalDistanceSqr() < 1.0e-4d) {
-            away = new Vec3(1.0d, 0.0d, 0.0d);
-        }
-        Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE);
-        companion.teleportTo(owner.getX() + offset.x, owner.getY(), owner.getZ() + offset.z);
     }
 }

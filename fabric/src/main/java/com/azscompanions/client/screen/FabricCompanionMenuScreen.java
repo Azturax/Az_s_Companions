@@ -1,0 +1,69 @@
+package com.azscompanions.client.screen;
+
+import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.network.FabricNetworkingClient;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+/**
+ * Shared Shift+RMB companion menu: Customize, Command, Inventory.
+ */
+public final class FabricCompanionMenuScreen extends Screen {
+    private static final int PANEL_BG = 0xC0101010;
+    private static final int PANEL_EDGE = 0xFF8B8B8B;
+
+    private final FabricCompanionEntity companion;
+    private int panelX;
+    private int panelY;
+    private final int panelW = 220;
+    private final int panelH = 168;
+
+    public FabricCompanionMenuScreen(FabricCompanionEntity companion) {
+        super(Component.translatable("screen.azscompanions.menu"));
+        this.companion = companion;
+    }
+
+    @Override
+    protected void init() {
+        panelX = (width - panelW) / 2;
+        panelY = (height - panelH) / 2;
+        int bx = panelX + 30;
+        int by = panelY + 40;
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.customize"), b -> {
+            if (minecraft != null) {
+                minecraft.setScreen(new FabricCompanionCreatorScreen(companion, this));
+            }
+        }).bounds(bx, by, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.command"), b -> {
+            if (minecraft != null) {
+                minecraft.setScreen(new FabricCompanionCommandScreen(companion, this));
+            }
+        }).bounds(bx, by + 28, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
+            FabricNetworkingClient.sendMenuAction(companion.getId(), "OPEN_INVENTORY");
+        }).bounds(bx, by + 56, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
+                .bounds(bx, by + 92, 160, 20).build());
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        graphics.fill(panelX - 1, panelY - 1, panelX + panelW + 1, panelY + panelH + 1, PANEL_EDGE);
+        graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BG);
+        graphics.drawCenteredString(font, title, panelX + panelW / 2, panelY + 12, 0xFFFFFF);
+        String name = companion.getDisplayName().getString();
+        graphics.drawCenteredString(font, name, panelX + panelW / 2, panelY + 24, 0xA0A0A0);
+        super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+}

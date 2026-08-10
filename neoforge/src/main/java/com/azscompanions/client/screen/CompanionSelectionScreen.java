@@ -1,6 +1,5 @@
 package com.azscompanions.client.screen;
 
-import com.azscompanions.AzsCompanions;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.CompanionDefinition;
 import com.azscompanions.entity.CompanionEntity;
@@ -19,13 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Polished companion selection UI with large cards. Kon is pre-selected for first-time players.
- * Kon's card uses the official portrait derived from the character reference art.
+ * Companion selection UI. Defaults to the first registered definition (built-in Kon is an optional easter egg).
  */
 public final class CompanionSelectionScreen extends AbstractContainerScreen<CompanionSelectionMenu> {
-    private static final ResourceLocation KON_CARD =
-            ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "textures/gui/kon_card.png");
-
     private final List<CompanionDefinition> definitions = new ArrayList<>();
     private int selectedIndex;
 
@@ -34,18 +29,7 @@ public final class CompanionSelectionScreen extends AbstractContainerScreen<Comp
         this.imageWidth = 320;
         this.imageHeight = 220;
         definitions.addAll(CompanionRegistry.all());
-        if (definitions.isEmpty()) {
-            // Datapack not synced to client registry yet — still default to Kon id.
-            selectedIndex = 0;
-        } else {
-            selectedIndex = 0;
-            for (int i = 0; i < definitions.size(); i++) {
-                if (definitions.get(i).id().equals(CompanionRegistry.KON_ID)) {
-                    selectedIndex = i;
-                    break;
-                }
-            }
-        }
+        selectedIndex = 0;
     }
 
     @Override
@@ -92,29 +76,23 @@ public final class CompanionSelectionScreen extends AbstractContainerScreen<Comp
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = leftPos;
         int y = topPos;
-        // Vanilla-like dark panel (no cyan chrome).
         graphics.fill(x - 1, y - 1, x + imageWidth + 1, y + imageHeight + 1, 0xFF8B8B8B);
         graphics.fill(x, y, x + imageWidth, y + imageHeight, 0xC0101010);
         graphics.fill(x + 12, y + 28, x + 150, y + 170, 0xFF2B2B2B);
         graphics.fill(x + 162, y + 28, x + 308, y + 170, 0xFF2B2B2B);
 
         CompanionDefinition selected = definitions.isEmpty() ? null : definitions.get(selectedIndex);
-        String name = selected == null ? "Kon" : selected.displayName();
+        String name = selected == null ? "Companion" : selected.displayName();
         String personality = selected == null
-                ? "Gentle, loyal, slightly shy, practical, and encouraging."
+                ? "A loyal companion who stays close, follows commands, and watches your back."
                 : selected.personality();
 
         graphics.drawString(font, Component.translatable("screen.azscompanions.selection"), x + 12, y + 10, 0xFFFFFF, false);
         graphics.drawString(font, name, x + 172, y + 40, 0xFFFFFF, false);
         graphics.drawWordWrap(font, Component.literal(personality), x + 172, y + 58, 126, 0xA0A0A0);
         graphics.drawString(font, Component.literal("Status: Available"), x + 172, y + 130, 0xA0A0A0, false);
-
-        boolean isKon = selected == null || selected.id().equals(CompanionRegistry.KON_ID);
-        if (isKon) {
-            graphics.blit(KON_CARD, x + 20, y + 36, 0, 0, 124, 124, 128, 128);
-        } else {
-            graphics.drawString(font, Component.literal("Preview"), x + 55, y + 90, 0xA0A0A0, false);
-        }
+        graphics.drawCenteredString(font, Component.literal(name.substring(0, 1).toUpperCase()), x + 81, y + 90, 0xE0E0E0);
+        graphics.drawCenteredString(font, Component.literal("Preview"), x + 81, y + 110, 0x808080);
     }
 
     @Override

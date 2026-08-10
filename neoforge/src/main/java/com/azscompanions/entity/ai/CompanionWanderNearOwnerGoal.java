@@ -13,17 +13,15 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Casual stroll near the owner:
+ * Casual stroll:
  * <ul>
- *   <li>Owner idle — free wander in {@link CompanionFollowDistances#IDLE_WANDER_MIN}–
- *       {@link CompanionFollowDistances#IDLE_WANDER_MAX}, loaded chunks only, no teleport.</li>
- *   <li>Owner exploring but companion within follow-start — soft stroll in the comfort
- *       ring (2–12) instead of bee-lining into the player's face.</li>
+ *   <li>Home-idle (Follow near bed) or Wander near bed — stroll around home bed.</li>
+ *   <li>Explicit WANDER away from bed / no bed — stroll near owner.</li>
+ *   <li>Never runs while Stay, or while actively following the owner.</li>
  * </ul>
  */
 public final class CompanionWanderNearOwnerGoal extends Goal {
-    private static final int IDLE_CHANCE = 60;
-    private static final int EXPLORE_CHANCE = 100;
+    private static final int IDLE_CHANCE = 50;
     private static final double SPEED = 0.85d;
 
     private final CompanionEntity companion;
@@ -44,9 +42,7 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        boolean freeWander = companion.getMode() == CompanionMode.WANDER;
-        int chance = freeWander || companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
-        if (companion.getRandom().nextInt(chance) != 0) {
+        if (companion.getRandom().nextInt(IDLE_CHANCE) != 0) {
             return false;
         }
         wanted = pickWanderTarget();
@@ -77,50 +73,55 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
 
     private boolean canWander() {
         CompanionMode mode = companion.getMode();
-        boolean freeWander = mode == CompanionMode.WANDER;
-        if ((!freeWander && mode != CompanionMode.FOLLOW)
-                || companion.isSitting()
-                || companion.isSleeping()) {
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT
+                || companion.isSitting() || companion.isSleeping()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        Player owner = companion.getOwner();
-        if (owner == null || owner.isSpectator() || owner.isSleeping()) {
+        // When actively following the owner, FollowGoal owns MOVE.
+        if (companion.shouldActivelyFollowOwner()) {
             return false;
         }
-        double dist = companion.distanceTo(owner);
-        if (CompanionFollowDistances.tooClose(dist)) {
-            return false; // follow goal steps back
+        if (mode == CompanionMode.WANDER) {
+            return true;
         }
-        if (freeWander || companion.isOwnerStandingAround()) {
-            // Explicit WANDER mode or owner idle — free wander envelope.
-            return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
+        if (mode == CompanionMode.FOLLOW) {
+            // Home-idle near bed, or soft stroll while owner stands around (no bed).
+            return companion.shouldHomeIdleNearBed()
+                    || (companion.getHomeBedPos() == null && companion.isOwnerStandingAround());
         }
-        // Exploring: stroll in comfort / mid band; follow owns MOVE beyond FOLLOW_START.
-        return dist <= CompanionFollowDistances.FOLLOW_START;
+        return false;
     }
 
     private Vec3 pickWanderTarget() {
-        Player owner = companion.getOwner();
-        if (owner == null) {
-            return null;
-        }
-        boolean freeRing = companion.getMode() == CompanionMode.WANDER || companion.isOwnerStandingAround();
-        double minR = freeRing
-                ? CompanionFollowDistances.IDLE_WANDER_MIN
-                : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
-        double maxR = freeRing
-                ? CompanionFollowDistances.IDLE_WANDER_MAX
-                : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();
+        BlockPos bed = companion.getHomeBedPos();
+        boolean aroundBed = companion.shouldHomeIdleNearBed()
+                || (companion.getMode() == CompanionMode.WANDER && bed != null && !companion.isOwnerFarFromHomeBed());
+        Vec3 center;
+        double minR;
+        double maxR;
+        if (aroundBed && bed != null) {
+            center = Vec3.atBottomCenterOf(bed);
+            minR = CompanionFollowDistances.HOME_IDLE_WANDER_MIN;
+            maxR = CompanionFollowDistances.HOME_IDLE_WANDER_MAX;
+        } else {
+            Player owner = companion.getOwner();
+            if (owner == null) {
+                return null;
+            }
+            center = owner.position();
+            minR = CompanionFollowDistances.IDLE_WANDER_MIN;
+            maxR = CompanionFollowDistances.IDLE_WANDER_MAX;
+        }
         for (int attempt = 0; attempt < 16; attempt++) {
             double angle = companion.getRandom().nextDouble() * Math.PI * 2.0d;
             double radius = minR + companion.getRandom().nextDouble() * (maxR - minR);
-            double x = owner.getX() + Math.cos(angle) * radius;
-            double z = owner.getZ() + Math.sin(angle) * radius;
-            BlockPos pos = BlockPos.containing(x, owner.getY(), z);
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+            BlockPos pos = BlockPos.containing(x, center.y, z);
             if (!isChunkLoaded(level, pos)) {
                 continue;
             }
@@ -129,11 +130,6 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
                 continue;
             }
             if (!level.getFluidState(stand).isEmpty() || !level.getFluidState(stand.above()).isEmpty()) {
-                continue;
-            }
-            // Never pick a spot inside personal space.
-            if (owner.distanceToSqr(stand.getX() + 0.5d, stand.getY(), stand.getZ() + 0.5d)
-                    < CompanionFollowDistances.MIN_PERSONAL_SPACE * CompanionFollowDistances.MIN_PERSONAL_SPACE) {
                 continue;
             }
             Vec3 candidate = Vec3.atBottomCenterOf(stand);

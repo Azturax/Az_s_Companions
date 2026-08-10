@@ -15,6 +15,9 @@ public final class ServerConfig {
     public static final ModConfigSpec.DoubleValue LOW_HEALTH_RETREAT_RATIO;
     public static final ModConfigSpec.BooleanValue LOG_TASK_EVENTS;
     public static final ModConfigSpec.BooleanValue STRICT_CHUNK_LOADING;
+    public static final ModConfigSpec.DoubleValue HOME_BED_RADIUS;
+    public static final ModConfigSpec.BooleanValue COMPANION_CHAT_MESSAGES;
+    public static final ModConfigSpec.BooleanValue AUTO_EQUIP_TOOLS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -26,6 +29,21 @@ public final class ServerConfig {
                 .defineInRange("maxCompanionsPerPlayer", 1, 1, 32);
         MAX_COMPANIONS_PER_SERVER = builder.defineInRange("maxCompanionsPerServer", 64, 1, 512);
         REQUIRE_OWNER_ONLINE = builder.define("requireOwnerOnline", false);
+        builder.pop();
+
+        builder.push("movement");
+        HOME_BED_RADIUS = builder
+                .comment("Blocks. Near home bed: Follow stays home-idle. Owner farther than this from bed → teleport+follow. Default 35.")
+                .defineInRange("homeBedRadius", 35.0d, 8.0d, 128.0d);
+        builder.pop();
+
+        builder.push("behavior");
+        COMPANION_CHAT_MESSAGES = builder
+                .comment("Owner chat/status lines (Hello/Bye and similar). Default on but keep non-spammy.")
+                .define("companionChatMessages", true);
+        AUTO_EQUIP_TOOLS = builder
+                .comment("Auto-equip tools/weapons from backpack into hand slots. Default off.")
+                .define("autoEquipTools", false);
         builder.pop();
 
         builder.push("combat");

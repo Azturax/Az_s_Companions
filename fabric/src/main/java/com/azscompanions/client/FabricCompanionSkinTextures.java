@@ -19,12 +19,17 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 /**
  * Mojang-only companion skins for Fabric. Avoids DefaultPlayerSkin fallback while loading
@@ -35,6 +40,9 @@ public final class FabricCompanionSkinTextures {
     public static final ResourceLocation DEFAULT_KON =
             ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "textures/entity/companion/kon.png");
 
+    public record ReadySkin(UUID uuid, ResourceLocation texture, boolean slim) {
+    }
+
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NORMAL)
@@ -42,11 +50,22 @@ public final class FabricCompanionSkinTextures {
     private static final Map<UUID, ResourceLocation> CACHE = new ConcurrentHashMap<>();
     private static final Map<UUID, Boolean> SLIM_CACHE = new ConcurrentHashMap<>();
     private static final Set<UUID> LOADING = ConcurrentHashMap.newKeySet();
+    private static final Map<UUID, List<Consumer<Optional<ReadySkin>>>> WAITERS = new ConcurrentHashMap<>();
 
     private FabricCompanionSkinTextures() {
     }
 
     public static ResourceLocation resolve(FabricCompanionEntity entity) {
+        if (FabricClientAppearanceDraft.matches(entity)) {
+            String draftSkin = FabricClientAppearanceDraft.ACTIVE.skinPath;
+            if (draftSkin != null && !draftSkin.isBlank()) {
+                return resolve(draftSkin);
+            }
+            String draftName = FabricClientAppearanceDraft.ACTIVE.name;
+            if (draftName != null && draftName.trim().equalsIgnoreCase("Kon")) {
+                return DEFAULT_KON;
+            }
+        }
         String skinPath = entity.getSkinPath();
         if (skinPath == null || skinPath.isBlank()) {
             if (entity.isKonNamed()) {
@@ -59,6 +78,40 @@ public final class FabricCompanionSkinTextures {
             return DEFAULT_KON;
         }
         return resolve(skinPath);
+    }
+
+    public static void loadPlayerSkin(UUID uuid, Consumer<Optional<ReadySkin>> onReady) {
+        Minecraft mc = Minecraft.getInstance();
+        if (uuid == null) {
+            mc.execute(() -> onReady.accept(Optional.empty()));
+            return;
+        }
+        ResourceLocation cached = CACHE.get(uuid);
+        if (cached != null) {
+            boolean slim = SLIM_CACHE.getOrDefault(uuid, false);
+            mc.execute(() -> onReady.accept(Optional.of(new ReadySkin(uuid, cached, slim))));
+            return;
+        }
+        WAITERS.computeIfAbsent(uuid, ignored -> new CopyOnWriteArrayList<>()).add(onReady);
+        ensurePlayerSkinLoaded(uuid);
+    }
+
+    public static void ensurePlayerSkinLoaded(UUID uuid) {
+        ensureLoaded(uuid);
+    }
+
+    private static void notifyWaiters(UUID uuid, Optional<ReadySkin> ready) {
+        List<Consumer<Optional<ReadySkin>>> waiters = WAITERS.remove(uuid);
+        if (waiters == null) {
+            return;
+        }
+        for (Consumer<Optional<ReadySkin>> waiter : waiters) {
+            try {
+                waiter.accept(ready);
+            } catch (Exception e) {
+                AzsCompanionsFabric.LOGGER.warn("Skin ready callback failed for {}", uuid, e);
+            }
+        }
     }
 
     public static ResourceLocation resolve(String skinPath) {
@@ -120,6 +173,7 @@ public final class FabricCompanionSkinTextures {
                         if (err != null) {
                             AzsCompanionsFabric.LOGGER.warn("Fabric skin download failed for {}", uuid, err);
                         }
+                        notifyWaiters(uuid, Optional.empty());
                         return;
                     }
                     try {
@@ -136,8 +190,10 @@ public final class FabricCompanionSkinTextures {
                                 && previous.getPath().startsWith("dynamic_player_skin/")) {
                             mc.getTextureManager().release(previous);
                         }
+                        notifyWaiters(uuid, Optional.of(new ReadySkin(uuid, id, payload.slim())));
                     } catch (Exception e) {
                         AzsCompanionsFabric.LOGGER.warn("Failed registering Fabric skin for {}", uuid, e);
+                        notifyWaiters(uuid, Optional.empty());
                     }
                 }));
     }

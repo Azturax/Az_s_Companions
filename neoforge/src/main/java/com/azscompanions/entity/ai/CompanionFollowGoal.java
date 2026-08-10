@@ -12,10 +12,11 @@ import net.minecraft.world.phys.Vec3;
 import java.util.EnumSet;
 
 /**
- * Loose ground follow while the owner is exploring. Only closes the gap beyond
- * {@link CompanionFollowDistances#FOLLOW_START}; stops in the preferred ring and
- * never bee-lines onto the player. Teleport is a last resort beyond the leash —
- * never while attacking, and never while the owner is standing around.
+ * Follow owner when commanded and not home-idle near the bed.
+ * <p>
+ * Home-bed rule ({@link CompanionFollowDistances#HOME_BED_RADIUS}): while near the home bed and
+ * the owner is also within that radius, do not glue-follow. When the owner leaves the bed radius,
+ * entity tick teleports here and this goal resumes follow.
  */
 public final class CompanionFollowGoal extends Goal {
     public static final double FOLLOW_START_DISTANCE = CompanionFollowDistances.FOLLOW_START;
@@ -32,7 +33,22 @@ public final class CompanionFollowGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (companion.getMode() != CompanionMode.FOLLOW || companion.isSitting() || companion.isSleeping()) {
+        CompanionMode mode = companion.getMode();
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT) {
+            return false;
+        }
+        if (mode != CompanionMode.FOLLOW && mode != CompanionMode.WANDER) {
+            return false;
+        }
+        // Wander only follows when owner left the bed radius (teleport+follow).
+        if (mode == CompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()
+                && companion.getHomeBedPos() != null) {
+            return false;
+        }
+        if (companion.isSitting() || companion.isSleeping()) {
+            return false;
+        }
+        if (!companion.shouldActivelyFollowOwner()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -45,23 +61,25 @@ public final class CompanionFollowGoal extends Goal {
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
-        if (companion.isOwnerStandingAround()) {
-            return false;
-        }
         double dist = companion.distanceTo(owner);
-        // Inside personal space: briefly engage to step back.
         if (CompanionFollowDistances.tooClose(dist)) {
             return true;
         }
-        return CompanionFollowDistances.needsFollow(dist);
+        return CompanionFollowDistances.needsFollow(dist)
+                || companion.isOwnerFarFromHomeBed()
+                || dist > FOLLOW_STOP_DISTANCE;
     }
 
     @Override
     public boolean canContinueToUse() {
         if (owner == null
-                || companion.getMode() != CompanionMode.FOLLOW
                 || companion.isSleeping()
-                || owner.isSleeping()) {
+                || owner.isSleeping()
+                || companion.getMode() == CompanionMode.STAY
+                || companion.getMode() == CompanionMode.SIT) {
+            return false;
+        }
+        if (!companion.shouldActivelyFollowOwner()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
@@ -69,9 +87,6 @@ public final class CompanionFollowGoal extends Goal {
         }
         if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
-        }
-        if (companion.isOwnerStandingAround()) {
-            return false;
         }
         double dist = companion.distanceTo(owner);
         if (CompanionFollowDistances.tooClose(dist)) {
@@ -114,7 +129,6 @@ public final class CompanionFollowGoal extends Goal {
             if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
                 companion.safeTeleportNear(owner.blockPosition());
             } else if (dist > FOLLOW_STOP_DISTANCE) {
-                // Path to a point in the preferred ring — never onto the owner's feet.
                 pathTowardPreferredRing();
             } else {
                 companion.getNavigation().stop();

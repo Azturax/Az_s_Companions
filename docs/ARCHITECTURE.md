@@ -5,7 +5,7 @@ Az's Companions (mod id `azscompanions`). Public repo: [Azturax/Az_s_Companions]
 ## Authority
 
 - Task execution, inventory mutation, combat, block breaking, and recruitment are **server-side only**.
-- Clients render entities/GUIs and play voice/subtitles; they send intent packets (`RecruitCompanionPacket`, `RadialCommandPacket`).
+- Clients render entities/GUIs and play voice/subtitles; they send intent packets (`RecruitCompanionPacket`, `CompanionCommandPacket`).
 - CCI IMC outcomes arrive client-side; CCI edition bridges forward actions to the server.
 
 ## Companion data
@@ -25,6 +25,10 @@ Az's Companions (mod id `azscompanions`). Public repo: [Azturax/Az_s_Companions]
 ## Compatibility
 
 Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps.
+
+## Pathfinding / home blocks
+
+Baritone is **not** a hard dependency in 0.1.x. Prefer a light foundation later: owned **home beacon** + **deposit box** blocks that companions recognize via UUID ownership, rather than shipping Baritone in this pass.
 
 ## Voice
 

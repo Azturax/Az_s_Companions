@@ -9,12 +9,9 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
-/**
- * Casual stroll near the owner (idle free wander 24–40, or comfort-ring stroll while exploring).
- */
+/** Stroll near home bed (home-idle / Wander) or near owner when no bed. */
 public final class FabricWanderNearOwnerGoal extends Goal {
-    private static final int IDLE_CHANCE = 60;
-    private static final int EXPLORE_CHANCE = 100;
+    private static final int IDLE_CHANCE = 50;
     private static final double SPEED = 0.85d;
 
     private final FabricCompanionEntity companion;
@@ -35,9 +32,7 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (!canWander()) {
             return false;
         }
-        boolean freeWander = companion.getMode() == FabricCompanionMode.WANDER;
-        int chance = freeWander || companion.isOwnerStandingAround() ? IDLE_CHANCE : EXPLORE_CHANCE;
-        if (companion.getRandom().nextInt(chance) != 0) {
+        if (companion.getRandom().nextInt(IDLE_CHANCE) != 0) {
             return false;
         }
         wanted = pickWanderTarget();
@@ -68,49 +63,52 @@ public final class FabricWanderNearOwnerGoal extends Goal {
 
     private boolean canWander() {
         FabricCompanionMode mode = companion.getMode();
-        boolean freeWander = mode == FabricCompanionMode.WANDER;
-        if ((!freeWander && mode != FabricCompanionMode.FOLLOW) || companion.isSleeping()) {
-            return false;
-        }
-        if (mode == FabricCompanionMode.SIT || mode == FabricCompanionMode.STAY) {
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT || companion.isSleeping()) {
             return false;
         }
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        Player owner = companion.getOwner();
-        if (owner == null || owner.isSleeping()) {
+        if (companion.shouldActivelyFollowOwner()) {
             return false;
         }
-        double dist = companion.distanceTo(owner);
-        if (CompanionFollowDistances.tooClose(dist)) {
-            return false;
+        if (mode == FabricCompanionMode.WANDER) {
+            return true;
         }
-        if (freeWander || companion.isOwnerStandingAround()) {
-            return dist <= CompanionFollowDistances.IDLE_WANDER_MAX + 4.0d;
+        if (mode == FabricCompanionMode.FOLLOW) {
+            return companion.shouldHomeIdleNearBed()
+                    || (companion.getHomeBedPos() == null && companion.isOwnerStandingAround());
         }
-        return dist <= CompanionFollowDistances.FOLLOW_START;
+        return false;
     }
 
     private Vec3 pickWanderTarget() {
-        Player owner = companion.getOwner();
-        if (owner == null) {
-            return null;
-        }
-        boolean freeRing = companion.getMode() == FabricCompanionMode.WANDER || companion.isOwnerStandingAround();
-        double minR = freeRing
-                ? CompanionFollowDistances.IDLE_WANDER_MIN
-                : CompanionFollowDistances.MIN_PERSONAL_SPACE + 0.5d;
-        double maxR = freeRing
-                ? CompanionFollowDistances.IDLE_WANDER_MAX
-                : CompanionFollowDistances.COMFORT_MAX;
         Level level = companion.level();
+        BlockPos bed = companion.getHomeBedPos();
+        boolean aroundBed = companion.shouldHomeIdleNearBed()
+                || (companion.getMode() == FabricCompanionMode.WANDER && bed != null && !companion.isOwnerFarFromHomeBed());
+        Vec3 center;
+        double minR;
+        double maxR;
+        if (aroundBed && bed != null) {
+            center = Vec3.atBottomCenterOf(bed);
+            minR = CompanionFollowDistances.HOME_IDLE_WANDER_MIN;
+            maxR = CompanionFollowDistances.HOME_IDLE_WANDER_MAX;
+        } else {
+            Player owner = companion.getOwner();
+            if (owner == null) {
+                return null;
+            }
+            center = owner.position();
+            minR = CompanionFollowDistances.IDLE_WANDER_MIN;
+            maxR = CompanionFollowDistances.IDLE_WANDER_MAX;
+        }
         for (int attempt = 0; attempt < 16; attempt++) {
             double angle = companion.getRandom().nextDouble() * Math.PI * 2.0d;
             double radius = minR + companion.getRandom().nextDouble() * (maxR - minR);
-            double x = owner.getX() + Math.cos(angle) * radius;
-            double z = owner.getZ() + Math.sin(angle) * radius;
-            BlockPos pos = BlockPos.containing(x, owner.getY(), z);
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+            BlockPos pos = BlockPos.containing(x, center.y, z);
             if (!isChunkLoaded(level, pos)) {
                 continue;
             }
@@ -119,10 +117,6 @@ public final class FabricWanderNearOwnerGoal extends Goal {
                 continue;
             }
             if (!level.getFluidState(stand).isEmpty() || !level.getFluidState(stand.above()).isEmpty()) {
-                continue;
-            }
-            if (owner.distanceToSqr(stand.getX() + 0.5d, stand.getY(), stand.getZ() + 0.5d)
-                    < CompanionFollowDistances.MIN_PERSONAL_SPACE * CompanionFollowDistances.MIN_PERSONAL_SPACE) {
                 continue;
             }
             Vec3 candidate = Vec3.atBottomCenterOf(stand);

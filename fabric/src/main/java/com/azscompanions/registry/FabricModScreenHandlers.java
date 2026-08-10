@@ -3,7 +3,6 @@ package com.azscompanions.registry;
 import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.menu.FabricCompanionInventoryMenu;
 import com.azscompanions.menu.FabricCompanionSelectionMenu;
-import com.azscompanions.menu.FabricRadialCommandMenu;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -14,7 +13,6 @@ import net.minecraft.world.inventory.MenuType;
 public final class FabricModScreenHandlers {
     public static MenuType<FabricCompanionSelectionMenu> SELECTION;
     public static MenuType<FabricCompanionInventoryMenu> INVENTORY;
-    public static MenuType<FabricRadialCommandMenu> RADIAL;
 
     private FabricModScreenHandlers() {
     }
@@ -29,12 +27,6 @@ public final class FabricModScreenHandlers {
                 id("companion_inventory"),
                 new ExtendedScreenHandlerType<>(
                         (syncId, inv, entityId) -> new FabricCompanionInventoryMenu(syncId, inv, entityId),
-                        net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
-        RADIAL = Registry.register(
-                BuiltInRegistries.MENU,
-                id("radial_command"),
-                new ExtendedScreenHandlerType<>(
-                        (syncId, inv, entityId) -> new FabricRadialCommandMenu(syncId, inv, entityId),
                         net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
     }
 

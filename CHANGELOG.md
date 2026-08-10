@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.1.1
+
+Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fixes
+- **Dedicated NeoForge server:** `RegisterPayloadHandlersEvent` no longer classloads client GUI (`Screen`) via `OpenCompanionCreatorPacket` / `OpenCompanionMenuPacket` / `CompanionDialoguePacket` handlers — S2C handlers live in `ClientNetworkHandlers` (client dist only)
+
+### UX / commands
+- Shift+RMB **Companion Menu** (shared on NeoForge + Fabric): Customize · **Command** (Follow / Stay / Wander) · Inventory — server packets only
+- Removed V-key **radial** command UI (and related menus/packets/keybinds); Command lives in the companion menu
+- Clearer Follow / Stay / Wander AI (no idle free-roam that ignores commands)
+- Ownership denial message for non-owners; inventory / command / customize stay owner-gated
+- Inventory: backpack + distinct armor/tool equipment strip
+- Removed unused Kon card/portrait GUI textures (mod icon uses companion charm)
+- Feed with edible food: consumes 1, small heal, hearts + cheer (not placed in hands)
+- Sleeping companions softly purr (`CAT_PURR`) every ~5s server-side (no sleep-skin texture override)
+- Charm Hello / Bye lines toggleable via NeoForge config
+- Scaled companions step up **1 full block** at any body size (`STEP_HEIGHT` 1.0 + `JUMP_STRENGTH` 0.42)
+- Fabric customize / creator parity improvements (appearance draft, skin lookup, shared menu screens)
+
+### Home bed / follow
+- **Home-bed proximity (35 blocks, configurable on NeoForge):** near bed → home-idle; owner farther than 35 from bed → teleport + follow. Stay ignores the auto rule; Wander strolls near the bed until the owner leaves radius
+- Night sleep **prefers Kon Bed**, then home bed; leave bed if owner moves far (~35) with wake cooldown to avoid thrashing
+- Follow bands: personal space **2**, preferred **~6**, start **10**, stop **5**, teleport **48**; home-bed radius **35**
+- Owner **explore vs idle** still used for soft stroll when no home bed is set
+
+### Loaders / editions
+- Four jars for Minecraft 1.21.1: NeoForge + Fabric **standalone**, NeoForge + Fabric **CCI** (same dependency story as 0.1.0)
+
 ## 0.1.0 — first public
 
 Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
@@ -32,3 +61,8 @@ Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 - **NeoForge CCI** (`azscompanions-neoforge-cci`): hard-depends on CCI **1.13.0** + iChunUtil **1.0.3**; IMC bridge for `companion_say` / `greet` / `wave` / `follow` / `sit` / `stay`
 - **Fabric CCI** (`azscompanions-fabric-cci`): same subjects via IMCOutcome mixin (iChunUtil Fabric has no InterModComms) plus `/azscci` CommandOutcome fallback
 - Standalone jars unchanged (no CCI required); never install standalone + CCI together
+
+### Deferred / foundation
+- **Baritone** pathfinding not bundled this pass — prefer future home beacon + owned deposit box foundation
+- Auto-equip tools config exists (default **off**); full auto-equip logic deferred
+- Sharing companions with other players deferred (ownership UUID hooks left extensible)

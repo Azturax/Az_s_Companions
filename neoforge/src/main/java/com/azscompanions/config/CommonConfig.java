@@ -35,7 +35,7 @@ public final class CommonConfig {
         builder.push("tasks");
         DEFAULT_TASK_RADIUS = builder.comment("Default gather/farm/mine radius.")
                 .defineInRange("defaultTaskRadius", 16, 4, 64);
-        TELEPORT_DISTANCE = builder.comment("Teleport near owner when farther than this (blocks). Loose follow starts ~32 and stops ~8 (min personal space 2); skipped while fighting or owner idle.")
+        TELEPORT_DISTANCE = builder.comment("Teleport near owner when farther than this (blocks). Follow starts ~10 and stops ~5 (min personal space 2). Home-bed radius is separate (default 35).")
                 .defineInRange("teleportDistance", 48, 16, 256);
         PATH_STUCK_TIMEOUT_TICKS = builder.comment("Ticks without progress before stuck recovery.")
                 .defineInRange("pathStuckTimeoutTicks", 100, 20, 1200);

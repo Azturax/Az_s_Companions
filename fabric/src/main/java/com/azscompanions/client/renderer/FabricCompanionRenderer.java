@@ -1,5 +1,6 @@
 package com.azscompanions.client.renderer;
 
+import com.azscompanions.client.FabricClientAppearanceDraft;
 import com.azscompanions.client.FabricCompanionSkinTextures;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.entity.FabricCompanionEntity;
@@ -25,8 +26,14 @@ public final class FabricCompanionRenderer
     @Override
     public void render(FabricCompanionEntity entity, float entityYaw, float partialTicks, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
-        this.model = entity.isSlimArms() ? slimModel : wideModel;
-        this.shadowRadius = 0.5f * entity.getBodyScale();
+        boolean slim = entity.isSlimArms();
+        float scale = entity.getBodyScale();
+        if (FabricClientAppearanceDraft.matches(entity)) {
+            slim = FabricClientAppearanceDraft.ACTIVE.slimArms;
+            scale = FabricClientAppearanceDraft.ACTIVE.scale;
+        }
+        this.model = slim ? slimModel : wideModel;
+        this.shadowRadius = 0.5f * scale;
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
     }
 

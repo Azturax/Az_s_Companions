@@ -3,7 +3,7 @@
 Stream setup for **iChun Content Creator Integration (CCI)** with the Az's Companions **CCI edition** jars.
 
 - Mod repo: [Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0)
+- Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1)
 - Official CCI docs: [content-creator-integration.readthedocs.io](https://content-creator-integration.readthedocs.io/)
 - CCI issues / docs: [iChun/ContentCreatorIntegration-IssuesAndDocumentation](https://github.com/iChun/ContentCreatorIntegration-IssuesAndDocumentation)
 
@@ -34,10 +34,10 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 | Jar | Role |
 |-----|------|
-| `azscompanions-neoforge-cci-0.1.0.jar` | NeoForge CCI edition |
-| `azscompanions-fabric-cci-0.1.0.jar` | Fabric CCI edition |
-| `azscompanions-neoforge-0.1.0.jar` | NeoForge standalone — **no** bridge |
-| `azscompanions-fabric-0.1.0.jar` | Fabric standalone — **no** bridge |
+| `azscompanions-neoforge-cci-0.1.1.jar` | NeoForge CCI edition |
+| `azscompanions-fabric-cci-0.1.1.jar` | Fabric CCI edition |
+| `azscompanions-neoforge-0.1.1.jar` | NeoForge standalone — **no** bridge |
+| `azscompanions-fabric-0.1.1.jar` | Fabric standalone — **no** bridge |
 
 Plus for Minecraft **1.21.1** (matching loader):
 
