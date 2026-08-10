@@ -8,7 +8,6 @@ Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod 
 
 Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
-> **Breaking rename:** Previously mod id `koncompanions`. Old worlds/items do not migrate — start fresh or re-loot charms.
 
 ## Editions (pick one jar)
 
