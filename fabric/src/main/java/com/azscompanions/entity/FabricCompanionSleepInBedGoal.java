@@ -4,17 +4,24 @@ import com.azscompanions.block.FabricKonBedBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.phys.AABB;
 
 import java.util.EnumSet;
 
-/** Night sleep; home bed, and Kon bed preference only when named Kon. Leaves bed if owner moves far. */
+/**
+ * Night sleep in the nearest usable bed. Kon-named companions prefer Kon beds first.
+ * Leaves bed if owner moves far. Follow mode only (Stay/Sit/Wander unchanged).
+ */
 public final class FabricCompanionSleepInBedGoal extends Goal {
+    /** Horizontal search radius (blocks) around the companion for usable beds. */
     private static final int SEARCH_RADIUS = 48;
+    private static final int SEARCH_VERTICAL = 48;
     private static final int WAKE_COOLDOWN_TICKS = 100;
 
     private final FabricCompanionEntity companion;
@@ -39,7 +46,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level) || !shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        bedPos = resolveBed(level);
+        bedPos = findNearestUsableBed(level);
         return bedPos != null;
     }
 
@@ -48,8 +55,8 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level) || !shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        if (bedPos == null || !isBedHead(level, bedPos)) {
-            bedPos = resolveBed(level);
+        if (bedPos == null || !isUsableBed(level, bedPos)) {
+            bedPos = findNearestUsableBed(level);
         }
         return bedPos != null;
     }
@@ -74,11 +81,15 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
 
     @Override
     public void tick() {
-        if (!(companion.level() instanceof ServerLevel) || bedPos == null || ownerTooFar()) {
+        if (!(companion.level() instanceof ServerLevel level) || bedPos == null || ownerTooFar()) {
             return;
         }
         if (companion.blockPosition().closerThan(bedPos, 2.0d)) {
             if (!companion.isSleeping()) {
+                if (!isUsableBed(level, bedPos)) {
+                    bedPos = findNearestUsableBed(level);
+                    return;
+                }
                 companion.getNavigation().stop();
                 companion.startSleeping(bedPos);
                 companion.setHomeBedPos(bedPos);
@@ -111,14 +122,11 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         return level.isNight();
     }
 
-    private BlockPos resolveBed(ServerLevel level) {
-        BlockPos home = companion.getHomeBedPos();
-        if (home != null && isBedHead(level, home)) {
-            return home;
-        }
-        if (home != null) {
-            companion.setHomeBedPos(null);
-        }
+    /**
+     * Closest usable empty bed near the companion.
+     * Kon-named: nearest Kon bed first, else nearest any bed. Never locks to a stored home bed.
+     */
+    private BlockPos findNearestUsableBed(ServerLevel level) {
         BlockPos origin = companion.blockPosition();
         boolean preferKonBed = companion.isKonNamed();
         BlockPos bestKon = null;
@@ -126,11 +134,11 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         BlockPos bestAny = null;
         int bestAnyDist = Integer.MAX_VALUE;
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int dy = -4; dy <= 4; dy++) {
+        for (int dy = -SEARCH_VERTICAL; dy <= SEARCH_VERTICAL; dy++) {
             for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
                 for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
                     cursor.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!isBedHead(level, cursor)) {
+                    if (!isUsableBed(level, cursor)) {
                         continue;
                     }
                     int dist = origin.distManhattan(cursor);
@@ -152,6 +160,21 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
             companion.setHomePos(nearest);
         }
         return nearest;
+    }
+
+    private boolean isUsableBed(ServerLevel level, BlockPos pos) {
+        if (!isBedHead(level, pos)) {
+            return false;
+        }
+        BlockState state = level.getBlockState(pos);
+        if (state.hasProperty(BedBlock.OCCUPIED) && state.getValue(BedBlock.OCCUPIED)) {
+            return false;
+        }
+        AABB box = new AABB(pos).inflate(0.25d);
+        return level.getEntitiesOfClass(
+                LivingEntity.class,
+                box,
+                e -> e.isAlive() && e.isSleeping() && e != companion).isEmpty();
     }
 
     public static boolean isBedHead(ServerLevel level, BlockPos pos) {

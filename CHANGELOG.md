@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.3
+
+Release: [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Sleep
+- **Nearest bed:** at night (Follow mode), companions path to the closest usable empty bed — no longer lock to a stored home bed.
+- **Search radius:** **48** blocks horizontal **and** vertical (was ±4 vertical).
+- Occupied beds (block flag or another sleeper) are skipped; Kon-named companions still prefer Kon beds first.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.3+1.21.1.jar` | `azscompanions-fabric-0.3.3+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.3+1.21.1.jar` | `azscompanions-fabric-cci-0.3.3+1.21.1.jar` |
+
 ## 0.3.2
 
 Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
