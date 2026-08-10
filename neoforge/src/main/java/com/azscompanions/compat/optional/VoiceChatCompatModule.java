@@ -11,6 +11,6 @@ public final class VoiceChatCompatModule {
     }
 
     public static void bootstrap() {
-        AzsCompanions.LOGGER.info("VoiceChatCompatModule active — no proprietary Voicemod code bundled");
+        AzsCompanions.LOGGER.info("VoiceChatCompatModule active — Simple Voice Chat optional hook (no VoiceMod)");
     }
 }

@@ -7,7 +7,6 @@ public final class ClientConfig {
 
     public static final ModConfigSpec.BooleanValue ENABLE_VOICE;
     public static final ModConfigSpec.BooleanValue ENABLE_SUBTITLES;
-    public static final ModConfigSpec.BooleanValue ENABLE_VOICEMOD_BRIDGE;
     public static final ModConfigSpec.DoubleValue VOICE_VOLUME;
     public static final ModConfigSpec.BooleanValue SHOW_TASK_PARTICLES;
     public static final ModConfigSpec.BooleanValue SHOW_3D_PREVIEW_IN_SELECTION;
@@ -16,11 +15,10 @@ public final class ClientConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         builder.push("voice");
-        ENABLE_VOICE = builder.comment("Play companion voice / sound events locally.")
+        ENABLE_VOICE = builder.comment("Play companion Minecraft sound events for dialogue categories.")
                 .define("enableVoice", true);
-        ENABLE_SUBTITLES = builder.define("enableSubtitles", true);
-        ENABLE_VOICEMOD_BRIDGE = builder.comment("Optional external Voicemod bridge (never required).")
-                .define("enableVoicemodBridge", false);
+        ENABLE_SUBTITLES = builder.comment("Show dialogue lines on the action bar.")
+                .define("enableSubtitles", true);
         VOICE_VOLUME = builder.defineInRange("voiceVolume", 0.8d, 0.0d, 1.0d);
         builder.pop();
 

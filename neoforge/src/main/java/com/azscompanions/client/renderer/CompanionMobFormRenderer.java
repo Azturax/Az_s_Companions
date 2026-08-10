@@ -144,6 +144,9 @@ public final class CompanionMobFormRenderer {
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack stack = source.getItemBySlot(slot);
+            if (!isArmorVisibleForRender(source) && isArmorEquipmentSlot(slot)) {
+                stack = ItemStack.EMPTY;
+            }
             if (!ItemStack.matches(visual.getItemBySlot(slot), stack)) {
                 visual.setItemSlot(slot, stack.copy());
             }
@@ -157,6 +160,21 @@ public final class CompanionMobFormRenderer {
             fox.setSitting(source.isSitting());
             fox.setIsCrouching(source.isShiftKeyDown());
         }
+    }
+
+    private static boolean isArmorVisibleForRender(CompanionEntity source) {
+        if (com.azscompanions.client.ClientAppearanceDraft.matches(source)) {
+            return com.azscompanions.client.ClientAppearanceDraft.ACTIVE.showArmor;
+        }
+        return source.isArmorVisible();
+    }
+
+    private static boolean isArmorEquipmentSlot(EquipmentSlot slot) {
+        return slot == EquipmentSlot.HEAD
+                || slot == EquipmentSlot.CHEST
+                || slot == EquipmentSlot.LEGS
+                || slot == EquipmentSlot.FEET
+                || slot == EquipmentSlot.BODY;
     }
 
     private static void copyWalkAnimation(WalkAnimationState from, WalkAnimationState to) {

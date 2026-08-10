@@ -42,10 +42,39 @@ public final class FabricCompanionRenderer
                 this,
                 new HumanoidArmorModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidArmorModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
-                context.getModelManager()));
+                context.getModelManager()) {
+            @Override
+            public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, FabricCompanionEntity entity,
+                               float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                               float netHeadYaw, float headPitch) {
+                if (!shouldRenderArmor(entity)) {
+                    return;
+                }
+                super.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTick,
+                        ageInTicks, netHeadYaw, headPitch);
+            }
+        });
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
-        this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
+        this.addLayer(new ElytraLayer<>(this, context.getModelSet()) {
+            @Override
+            public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, FabricCompanionEntity entity,
+                               float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                               float netHeadYaw, float headPitch) {
+                if (!shouldRenderArmor(entity)) {
+                    return;
+                }
+                super.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTick,
+                        ageInTicks, netHeadYaw, headPitch);
+            }
+        });
         this.addLayer(new CompanionCapeLayer(this));
+    }
+
+    private static boolean shouldRenderArmor(FabricCompanionEntity entity) {
+        if (FabricClientAppearanceDraft.matches(entity)) {
+            return FabricClientAppearanceDraft.ACTIVE.showArmor;
+        }
+        return entity.isArmorVisible();
     }
 
     @Override
@@ -137,7 +166,8 @@ public final class FabricCompanionRenderer
             if (cape == null) {
                 return;
             }
-            if (entity.getCompanionInventory().getItem(FabricCompanionInventory.CHEST).is(Items.ELYTRA)) {
+            if (entity.getCompanionInventory().getItem(FabricCompanionInventory.CHEST).is(Items.ELYTRA)
+                    && shouldRenderArmor(entity)) {
                 return;
             }
             poseStack.pushPose();

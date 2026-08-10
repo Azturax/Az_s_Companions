@@ -154,6 +154,15 @@ public final class FabricCompanionCreatorScreen extends Screen {
                     }).bounds(rightX, 0, rightW, 20).build();
             addRightWidget(nameTagBtn, y, 20);
             y += 28;
+            Button armorBtn = Button.builder(
+                    Component.literal(draft.showArmor ? "Armor: Show" : "Armor: Hide"),
+                    b -> {
+                        draft.showArmor = !draft.showArmor;
+                        b.setMessage(Component.literal(draft.showArmor ? "Armor: Show" : "Armor: Hide"));
+                        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_SHOW_ARMOR);
+                    }).bounds(rightX, 0, rightW, 20).build();
+            addRightWidget(armorBtn, y, 20);
+            y += 28;
             nameStatusContentY = y;
             y += 36;
         } else if (category == Category.FORM) {
@@ -500,6 +509,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.bustOffset,
                 draft.form.serializedName(),
                 draft.showNameTag,
+                draft.showArmor,
                 flags
         ));
     }
@@ -518,7 +528,8 @@ public final class FabricCompanionCreatorScreen extends Screen {
         int flags = FabricNetworking.SettingsPayload.FLAG_NAME | FabricNetworking.SettingsPayload.FLAG_SCALE
                 | FabricNetworking.SettingsPayload.FLAG_SKIN | FabricNetworking.SettingsPayload.FLAG_SLIM
                 | FabricNetworking.SettingsPayload.FLAG_PROPORTIONS | FabricNetworking.SettingsPayload.FLAG_GENDER
-                | FabricNetworking.SettingsPayload.FLAG_FORM | FabricNetworking.SettingsPayload.FLAG_SHOW_NAME;
+                | FabricNetworking.SettingsPayload.FLAG_FORM | FabricNetworking.SettingsPayload.FLAG_SHOW_NAME
+                | FabricNetworking.SettingsPayload.FLAG_SHOW_ARMOR;
         com.azscompanions.network.FabricNetworkingClient.sendSettings(new FabricNetworking.SettingsPayload(
                 companion.getId(),
                 draft.name,
@@ -533,6 +544,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.bustOffset,
                 draft.form.serializedName(),
                 draft.showNameTag,
+                draft.showArmor,
                 flags
         ));
         FabricClientAppearanceDraft.ACTIVE = null;

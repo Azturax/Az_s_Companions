@@ -65,6 +65,10 @@ public final class CciCompanionActions {
             return;
         }
 
+        if (TeamFightCciHandler.handle(player, action, message)) {
+            return;
+        }
+
         CompanionEntity companion = findOwnedCompanion(player);
         if (companion == null) {
             AzsCompanions.LOGGER.debug("CCI action {} — no owned companion near {}", action, player.getGameProfile().getName());
@@ -160,7 +164,7 @@ public final class CciCompanionActions {
                             + " / " + companion.getAttitude().serializedName().toLowerCase(Locale.ROOT));
         } else {
             toast(player, companion.getChatDisplayName(),
-                    "Nothing to modify. Use form=/skin=/name=/attitude=/team=/gear keys.");
+                    "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/gear keys.");
         }
     }
 
@@ -205,6 +209,11 @@ public final class CciCompanionActions {
             }
         } else if (hasForm && !form.isPlayer()) {
             companion.setSkinPath("");
+            changed = true;
+        }
+        Boolean showArmor = params.showArmorOrNull();
+        if (showArmor != null) {
+            companion.setArmorVisible(showArmor);
             changed = true;
         }
         return changed;

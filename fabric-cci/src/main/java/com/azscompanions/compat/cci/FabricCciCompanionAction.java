@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * CCI IMC subjects for Az's Companions (Fabric CCI edition).
+ * Team-fight actions are first-class CCI subjects (primary streamer API).
  */
 public enum FabricCciCompanionAction {
     SAY,
@@ -21,10 +22,17 @@ public enum FabricCciCompanionAction {
     SET_MAINHAND,
     SET_OFFHAND,
     SET_ARMOR,
-    /** Apply form/skin/name/attitude/team/gear to the owner's active called companion. */
     MODIFY,
-    /** Brief playful HOSTILE burst, then restore prior attitude. */
-    TURN_EVIL;
+    TURN_EVIL,
+    TEAMFIGHT_ENABLE,
+    TEAMFIGHT_DISABLE,
+    TEAMFIGHT_TOGGLE,
+    TEAMFIGHT_STATUS,
+    TEAMFIGHT_SCOREBOARD,
+    TEAMFIGHT_SCORE,
+    TEAMFIGHT_TOP,
+    SPAWN_LEADER,
+    SPAWN_CHILD;
 
     @Nullable
     public static FabricCciCompanionAction fromSubject(String subject) {
@@ -50,11 +58,27 @@ public enum FabricCciCompanionAction {
             case "companion_modify", "modify", "companion_customize", "customize",
                  "companion_edit", "edit", "set_appearance", "companion_set_appearance" -> MODIFY;
             case "companion_turn_evil", "turn_evil", "go_evil", "berserk", "companion_berserk" -> TURN_EVIL;
+            case "teamfight_enable", "teamfight_on", "companion_teamfight_enable", "teamfight_enable_on" -> TEAMFIGHT_ENABLE;
+            case "teamfight_disable", "teamfight_off", "companion_teamfight_disable" -> TEAMFIGHT_DISABLE;
+            case "teamfight_toggle", "companion_teamfight_toggle" -> TEAMFIGHT_TOGGLE;
+            case "teamfight_status", "companion_teamfight_status" -> TEAMFIGHT_STATUS;
+            case "teamfight_scoreboard", "scoreboard", "companion_teamfight_scoreboard" -> TEAMFIGHT_SCOREBOARD;
+            case "teamfight_score", "teamfight_kill", "companion_teamfight_score" -> TEAMFIGHT_SCORE;
+            case "teamfight_top", "teamfight_best", "companion_teamfight_top" -> TEAMFIGHT_TOP;
+            case "companion_spawn_leader", "spawn_leader", "teamfight_spawn_leader", "sub_spawn_leader" -> SPAWN_LEADER;
+            case "companion_spawn_child", "spawn_child", "spawn_minion", "companion_spawn_minion",
+                 "spawn_bit", "companion_spawn_bit", "bit_spawn", "teamfight_spawn_child" -> SPAWN_CHILD;
             default -> null;
         };
     }
 
     public boolean isSummon() {
         return this == SUMMON || this == SUMMON_PASSIVE || this == SUMMON_HOSTILE;
+    }
+
+    public boolean isTeamFightControl() {
+        return this == TEAMFIGHT_ENABLE || this == TEAMFIGHT_DISABLE || this == TEAMFIGHT_TOGGLE
+                || this == TEAMFIGHT_STATUS || this == TEAMFIGHT_SCOREBOARD || this == TEAMFIGHT_SCORE
+                || this == TEAMFIGHT_TOP || this == SPAWN_LEADER;
     }
 }

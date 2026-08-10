@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_spawn_child",
+  "message": "bits=500;count=1;name=$username;form=chicken;team=red"
+}

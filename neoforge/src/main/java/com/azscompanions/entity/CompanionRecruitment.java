@@ -17,7 +17,7 @@ public final class CompanionRecruitment {
     private CompanionRecruitment() {
     }
 
-    /** Count loaded companions owned by this player across all dimensions. */
+    /** Primary companions only (excludes fight spawns / children). */
     public static long countOwned(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
@@ -27,7 +27,9 @@ public final class CompanionRecruitment {
         long owned = 0;
         for (ServerLevel level : server.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
-                if (entity instanceof CompanionEntity companion && owner.equals(companion.getOwnerUuid())) {
+                if (entity instanceof CompanionEntity companion
+                        && owner.equals(companion.getOwnerUuid())
+                        && !companion.isFightSpawn()) {
                     owned++;
                 }
             }
@@ -35,7 +37,29 @@ public final class CompanionRecruitment {
         return owned;
     }
 
-    /** Find a loaded companion by UUID owned by this player (any dimension). */
+    public static int countChildrenOf(ServerPlayer player, UUID leaderUuid) {
+        if (leaderUuid == null) {
+            return 0;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return 0;
+        }
+        UUID owner = player.getUUID();
+        int count = 0;
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && leaderUuid.equals(companion.getLeaderUuid())
+                        && owner.equals(companion.getOwnerUuid())) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     @Nullable
     public static CompanionEntity findOwned(ServerPlayer player, UUID companionUuid) {
         MinecraftServer server = player.getServer();
@@ -52,16 +76,28 @@ public final class CompanionRecruitment {
         return null;
     }
 
-    /** Recruit a new Kon near the player. Does not open UI. Returns the entity or null. */
+    @Nullable
+    public static CompanionEntity resolveLeader(ServerPlayer player, CompanionEntity candidate) {
+        if (candidate == null || !candidate.isAlive()) {
+            return null;
+        }
+        if (!candidate.isChildCompanion()) {
+            return candidate;
+        }
+        CompanionEntity parent = findOwned(player, candidate.getLeaderUuid());
+        if (parent != null && parent.isAlive() && !parent.isChildCompanion()) {
+            return parent;
+        }
+        return null;
+    }
+
     @Nullable
     public static CompanionEntity recruit(ServerPlayer player, String definitionId) {
         ServerLevel level = player.serverLevel();
         if (countOwned(player) >= ServerConfig.MAX_COMPANIONS_PER_PLAYER.get()) {
-            Component msg = Component.translatable("message.azscompanions.limit_reached");
-            player.displayClientMessage(msg, true);
+            player.displayClientMessage(Component.translatable("message.azscompanions.limit_reached"), true);
             return null;
         }
-
         ResourceLocation id = ResourceLocation.tryParse(definitionId);
         if (id == null) {
             id = CompanionRegistry.KON_ID;
@@ -80,7 +116,79 @@ public final class CompanionRecruitment {
         return companion;
     }
 
-    /** Resummon a companion previously stored on a charm. */
+    /**
+     * Team-fight leader spawn (does not count toward maxCompanionsPerPlayer).
+     * Shared by CCI {@code companion_spawn_leader}.
+     */
+    @Nullable
+    public static CompanionEntity spawnFightLeader(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        CompanionDefinition definition = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level);
+        if (companion == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        companion.moveTo(
+                player.getX() + Math.cos(angle) * 2.0d,
+                player.getY(),
+                player.getZ() + Math.sin(angle) * 2.0d,
+                player.getYRot(), 0);
+        companion.setOwner(player);
+        companion.applyDefinition(definition);
+        companion.setFightSpawn(true);
+        companion.setAttitude(CompanionAttitude.HOSTILE);
+        companion.setMode(CompanionMode.FOLLOW);
+        companion.setHomePos(player.blockPosition());
+        level.addFreshEntity(companion);
+        return companion;
+    }
+
+    /**
+     * Child/Bit spawn under a leader. Shared by CCI {@code companion_spawn_child} and cake feed.
+     */
+    @Nullable
+    public static CompanionEntity spawnChild(ServerPlayer player, CompanionEntity leader) {
+        if (leader == null || !leader.isAlive()) {
+            return null;
+        }
+        CompanionEntity root = resolveLeader(player, leader);
+        if (root == null) {
+            return null;
+        }
+        int maxChildren = ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get();
+        if (countChildrenOf(player, root.getUUID()) >= maxChildren) {
+            return null;
+        }
+        ServerLevel level = player.serverLevel();
+        if (root.level() instanceof ServerLevel leaderLevel) {
+            level = leaderLevel;
+        }
+        CompanionDefinition definition = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
+        CompanionEntity child = ModEntities.COMPANION.get().create(level);
+        if (child == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.random.nextDouble() * 1.5d;
+        child.moveTo(root.getX() + Math.cos(angle) * dist, root.getY(),
+                root.getZ() + Math.sin(angle) * dist, root.getYRot(), 0);
+        child.setOwner(player);
+        child.applyDefinition(definition);
+        child.setFightSpawn(true);
+        child.setLeaderUuid(root.getUUID());
+        child.setHomePos(root.blockPosition());
+        child.setMode(CompanionMode.FOLLOW);
+        child.setAttitude(root.getAttitude());
+        child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
+        child.setForm(CompanionForm.CHICKEN);
+        child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
+        child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
+        child.setSkinPath("");
+        level.addFreshEntity(child);
+        return child;
+    }
+
     @Nullable
     public static CompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {
         ServerLevel level = player.serverLevel();

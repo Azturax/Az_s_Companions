@@ -2,11 +2,19 @@ package com.azscompanions.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+/**
+ * Server limits / combat / teamfight. Companion AI lives in {@link AiConfig}
+ * ({@code config/azscompanions-ai.toml}).
+ */
 public final class ServerConfig {
     public static final ModConfigSpec SPEC;
 
     public static final ModConfigSpec.IntValue MAX_COMPANIONS_PER_PLAYER;
     public static final ModConfigSpec.IntValue MAX_COMPANIONS_PER_SERVER;
+    public static final ModConfigSpec.IntValue MAX_CHILD_COMPANIONS_PER_LEADER;
+    public static final ModConfigSpec.BooleanValue TEAMFIGHT_ENABLED_BY_DEFAULT;
+    public static final ModConfigSpec.IntValue TEAMFIGHT_SUB_COST_LEADER;
+    public static final ModConfigSpec.IntValue TEAMFIGHT_MAX_FIGHT_SPAWNS;
     public static final ModConfigSpec.BooleanValue ALLOW_COMBAT;
     public static final ModConfigSpec.BooleanValue ATTACK_NEUTRALS_ONLY_IF_HIT;
     public static final ModConfigSpec.BooleanValue ALLOW_GRIEFING;
@@ -25,10 +33,25 @@ public final class ServerConfig {
         builder.push("limits");
         // Designed for one girlfriend/companion per player; raise only if a server wants multiples.
         MAX_COMPANIONS_PER_PLAYER = builder
-                .comment("Max owned companions per player. Default 1 (one companion / girlfriend).")
+                .comment("Max owned companions per player (excludes teamfight / child Bits). Default 1.")
                 .defineInRange("maxCompanionsPerPlayer", 1, 1, 32);
         MAX_COMPANIONS_PER_SERVER = builder.defineInRange("maxCompanionsPerServer", 64, 1, 512);
+        MAX_CHILD_COMPANIONS_PER_LEADER = builder
+                .comment("Max CCI/cake child Bits under one leader (1–8).")
+                .defineInRange("maxChildCompanionsPerLeader", 6, 1, 8);
         REQUIRE_OWNER_ONLINE = builder.define("requireOwnerOnline", false);
+        builder.pop();
+
+        builder.push("teamfight");
+        TEAMFIGHT_ENABLED_BY_DEFAULT = builder
+                .comment("If true, team fights start enabled on server boot (normally use /azscompanions teamfight on).")
+                .define("enabledByDefault", false);
+        TEAMFIGHT_SUB_COST_LEADER = builder
+                .comment("Subs (or sub-equivalent) required for companion_spawn_leader.")
+                .defineInRange("subCostLeader", 1, 0, 50);
+        TEAMFIGHT_MAX_FIGHT_SPAWNS = builder
+                .comment("Hard cap of fight-spawned companions (leaders+children) per streamer.")
+                .defineInRange("maxFightSpawnsPerPlayer", 24, 4, 64);
         builder.pop();
 
         builder.push("movement");

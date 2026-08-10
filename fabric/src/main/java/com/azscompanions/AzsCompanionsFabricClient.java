@@ -1,5 +1,6 @@
 package com.azscompanions;
 
+import com.azscompanions.client.hud.TeamFightHudOverlay;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.FabricCompanionRenderer;
@@ -12,6 +13,7 @@ import com.azscompanions.registry.FabricModScreenHandlers;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
@@ -34,6 +36,7 @@ public final class AzsCompanionsFabricClient implements ClientModInitializer {
         MenuScreens.register(FabricModScreenHandlers.SELECTION, FabricCompanionSelectionScreen::new);
         MenuScreens.register(FabricModScreenHandlers.INVENTORY, FabricCompanionInventoryScreen::new);
         FabricNetworkingClient.register();
+        HudRenderCallback.EVENT.register((graphics, tickCounter) -> TeamFightHudOverlay.render(graphics, 0f));
 
         AzsCompanionsFabric.LOGGER.info("Az's Companions (Fabric) client ready");
     }

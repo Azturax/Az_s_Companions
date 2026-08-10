@@ -1,8 +1,12 @@
 package com.azscompanions;
 
+import com.azscompanions.ai.CompanionAiRuntime;
+import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.command.FabricCompanionCommands;
+import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.data.FabricCompanionDefinitionLoader;
 import com.azscompanions.entity.FabricBuiltinCompanions;
+import com.azscompanions.event.FabricTeamFightEvents;
 import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import com.azscompanions.platform.LoaderPlatform;
@@ -35,6 +39,13 @@ public final class AzsCompanionsFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        try {
+            FabricServerConfig.loadAiConfig();
+        } catch (Exception e) {
+            LOGGER.error("Companion AI config load failed — AI stays disabled", e);
+            CompanionAiRuntime.get().applySettings(new CompanionAiSettings());
+        }
+
         FabricModBlocks.register();
         FabricModBlockEntities.register();
         FabricModItems.register();
@@ -43,6 +54,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricModSounds.register();
         FabricModScreenHandlers.register();
         FabricNetworking.register();
+        FabricTeamFightEvents.register();
         FabricTaskRegistry.bootstrap();
         FabricBuiltinCompanions.registerDefaults();
 
@@ -68,7 +80,9 @@ public final class AzsCompanionsFabric implements ModInitializer {
             }
         });
 
-        LOGGER.info("Az's Companions (Fabric) initialized — support MC {}–{}",
-                AzsCompanionsConstants.MIN_MINECRAFT, AzsCompanionsConstants.MAX_MINECRAFT);
+        LOGGER.info("Az's Companions (Fabric) initialized — support MC {}–{} — {}",
+                AzsCompanionsConstants.MIN_MINECRAFT,
+                AzsCompanionsConstants.MAX_MINECRAFT,
+                CompanionAiRuntime.get().statusLine());
     }
 }

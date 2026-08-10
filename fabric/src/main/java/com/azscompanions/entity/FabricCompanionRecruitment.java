@@ -16,7 +16,7 @@ public final class FabricCompanionRecruitment {
     private FabricCompanionRecruitment() {
     }
 
-    /** Count loaded companions owned by this player across all dimensions. */
+    /** Primary companions only (excludes fight spawns / children). */
     public static long countOwned(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
@@ -26,12 +26,37 @@ public final class FabricCompanionRecruitment {
         long owned = 0;
         for (ServerLevel level : server.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
-                if (entity instanceof FabricCompanionEntity companion && owner.equals(companion.getOwnerUuid())) {
+                if (entity instanceof FabricCompanionEntity companion
+                        && owner.equals(companion.getOwnerUuid())
+                        && !companion.isFightSpawn()) {
                     owned++;
                 }
             }
         }
         return owned;
+    }
+
+    public static int countChildrenOf(ServerPlayer player, UUID leaderUuid) {
+        if (leaderUuid == null) {
+            return 0;
+        }
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return 0;
+        }
+        UUID owner = player.getUUID();
+        int count = 0;
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof FabricCompanionEntity companion
+                        && companion.isAlive()
+                        && leaderUuid.equals(companion.getLeaderUuid())
+                        && owner.equals(companion.getOwnerUuid())) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     public static FabricCompanionEntity findOwned(ServerPlayer player, UUID companionUuid) {
@@ -49,6 +74,20 @@ public final class FabricCompanionRecruitment {
         return null;
     }
 
+    public static FabricCompanionEntity resolveLeader(ServerPlayer player, FabricCompanionEntity candidate) {
+        if (candidate == null || !candidate.isAlive()) {
+            return null;
+        }
+        if (!candidate.isChildCompanion()) {
+            return candidate;
+        }
+        FabricCompanionEntity parent = findOwned(player, candidate.getLeaderUuid());
+        if (parent != null && parent.isAlive() && !parent.isChildCompanion()) {
+            return parent;
+        }
+        return null;
+    }
+
     public static boolean recruit(ServerPlayer player, String definitionId) {
         return recruitEntity(player, definitionId) != null;
     }
@@ -56,8 +95,7 @@ public final class FabricCompanionRecruitment {
     public static FabricCompanionEntity recruitEntity(ServerPlayer player, String definitionId) {
         ServerLevel level = player.serverLevel();
         if (countOwned(player) >= FabricServerConfig.MAX_COMPANIONS_PER_PLAYER) {
-            Component msg = Component.translatable("message.azscompanions.limit_reached");
-            player.displayClientMessage(msg, true);
+            player.displayClientMessage(Component.translatable("message.azscompanions.limit_reached"), true);
             return null;
         }
         ResourceLocation id = ResourceLocation.tryParse(definitionId);
@@ -76,6 +114,71 @@ public final class FabricCompanionRecruitment {
         companion.setHomePos(player.blockPosition());
         level.addFreshEntity(companion);
         return companion;
+    }
+
+    /** Team-fight leader spawn (CCI {@code companion_spawn_leader}). */
+    public static FabricCompanionEntity spawnFightLeader(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        FabricCompanionDefinition definition = FabricCompanionRegistry.getOrKon(FabricCompanionRegistry.KON_ID);
+        FabricCompanionEntity companion = FabricModEntities.COMPANION.create(level);
+        if (companion == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        companion.moveTo(
+                player.getX() + Math.cos(angle) * 2.0d,
+                player.getY(),
+                player.getZ() + Math.sin(angle) * 2.0d,
+                player.getYRot(), 0);
+        companion.setOwner(player);
+        companion.applyDefinition(definition);
+        companion.setFightSpawn(true);
+        companion.setAttitude(CompanionAttitude.HOSTILE);
+        companion.setMode(FabricCompanionMode.FOLLOW);
+        companion.setHomePos(player.blockPosition());
+        level.addFreshEntity(companion);
+        return companion;
+    }
+
+    /** Child/Bit spawn — CCI {@code companion_spawn_child} and cake feed. */
+    public static FabricCompanionEntity spawnChild(ServerPlayer player, FabricCompanionEntity leader) {
+        if (leader == null || !leader.isAlive()) {
+            return null;
+        }
+        FabricCompanionEntity root = resolveLeader(player, leader);
+        if (root == null) {
+            return null;
+        }
+        if (countChildrenOf(player, root.getUUID()) >= FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER) {
+            return null;
+        }
+        ServerLevel level = player.serverLevel();
+        if (root.level() instanceof ServerLevel leaderLevel) {
+            level = leaderLevel;
+        }
+        FabricCompanionDefinition definition = FabricCompanionRegistry.getOrKon(FabricCompanionRegistry.KON_ID);
+        FabricCompanionEntity child = FabricModEntities.COMPANION.create(level);
+        if (child == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.random.nextDouble() * 1.5d;
+        child.moveTo(root.getX() + Math.cos(angle) * dist, root.getY(),
+                root.getZ() + Math.sin(angle) * dist, root.getYRot(), 0);
+        child.setOwner(player);
+        child.applyDefinition(definition);
+        child.setFightSpawn(true);
+        child.setLeaderUuid(root.getUUID());
+        child.setHomePos(root.blockPosition());
+        child.setMode(FabricCompanionMode.FOLLOW);
+        child.setAttitude(root.getAttitude());
+        child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
+        child.setForm(CompanionForm.CHICKEN);
+        child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
+        child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
+        child.setSkinPath("");
+        level.addFreshEntity(child);
+        return child;
     }
 
     public static FabricCompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {

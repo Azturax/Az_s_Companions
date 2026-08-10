@@ -1,5 +1,6 @@
 package com.azscompanions.command;
 
+import com.azscompanions.ai.FabricCompanionAiAsk;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.FabricCompanionRegistry;
@@ -123,7 +124,53 @@ public final class FabricCompanionCommands {
                             nearest.openInventory(player);
                             return 1;
                         }))
+                .then(Commands.literal("ask")
+                        .then(Commands.argument("message", StringArgumentType.greedyString())
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    FabricCompanionEntity nearest = nearestOwned(player);
+                                    if (nearest == null) {
+                                        ctx.getSource().sendFailure(Component.literal("No owned companion nearby"));
+                                        return 0;
+                                    }
+                                    return FabricCompanionAiAsk.ask(player, nearest,
+                                            StringArgumentType.getString(ctx, "message"));
+                                })))
+                .then(Commands.literal("ai")
+                        .then(Commands.literal("status")
+                                .executes(ctx -> {
+                                    ctx.getSource().sendSuccess(() -> Component.literal(FabricCompanionAiAsk.status()), false);
+                                    return 1;
+                                })))
+                .then(Commands.literal("teamfight")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("on")
+                                .executes(ctx -> teamfight(ctx.getSource(), true)))
+                        .then(Commands.literal("off")
+                                .executes(ctx -> teamfight(ctx.getSource(), false)))
+                        .then(Commands.literal("status")
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    var session = com.azscompanions.teamfight.TeamFightSession.of(player.getUUID());
+                                    ctx.getSource().sendSuccess(() -> Component.literal(
+                                            "Team fight: " + (session.isEnabled() ? "ON" : "OFF")
+                                                    + " | HUD " + (session.isHudVisible() ? "shown" : "hidden")
+                                                    + " | Also: /azscci teamfight_enable (CCI edition)"), false);
+                                    return 1;
+                                }))
+                )
         );
+    }
+
+    private static int teamfight(CommandSourceStack source, boolean enabled) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        var session = com.azscompanions.teamfight.TeamFightSession.of(player.getUUID());
+        session.setEnabled(enabled);
+        com.azscompanions.network.FabricNetworking.sendTeamFightHud(player, session.snapshot().encode());
+        player.displayClientMessage(Component.translatable(
+                enabled ? "message.azscompanions.teamfight_on" : "message.azscompanions.teamfight_off"), true);
+        source.sendSuccess(() -> Component.literal("Team fight " + (enabled ? "ON" : "OFF")), true);
+        return 1;
     }
 
     private static FabricCompanionEntity nearestOwned(ServerPlayer player) {

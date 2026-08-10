@@ -30,6 +30,7 @@ public final class ClientAppearanceDraft {
     public float bustOffset = CompanionBodyProportions.DEFAULT_BUST_OFFSET;
     public CompanionForm form = CompanionForm.PLAYER;
     public boolean showNameTag = true;
+    public boolean showArmor = true;
 
     public ClientAppearanceDraft(int entityId) {
         this.entityId = entityId;
@@ -51,6 +52,7 @@ public final class ClientAppearanceDraft {
         d.bustOffset = entity.getBustOffset();
         d.form = entity.getForm();
         d.showNameTag = entity.isNameTagVisible();
+        d.showArmor = entity.isArmorVisible();
         return d;
     }
 

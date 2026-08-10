@@ -36,8 +36,50 @@ Implemented in **both** `neoforge-cci` and `fabric-cci`. Unless noted, the compa
 | `companion_set_offhand` | `minecraft:shield` / `clear` | Set off hand |
 | `companion_set_armor` | `helmet=minecraft:iron_helmet;boots=…` | Set armor slots |
 | `companion_set_hand` / `companion_set_equipment` | `mainhand=…;offhand=…;helmet=…` | Any equipment keys |
-| `companion_modify` | `form=wolf;skin=Notch;name=Fluffy;attitude=passive` | Edit the **already called/summoned** companion (no new recruit) |
+| `companion_modify` | `form=wolf;skin=Notch;name=Fluffy;attitude=passive;showArmor=false` | Edit the **already called/summoned** companion (no new recruit). `showArmor` / `show_armor` / `armor_visible` hides armor rendering only. |
 | `companion_turn_evil` | `seconds=10` (optional, 5–15) | Playful temporary HOSTILE (~10s default), then restore prior attitude |
+
+### Team fights (CCI-first showcase)
+
+**Enable (required before bits/subs spawns):**
+
+| Command / CCI | Effect |
+|---------------|--------|
+| `/azscompanions teamfight on` | Ops (perm 2): enable mode + show HUD |
+| `/azscompanions teamfight off` | Disable + hide HUD; bits/subs spawns idle |
+| `/azscompanions teamfight status` | Print ON/OFF |
+| CCI `teamfight_enable` / `teamfight_on` | Same as command on |
+| CCI `teamfight_disable` / `teamfight_off` | Same as command off |
+| CCI `teamfight_toggle` | Toggle |
+| Fabric also: `/azscci teamfight_enable` | CommandOutcome fallback |
+
+| IMC `subject` | Message examples | Effect |
+|---------------|------------------|--------|
+| `teamfight_scoreboard` | `show` / `hide` / `reset` / `team1=red;team2=blue` | HUD show/hide/reset |
+| `teamfight_score` | `team=red;points=1` or `killer=Alice` | Add score / record kill |
+| `teamfight_top` | (ignored) | Chat top bits + kills + tier table |
+| `companion_spawn_leader` | `name=Alice;form=zombie;subs=1;team=red;mainhand=iron_sword` | Sub → team leader |
+| `companion_spawn_child` | `bits=500;count=2;name=Bit;team=red` | Bits → child Bits + tier gear |
+
+**Bit gear tiers (auto when no explicit armor keys):**
+
+| Bits | Gear |
+|------|------|
+| 100 | leather + stick |
+| 250 | chain + stone sword |
+| 500 | full iron |
+| 750 | diamond mix |
+| 1000 | full netherite |
+
+**Scoreboard HUD layout:** Team LEFT (name/score/bits/members) | Team RIGHT (same) | center: price table + top bits + top kills.
+
+**Caps:** 6 children/leader; 24 fight spawns/streamer; children excluded from `maxCompanionsPerPlayer`.
+
+**Kills:** when owned companions on different teams kill each other, score + top-kills update automatically (also via `teamfight_score` / `killer=`).
+
+**Cake:** right-click companion with cake → one Bit via same `spawnChild` helper (works even if teamfight off). CCI `companion_spawn_child` without `bits=` also works without teamfight; bits donations require teamfight ON.
+
+**Chat helper:** Twitch-bot lines without `=` are translated into CCI `key=value` (e.g. `Alice cheered 500 bits zombie red` → `name=Alice;bits=500;form=zombie;team=red`). Prefer structured IMC messages when possible.
 
 **Modify (called / summoned companion)**
 

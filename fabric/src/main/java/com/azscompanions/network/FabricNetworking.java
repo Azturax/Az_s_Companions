@@ -26,6 +26,7 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenMenuPayload.TYPE, OpenMenuPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(TeamFightHudPayload.TYPE, TeamFightHudPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> FabricCompanionRecruitment.recruit(context.player(), payload.definitionId())));
@@ -109,11 +110,18 @@ public final class FabricNetworking {
                     if ((payload.flags() & SettingsPayload.FLAG_SHOW_NAME) != 0) {
                         companion.setNameTagVisible(payload.showNameTag());
                     }
+                    if ((payload.flags() & SettingsPayload.FLAG_SHOW_ARMOR) != 0) {
+                        companion.setArmorVisible(payload.showArmor());
+                    }
                 }));
     }
 
     public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
         ServerPlayNetworking.send(player, new OpenMenuPayload(companion.getId()));
+    }
+
+    public static void sendTeamFightHud(ServerPlayer player, String encodedSnapshot) {
+        ServerPlayNetworking.send(player, new TeamFightHudPayload(encodedSnapshot == null ? "" : encodedSnapshot));
     }
 
     private static void toastMode(ServerPlayer player, FabricCompanionEntity companion, String key) {
@@ -128,6 +136,18 @@ public final class FabricNetworking {
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_menu"));
         public static final StreamCodec<RegistryFriendlyByteBuf, OpenMenuPayload> CODEC =
                 StreamCodec.composite(ByteBufCodecs.VAR_INT, OpenMenuPayload::entityId, OpenMenuPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record TeamFightHudPayload(String payload) implements CustomPacketPayload {
+        public static final Type<TeamFightHudPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "teamfight_hud"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, TeamFightHudPayload> CODEC =
+                StreamCodec.composite(ByteBufCodecs.STRING_UTF8, TeamFightHudPayload::payload, TeamFightHudPayload::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -176,6 +196,7 @@ public final class FabricNetworking {
             float bustOffset,
             String form,
             boolean showNameTag,
+            boolean showArmor,
             int flags
     ) implements CustomPacketPayload {
         public static final int FLAG_NAME = 1;
@@ -186,6 +207,7 @@ public final class FabricNetworking {
         public static final int FLAG_GENDER = 32;
         public static final int FLAG_FORM = 64;
         public static final int FLAG_SHOW_NAME = 128;
+        public static final int FLAG_SHOW_ARMOR = 256;
 
         public static final Type<SettingsPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_settings"));
@@ -207,6 +229,7 @@ public final class FabricNetworking {
             buf.writeFloat(p.bustOffset);
             buf.writeUtf(p.form == null ? "player" : p.form, 32);
             buf.writeBoolean(p.showNameTag);
+            buf.writeBoolean(p.showArmor);
             buf.writeVarInt(p.flags);
         }
 
@@ -215,7 +238,7 @@ public final class FabricNetworking {
                     buf.readVarInt(), buf.readUtf(64), buf.readFloat(), buf.readUtf(256),
                     buf.readBoolean(), buf.readBoolean(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-                    buf.readUtf(32), buf.readBoolean(),
+                    buf.readUtf(32), buf.readBoolean(), buf.readBoolean(),
                     buf.readVarInt());
         }
 

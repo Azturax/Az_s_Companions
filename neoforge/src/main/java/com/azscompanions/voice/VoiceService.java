@@ -7,7 +7,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Server entrypoint for dialogue. Actual sound/TTS/Voicemod playback is client-side.
+ * Server entrypoint for dialogue text (and optional client sound cues via packet).
+ * Companion AI is text-first: owner chat lines work for every companion form.
  */
 public final class VoiceService {
     private static final VoiceService INSTANCE = new VoiceService();

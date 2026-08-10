@@ -1,9 +1,12 @@
 package com.azscompanions.command;
 
+import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.menu.CompanionSelectionMenu;
+import com.azscompanions.network.packet.TeamFightHudPacket;
+import com.azscompanions.teamfight.TeamFightSession;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -11,6 +14,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class CompanionCommands {
     private CompanionCommands() {
@@ -71,7 +75,49 @@ public final class CompanionCommands {
                                     new com.azscompanions.network.packet.OpenCompanionCreatorPacket(nearest.getId()));
                             return 1;
                         }))
+                .then(Commands.literal("ask")
+                        .then(Commands.argument("message", StringArgumentType.greedyString())
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    CompanionEntity nearest = nearestOwned(player);
+                                    if (nearest == null) {
+                                        ctx.getSource().sendFailure(Component.literal("No owned companion nearby"));
+                                        return 0;
+                                    }
+                                    return CompanionAiAsk.ask(player, nearest, StringArgumentType.getString(ctx, "message"));
+                                })))
+                .then(Commands.literal("ai")
+                        .then(Commands.literal("status")
+                                .executes(ctx -> {
+                                    ctx.getSource().sendSuccess(() -> Component.literal(CompanionAiAsk.status()), false);
+                                    return 1;
+                                })))
+                .then(Commands.literal("teamfight")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("on").executes(ctx -> teamfight(ctx.getSource(), true)))
+                        .then(Commands.literal("off").executes(ctx -> teamfight(ctx.getSource(), false)))
+                        .then(Commands.literal("status").executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            TeamFightSession session = TeamFightSession.of(player.getUUID());
+                            ctx.getSource().sendSuccess(() -> Component.literal(
+                                    "Team fight: " + (session.isEnabled() ? "ON" : "OFF")
+                                            + " | HUD " + (session.isHudVisible() ? "shown" : "hidden")
+                                            + " | CCI: teamfight_enable / teamfight_disable"), false);
+                            return 1;
+                        }))
+                )
         );
+    }
+
+    private static int teamfight(CommandSourceStack source, boolean enabled) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        TeamFightSession session = TeamFightSession.of(player.getUUID());
+        session.setEnabled(enabled);
+        PacketDistributor.sendToPlayer(player, new TeamFightHudPacket(session.snapshot().encode()));
+        player.displayClientMessage(Component.translatable(
+                enabled ? "message.azscompanions.teamfight_on" : "message.azscompanions.teamfight_off"), true);
+        source.sendSuccess(() -> Component.literal("Team fight " + (enabled ? "ON" : "OFF")), true);
+        return 1;
     }
 
     private static int recruit(CommandSourceStack source, String id) throws CommandSyntaxException {

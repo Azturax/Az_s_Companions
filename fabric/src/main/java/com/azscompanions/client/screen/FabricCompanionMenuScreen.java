@@ -1,18 +1,25 @@
 package com.azscompanions.client.screen;
 
+import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.network.FabricNetworkingClient;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /**
- * Shared Shift+RMB companion menu: Customize, Command, Inventory.
+ * Shared Shift+RMB companion menu: Customize, Command, Inventory, Donate.
  */
 public final class FabricCompanionMenuScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
+    private static final ResourceLocation DONATE_ICON =
+            ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "textures/gui/donate.png");
+    private static final String DONATE_URL = "https://paypal.me/azturax";
 
     private final FabricCompanionEntity companion;
     private int panelX;
@@ -46,6 +53,10 @@ public final class FabricCompanionMenuScreen extends Screen {
         }).bounds(bx, by + 56, 160, 22).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
                 .bounds(bx, by + 92, 160, 20).build());
+
+        addRenderableWidget(new IconButton(
+                panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
+                b -> Util.getPlatform().openUri(DONATE_URL)));
     }
 
     @Override
@@ -65,5 +76,22 @@ public final class FabricCompanionMenuScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private static final class IconButton extends Button {
+        private final ResourceLocation icon;
+
+        IconButton(int x, int y, int width, int height, ResourceLocation icon, OnPress onPress) {
+            super(x, y, width, height, Component.empty(), onPress, DEFAULT_NARRATION);
+            this.icon = icon;
+            setTooltip(Tooltip.create(Component.translatable("screen.azscompanions.donate")));
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
+            graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
+            graphics.blit(icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);
+        }
     }
 }

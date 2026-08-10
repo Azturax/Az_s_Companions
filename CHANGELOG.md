@@ -1,12 +1,35 @@
 # Changelog
 
-## Unreleased
+## 0.3.5
 
-### CCI — child / Bit companions
-- **`companion_spawn_child`** (aliases: `spawn_child`, `spawn_minion`, `spawn_bit`, …): spawn Bits under the nearest owned leader for team fights. Params: `form`, `name`, `count` (1–8), `size`, `attitude`, `team`, gear. Defaults: chicken / Bit / scale 0.5.
-- Cap: **6** children per leader (`maxChildCompanionsPerLeader`, max 8). Children excluded from `maxCompanionsPerPlayer`.
-- Shared API: `CompanionRecruitment.spawnChild` / `FabricCompanionRecruitment.spawnChild`.
-- In-game: right-click owned companion with **cake** → one Bit via the same helper (consumes cake; respects cap). Charm-dismiss clears Bits.
+Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Companion AI (text-only)
+- Optional LLM replies via `/azscompanions ask <message>` · `/azscompanions ai status`.
+- Providers: `disabled` (default, offline-safe), `local`, `openai_compatible`, `mcp`.
+- **Dedicated config files:** Fabric `config/azscompanions-ai.json` · NeoForge `config/azscompanions-ai.toml` (not inside `azscompanions-server.toml`).
+- No VoiceMod / TTS — owner chat / `speakLine` only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
+
+### Customize / UI
+- **Armor visibility:** Customize → Name tab toggle **Armor: Show/Hide** (equipment stays equipped; render only). Persists per companion (`ShowArmor` NBT / synched data).
+- **Donate:** Shift+RMB companion menu has a donate icon button (top-right) opening `https://paypal.me/azturax`.
+
+### CCI
+- **`companion_modify`:** `showArmor=true|false` (aliases `show_armor`, `armor_visible`) toggles armor rendering remotely.
+
+### CCI — team fights + Bit children
+- **Enable:** `/azscompanions teamfight on|off|status` (ops) or CCI `teamfight_enable` / `teamfight_disable` / `teamfight_toggle`.
+- **HUD:** left/right team scoreboard (scores, bits, members, tier table, top bits/kills); `teamfight_scoreboard` show/hide/reset. Synced on login.
+- **`companion_spawn_leader`:** subs → hostile team leader (form/name/gear); requires teamfight ON.
+- **`companion_spawn_child`:** bits → Bits under leader with tiered gear (100 leather+stick → 1000 netherite); aliases `spawn_child`, `spawn_bit`, …
+- **Auto kills:** rival-team companion deaths score the HUD automatically.
+- Shared helpers: `spawnChild` / `spawnFightLeader`; cake also calls `spawnChild`.
+- Caps: 6 children/leader; 24 fight spawns/player. Docs: [CCI_STREAMING_GUIDE](docs/CCI_STREAMING_GUIDE.md).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.5+1.21.1.jar` | `azscompanions-fabric-0.3.5+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.5+1.21.1.jar` | `azscompanions-fabric-cci-0.3.5+1.21.1.jar` |
 
 ## 0.3.4
 

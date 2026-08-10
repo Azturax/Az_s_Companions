@@ -32,4 +32,4 @@ Baritone is **not** a hard dependency in 0.1.x. Prefer a light foundation later:
 
 ## Voice
 
-`VoiceService` (server) → `CompanionDialoguePacket` → `ClientVoiceController` (sounds/subtitles/TTS/Voicemod bridge). Voicemod is never required.
+`VoiceService` (server) → `CompanionDialoguePacket` → `ClientVoiceController` (owner text + optional Minecraft sound cues). Optional LLM/MCP **text** chat: [COMPANION_AI.md](COMPANION_AI.md). No VoiceMod.

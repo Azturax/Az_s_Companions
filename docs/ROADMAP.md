@@ -51,17 +51,18 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [ ] Compatibility report command with per-mod status
 - [ ] JEI/EMI recipe transfer into CraftTask
 
-## Phase 4 — Voice integration
+## Phase 4 — Voice / dialogue
 
-**Goal:** Expressive client-side voice without proprietary lock-in.
+**Goal:** Expressive client-side dialogue without proprietary lock-in.
 
 - [x] Voice abstraction (`VoiceService`, profiles, subtitles, sound events)
-- [x] Optional Voicemod-compatible external bridge (no SDK bundled)
-- [x] TTS adapter hook
+- [x] Text-first companion AI (local / OpenAI-compatible / MCP) — see `docs/COMPANION_AI.md`
 - [ ] Custom Kon voice pack assets
 - [ ] Per-line subtitle timing
 - [ ] Simple Voice Chat proximity emission (optional)
 - [ ] Privacy mode (owner-only / party-only / silent)
+
+~~VoiceMod bridge~~ — dropped (Control API is voice-filter/soundboard, not free companion TTS).
 
 ## Testing matrix (target)
 

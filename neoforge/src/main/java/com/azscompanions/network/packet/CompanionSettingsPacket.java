@@ -29,6 +29,7 @@ public record CompanionSettingsPacket(
         float bustOffset,
         String form,
         boolean showNameTag,
+        boolean showArmor,
         int flags
 ) implements CustomPacketPayload {
     public static final int FLAG_NAME = 1;
@@ -39,6 +40,7 @@ public record CompanionSettingsPacket(
     public static final int FLAG_GENDER = 32;
     public static final int FLAG_FORM = 64;
     public static final int FLAG_SHOW_NAME = 128;
+    public static final int FLAG_SHOW_ARMOR = 256;
 
     public static final Type<CompanionSettingsPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "companion_settings"));
@@ -60,6 +62,7 @@ public record CompanionSettingsPacket(
         buf.writeFloat(packet.bustOffset);
         buf.writeUtf(packet.form == null ? CompanionForm.PLAYER.serializedName() : packet.form, 32);
         buf.writeBoolean(packet.showNameTag);
+        buf.writeBoolean(packet.showArmor);
         buf.writeVarInt(packet.flags);
     }
 
@@ -77,6 +80,7 @@ public record CompanionSettingsPacket(
                 buf.readFloat(),
                 buf.readFloat(),
                 buf.readUtf(32),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readVarInt()
         );
@@ -141,6 +145,9 @@ public record CompanionSettingsPacket(
             }
             if ((packet.flags() & FLAG_SHOW_NAME) != 0) {
                 companion.setNameTagVisible(packet.showNameTag());
+            }
+            if ((packet.flags() & FLAG_SHOW_ARMOR) != 0) {
+                companion.setArmorVisible(packet.showArmor());
             }
         });
     }

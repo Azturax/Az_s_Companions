@@ -8,6 +8,7 @@ import com.azscompanions.network.packet.CompanionSettingsPacket;
 import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
 import com.azscompanions.network.packet.RecruitCompanionPacket;
+import com.azscompanions.network.packet.TeamFightHudPacket;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -31,6 +32,7 @@ public final class ModNetworking {
             registrar.playToClient(CompanionDialoguePacket.TYPE, CompanionDialoguePacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(OpenCompanionCreatorPacket.TYPE, OpenCompanionCreatorPacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(OpenCompanionMenuPacket.TYPE, OpenCompanionMenuPacket.STREAM_CODEC, (packet, context) -> {});
+            registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, (packet, context) -> {});
         }
     }
 }

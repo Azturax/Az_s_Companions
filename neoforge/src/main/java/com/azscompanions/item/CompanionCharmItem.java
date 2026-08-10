@@ -57,6 +57,7 @@ public final class CompanionCharmItem extends Item {
         if (living != null) {
             living.sayBye();
             MisterWigglySidekick.despawnFor(living);
+            living.despawnChildCompanions();
             var entityTag = new net.minecraft.nbt.CompoundTag();
             living.saveWithoutId(entityTag);
             CharmData.storeCompanion(stack, entityTag, bound);

@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4)
+- **Release:** [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5)
 - **Multi-version plan:** [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md)
 
 Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
@@ -14,10 +14,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.4+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.4+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.4+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.4+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.5+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.5+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.5+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.5+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -35,7 +35,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 
-## Gameplay (0.3.4)
+## Gameplay (0.3.5)
 
 - **Companion Charm** — desert pyramid chest loot; **one companion per player** (UUID-based; unloaded companions may not count toward the limit)
 - Charm **summon / store**; appear → `<Name> Hello!` · store → `<Name> Bye!` (owner only)
@@ -94,10 +94,10 @@ Mob spawning is **CCI-native** (`CommandOutcome` + `/summon`), not our bridge �
 
 Outputs:
 
-- `neoforge/build/libs/azscompanions-neoforge-0.3.2+1.21.1.jar`
-- `neoforge-cci/build/libs/azscompanions-neoforge-cci-0.3.2+1.21.1.jar`
-- `fabric/build/libs/azscompanions-fabric-0.3.2+1.21.1.jar`
-- `fabric-cci/build/libs/azscompanions-fabric-cci-0.3.2+1.21.1.jar`
+- `neoforge/build/libs/azscompanions-neoforge-0.3.5+1.21.1.jar`
+- `neoforge-cci/build/libs/azscompanions-neoforge-cci-0.3.5+1.21.1.jar`
+- `fabric/build/libs/azscompanions-fabric-0.3.5+1.21.1.jar`
+- `fabric-cci/build/libs/azscompanions-fabric-cci-0.3.5+1.21.1.jar`
 
 ### CCI edition Maven coords (Modrinth)
 

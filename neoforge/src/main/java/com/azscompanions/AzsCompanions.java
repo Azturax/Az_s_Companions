@@ -1,16 +1,19 @@
 package com.azscompanions;
 
+import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.api.CompanionApi;
 import com.azscompanions.command.CompanionCommands;
 import com.azscompanions.command.DebugCommands;
 import com.azscompanions.compat.CompatBootstrap;
 import com.azscompanions.entity.BuiltinCompanions;
+import com.azscompanions.config.AiConfig;
 import com.azscompanions.config.ClientConfig;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.data.CompanionDefinitionReloadListener;
 import com.azscompanions.network.ModNetworking;
 import com.azscompanions.event.CompanionGameEvents;
+import com.azscompanions.event.TeamFightGameEvents;
 import com.azscompanions.registry.ModBlockEntities;
 import com.azscompanions.registry.ModBlocks;
 import com.azscompanions.registry.ModCreativeTabs;
@@ -28,6 +31,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -61,15 +65,24 @@ public final class AzsCompanions {
         modBus.addListener(this::commonSetup);
         modBus.addListener(ModNetworking::register);
         modBus.addListener(ModEntities::registerAttributes);
+        modBus.addListener(this::onModConfig);
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onServerStarting);
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
+        NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
+        container.registerConfig(ModConfig.Type.COMMON, AiConfig.SPEC, AiConfig.FILE_NAME);
         container.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+    }
+
+    private void onModConfig(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == AiConfig.SPEC) {
+            CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -93,6 +106,9 @@ public final class AzsCompanions {
     }
 
     private void onServerStarting(ServerStartingEvent event) {
-        LOGGER.info("Az's Companions loaded on server — companions per player={}", ServerConfig.MAX_COMPANIONS_PER_PLAYER.get());
+        CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
+        LOGGER.info("Az's Companions loaded on server — companions per player={} — {}",
+                ServerConfig.MAX_COMPANIONS_PER_PLAYER.get(),
+                CompanionAiRuntime.get().statusLine());
     }
 }

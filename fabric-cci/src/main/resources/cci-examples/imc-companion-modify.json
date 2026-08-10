@@ -2,5 +2,5 @@
   "type": "imc",
   "modId": "azscompanions",
   "subject": "companion_modify",
-  "message": "form=wolf;name=Fluffy;attitude=passive;mainhand=minecraft:bone"
+  "message": "form=wolf;name=Fluffy;attitude=passive;showArmor=true;mainhand=minecraft:bone"
 }

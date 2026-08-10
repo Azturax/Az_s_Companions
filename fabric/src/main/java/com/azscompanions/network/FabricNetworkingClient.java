@@ -2,6 +2,7 @@ package com.azscompanions.network;
 
 import com.azscompanions.client.screen.FabricCompanionMenuScreen;
 import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.teamfight.ClientTeamFightHud;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -25,6 +26,8 @@ public final class FabricNetworkingClient {
                         mc.setScreen(new FabricCompanionMenuScreen(companion));
                     }
                 }));
+        ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.TeamFightHudPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientTeamFightHud.apply(payload.payload())));
     }
 
     public static void sendRecruit(String definitionId) {

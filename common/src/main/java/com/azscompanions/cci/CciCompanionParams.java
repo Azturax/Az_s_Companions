@@ -20,7 +20,10 @@ import java.util.Map;
  *   <li>{@code mainhand=minecraft:diamond_sword}</li>
  *   <li>{@code helmet=minecraft:iron_helmet;offhand=clear}</li>
  *   <li>{@code form=wolf;skin=Notch;name=Fluffy} ({@code companion_modify})</li>
+ *   <li>{@code showArmor=false} ({@code companion_modify} — hide armor render)</li>
  *   <li>{@code seconds=10} ({@code companion_turn_evil})</li>
+ *   <li>{@code form=chicken;name=Bit;count=3;bits=500;team=red} ({@code companion_spawn_child})</li>
+ *   <li>{@code name=Alice;form=zombie;subs=1;team=blue;mainhand=iron_sword} ({@code companion_spawn_leader})</li>
  *   <li>{@code red} (bare team for {@code companion_set_team})</li>
  * </ul>
  */
@@ -123,6 +126,29 @@ public final class CciCompanionParams {
     }
 
     /**
+     * Armor render toggle ({@code showArmor=}/{@code show_armor=}/{@code armor_visible=}).
+     * Returns null when the key is absent.
+     */
+    public Boolean showArmorOrNull() {
+        String v = first("showarmor", "show_armor", "armor_visible", "armorvisible");
+        if (v == null || v.isBlank()) {
+            return null;
+        }
+        return parseBoolean(v);
+    }
+
+    private static Boolean parseBoolean(String raw) {
+        String v = raw.trim().toLowerCase(Locale.ROOT);
+        if (v.equals("true") || v.equals("1") || v.equals("yes") || v.equals("on") || v.equals("show")) {
+            return Boolean.TRUE;
+        }
+        if (v.equals("false") || v.equals("0") || v.equals("no") || v.equals("off") || v.equals("hide")) {
+            return Boolean.FALSE;
+        }
+        return null;
+    }
+
+    /**
      * Duration in seconds for timed actions (e.g. playful evil). Clamped to 5–15.
      * Accepts {@code seconds=} / {@code duration=} or a bare integer message.
      */
@@ -143,6 +169,59 @@ public final class CciCompanionParams {
 
     public static int clampDurationSeconds(int seconds) {
         return Math.max(5, Math.min(15, seconds));
+    }
+
+    /** Spawn count for child actions ({@code count=}/{@code amount=}/{@code n=}). Clamped 1–8. */
+    public int spawnCountOr(int fallback) {
+        String v = first("count", "amount", "n", "num");
+        if (v == null || v.isBlank()) {
+            return com.azscompanions.entity.CompanionChildLimits.clampSpawnCount(fallback);
+        }
+        try {
+            return com.azscompanions.entity.CompanionChildLimits.clampSpawnCount(Integer.parseInt(v.trim()));
+        } catch (NumberFormatException ex) {
+            return com.azscompanions.entity.CompanionChildLimits.clampSpawnCount(fallback);
+        }
+    }
+
+    /** Body scale ({@code size=}/{@code scale=}). Clamped 0.5–3.0. */
+    public float bodyScaleOr(float fallback) {
+        String v = first("size", "scale", "body_scale", "bodyscale");
+        if (v == null || v.isBlank()) {
+            return clampBodyScale(fallback);
+        }
+        try {
+            return clampBodyScale(Float.parseFloat(v.trim()));
+        } catch (NumberFormatException ex) {
+            return clampBodyScale(fallback);
+        }
+    }
+
+    public static float clampBodyScale(float scale) {
+        return Math.max(0.5f, Math.min(3.0f, scale));
+    }
+
+    /** Bits amount ({@code bits=}/{@code cheer=}/{@code amount=} when used with bits context). */
+    public int bitsOr(int fallback) {
+        String v = first("bits", "cheer", "cheers", "bit");
+        return parseNonNegInt(v, fallback);
+    }
+
+    /** Subs amount ({@code subs=}/{@code sub=}/{@code gift=}). */
+    public int subsOr(int fallback) {
+        String v = first("subs", "sub", "gift", "giftsubs");
+        return parseNonNegInt(v, fallback);
+    }
+
+    private static int parseNonNegInt(String v, int fallback) {
+        if (v == null || v.isBlank()) {
+            return Math.max(0, fallback);
+        }
+        try {
+            return Math.max(0, Integer.parseInt(v.trim()));
+        } catch (NumberFormatException ex) {
+            return Math.max(0, fallback);
+        }
     }
 
     public String equipment(String slotKey) {

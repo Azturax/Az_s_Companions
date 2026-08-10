@@ -7,6 +7,8 @@ import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
 import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
+import com.azscompanions.network.packet.TeamFightHudPacket;
+import com.azscompanions.teamfight.ClientTeamFightHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.api.distmarker.Dist;
@@ -27,6 +29,7 @@ public final class ClientNetworkHandlers {
         registrar.playToClient(CompanionDialoguePacket.TYPE, CompanionDialoguePacket.STREAM_CODEC, ClientNetworkHandlers::handleDialogue);
         registrar.playToClient(OpenCompanionCreatorPacket.TYPE, OpenCompanionCreatorPacket.STREAM_CODEC, ClientNetworkHandlers::handleOpenCreator);
         registrar.playToClient(OpenCompanionMenuPacket.TYPE, OpenCompanionMenuPacket.STREAM_CODEC, ClientNetworkHandlers::handleOpenMenu);
+        registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, ClientNetworkHandlers::handleTeamFightHud);
     }
 
     private static void handleDialogue(CompanionDialoguePacket packet, IPayloadContext context) {
@@ -58,5 +61,9 @@ public final class ClientNetworkHandlers {
                 mc.setScreen(new CompanionMenuScreen(companion));
             }
         });
+    }
+
+    private static void handleTeamFightHud(TeamFightHudPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> ClientTeamFightHud.apply(packet.payload()));
     }
 }

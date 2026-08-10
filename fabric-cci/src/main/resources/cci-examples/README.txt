@@ -32,6 +32,16 @@ Attitude / teams / summon / gear / modify:
 
 Hidden in-game: right-click companion with a fermented spider eye → same playful evil (~10s).
 
+Team fights (CCI-first):
+  /azscompanions teamfight on|off|status   (ops) — enable scoreboard + bits/subs spawns
+  teamfight_enable / teamfight_disable / teamfight_toggle / teamfight_status
+  teamfight_scoreboard   message = show|hide|reset|team1=red;team2=blue
+  teamfight_score        message = team=red;points=1  OR  killer=Alice
+  teamfight_top
+  companion_spawn_leader message = name=Alice;form=zombie;subs=1;team=red
+  companion_spawn_child  message = bits=500;count=1;name=Bit;team=red
+  Bit tiers: 100 leather+stick … 1000 netherite. Cake RMB also calls spawnChild.
+
 Example files
 -------------
   imc-companion-*.json          (say/greet/wave/follow/sit/stay)
@@ -40,11 +50,14 @@ Example files
   imc-companion-set-equipment.json
   imc-companion-modify.json
   imc-companion-turn-evil.json
+  imc-teamfight-enable.json
+  imc-companion-spawn-leader.json
+  imc-companion-spawn-child.json
   command-summon-wolf-alongside.json   (CCI-native /summon — not our bridge)
   command-azscci-greet-outcome.json    (Fabric /azscci fallback)
 
 Twitch tips
 -----------
 - Channel points: match custom-reward-id; set message to $username or redemption input.
-- Bits/cheers: greet or summon_hostile with form=…;team=…
-- Different teamIds fight each other; never the owner.
+- Subs → companion_spawn_leader (teamfight ON). Bits/cheers → companion_spawn_child with bits=.
+- Different teamIds fight each other; never the owner. Kills auto-score on the HUD.

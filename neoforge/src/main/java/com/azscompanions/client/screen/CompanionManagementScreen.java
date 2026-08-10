@@ -240,6 +240,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 editBustOffset,
                 c.getForm().serializedName(),
                 c.isNameTagVisible(),
+                c.isArmorVisible(),
                 flags
         ));
     }

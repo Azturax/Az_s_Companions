@@ -47,6 +47,7 @@ public final class FabricCompanionCharmItem extends Item {
         FabricCompanionEntity living = FabricCompanionRecruitment.findOwned(player, bound);
         if (living != null) {
             living.sayBye();
+            living.despawnChildCompanions();
             var tag = new net.minecraft.nbt.CompoundTag();
             living.saveWithoutId(tag);
             FabricCharmData.storeCompanion(stack, tag, bound);

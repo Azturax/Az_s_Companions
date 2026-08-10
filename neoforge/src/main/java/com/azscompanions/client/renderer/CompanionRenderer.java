@@ -44,10 +44,39 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
                 this,
                 new HumanoidArmorModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidArmorModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
-                context.getModelManager()));
+                context.getModelManager()) {
+            @Override
+            public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, CompanionEntity entity,
+                               float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                               float netHeadYaw, float headPitch) {
+                if (!shouldRenderArmor(entity)) {
+                    return;
+                }
+                super.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTick,
+                        ageInTicks, netHeadYaw, headPitch);
+            }
+        });
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
-        this.addLayer(new ElytraLayer<>(this, context.getModelSet()));
+        this.addLayer(new ElytraLayer<>(this, context.getModelSet()) {
+            @Override
+            public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, CompanionEntity entity,
+                               float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                               float netHeadYaw, float headPitch) {
+                if (!shouldRenderArmor(entity)) {
+                    return;
+                }
+                super.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTick,
+                        ageInTicks, netHeadYaw, headPitch);
+            }
+        });
         this.addLayer(new CompanionCapeLayer(this));
+    }
+
+    private static boolean shouldRenderArmor(CompanionEntity entity) {
+        if (ClientAppearanceDraft.matches(entity)) {
+            return ClientAppearanceDraft.ACTIVE.showArmor;
+        }
+        return entity.isArmorVisible();
     }
 
     @Override
@@ -140,7 +169,8 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
             if (cape == null) {
                 return;
             }
-            if (entity.getCompanionInventory().getStackInSlot(CompanionInventory.CHEST).is(Items.ELYTRA)) {
+            if (entity.getCompanionInventory().getStackInSlot(CompanionInventory.CHEST).is(Items.ELYTRA)
+                    && shouldRenderArmor(entity)) {
                 return;
             }
 

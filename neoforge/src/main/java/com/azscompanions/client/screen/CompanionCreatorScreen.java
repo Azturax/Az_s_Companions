@@ -158,6 +158,15 @@ public final class CompanionCreatorScreen extends Screen {
                     }).bounds(rightX, 0, rightW, 20).build();
             addRightWidget(nameTagBtn, y, 20);
             y += 28;
+            Button armorBtn = Button.builder(
+                    Component.literal(draft.showArmor ? "Armor: Show" : "Armor: Hide"),
+                    b -> {
+                        draft.showArmor = !draft.showArmor;
+                        b.setMessage(Component.literal(draft.showArmor ? "Armor: Show" : "Armor: Hide"));
+                        pushLiveAppearance(CompanionSettingsPacket.FLAG_SHOW_ARMOR);
+                    }).bounds(rightX, 0, rightW, 20).build();
+            addRightWidget(armorBtn, y, 20);
+            y += 28;
             nameStatusContentY = y;
             y += 36; // reserve space for live lookup status
         } else if (category == Category.FORM) {
@@ -504,6 +513,7 @@ public final class CompanionCreatorScreen extends Screen {
                 draft.bustOffset,
                 draft.form.serializedName(),
                 draft.showNameTag,
+                draft.showArmor,
                 flags
         ));
     }
@@ -522,7 +532,8 @@ public final class CompanionCreatorScreen extends Screen {
         int flags = CompanionSettingsPacket.FLAG_NAME | CompanionSettingsPacket.FLAG_SCALE
                 | CompanionSettingsPacket.FLAG_SKIN | CompanionSettingsPacket.FLAG_SLIM
                 | CompanionSettingsPacket.FLAG_PROPORTIONS | CompanionSettingsPacket.FLAG_GENDER
-                | CompanionSettingsPacket.FLAG_FORM | CompanionSettingsPacket.FLAG_SHOW_NAME;
+                | CompanionSettingsPacket.FLAG_FORM | CompanionSettingsPacket.FLAG_SHOW_NAME
+                | CompanionSettingsPacket.FLAG_SHOW_ARMOR;
         PacketDistributor.sendToServer(new CompanionSettingsPacket(
                 companion.getId(),
                 draft.name,
@@ -537,6 +548,7 @@ public final class CompanionCreatorScreen extends Screen {
                 draft.bustOffset,
                 draft.form.serializedName(),
                 draft.showNameTag,
+                draft.showArmor,
                 flags
         ));
         ClientAppearanceDraft.ACTIVE = null;
