@@ -251,9 +251,9 @@ public class CompanionEntity extends PathfinderMob {
         }
     }
 
-    /** Soft cat purr every few seconds while asleep — audible to nearby players. */
+    /** Soft cat purr every few seconds while asleep — Kon-named companions only. */
     private void tickSleepPurr() {
-        if (!isSleeping()) {
+        if (!isSleeping() || !isKonNamed()) {
             return;
         }
         // ~5s cadence, staggered by entity id so multiple companions don't sync.

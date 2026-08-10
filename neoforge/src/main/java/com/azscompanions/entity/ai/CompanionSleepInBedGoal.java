@@ -18,7 +18,7 @@ import java.util.EnumSet;
 
 /**
  * At night (or when the owner is sleeping), path to a bed and sleep.
- * Strongly prefers {@link KonBedBlock} / remembered home bed over vanilla beds.
+ * Remembers home bed; Kon-named companions also prefer {@link KonBedBlock} over vanilla beds.
  * Leaves bed if the owner moves farther than {@link CompanionFollowDistances#LEAVE_BED_OWNER_DISTANCE}.
  */
 public final class CompanionSleepInBedGoal extends Goal {
@@ -142,6 +142,7 @@ public final class CompanionSleepInBedGoal extends Goal {
         }
 
         BlockPos origin = companion.blockPosition();
+        boolean preferKonBed = companion.isKonNamed();
         BlockPos bestKon = null;
         int bestKonDist = Integer.MAX_VALUE;
         BlockPos bestAny = null;
@@ -155,7 +156,7 @@ public final class CompanionSleepInBedGoal extends Goal {
                         continue;
                     }
                     int dist = origin.distManhattan(cursor);
-                    if (isKonBed(level, cursor)) {
+                    if (preferKonBed && isKonBed(level, cursor)) {
                         if (dist < bestKonDist) {
                             bestKonDist = dist;
                             bestKon = cursor.immutable();

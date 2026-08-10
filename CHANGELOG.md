@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.2.0
+
+Release: [v0.2.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Gameplay
+- **Kon-only gating:** sleep purr (`CAT_PURR`), Kon Bed sleep priority, Kon skin easter egg + one-time Kon Bed grant apply only when the companion display name equals `Kon` (case-insensitive). Non-Kon companions use generic sleep/bed/skin defaults. UUID special perks (ears, fly/glow, Wiggly) unchanged.
+
+### Loaders / editions (jar matrix)
+Jar names use `0.2.0+<minecraft>` so the game version is visible in the filename.
+
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.2.0+1.21.1.jar` | `azscompanions-fabric-0.2.0+1.21.1.jar` | `azscompanions-neoforge-cci-0.2.0+1.21.1.jar` | `azscompanions-fabric-cci-0.2.0+1.21.1.jar` |
+| **1.20.1** | *not shipped — no NeoForge 20.1 on releases Maven; Forge port deferred* | *deferred — API backport* | *CCI: no NeoForge build (Forge-only on Modrinth)* | *CCI available (see table) but Az port deferred* |
+| **26.1.2** | *deferred — unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
+| **26.2** | *deferred — unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
+
+### CCI / iChunUtil dependency pins (Modrinth lookup)
+
+| Minecraft | Loader | CCI | Modrinth id | iChunUtil | Modrinth id | Used in 0.2.0? |
+|-----------|--------|-----|-------------|-----------|-------------|----------------|
+| **1.21.1** | NeoForge | **1.13.0** | `AySbAgcO` | **1.0.3** | `OvIyyNh4` | Yes (`neoforge-cci`) |
+| **1.21.1** | Fabric | **1.13.0** | `PERd6IT9` | **1.0.3** | `gfAOoiwe` | Yes (`fabric-cci`) |
+| **1.20.1** | Fabric | **1.13.0** | `7tk12xkN` | **1.0.3** | `JjEWQx5u` | No (port deferred) |
+| **1.20.1** | Forge | **1.13.0** | `nNaAlKHI` | **1.0.3** | `W6d0pCyu` | No (no NeoForge CCI; Forge module deferred) |
+| **1.20.1** | NeoForge | — | none | — | none | N/A |
+| **26.1.2** | any | — | none | — | none | N/A — ship standalone only when ported |
+| **26.2** | any | — | none | — | none | N/A — ship standalone only when ported |
+
+**Shipped this release:** four jars for Minecraft **1.21.1** (NeoForge + Fabric standalone and CCI). See `docs/MULTI_VERSION.md`.
+
+### Build / metadata
+- Mod version **0.2.0**; published archives tagged `+1.21.1`
+- NeoForge / Minecraft dependency ranges tightened to **1.21.1 / NeoForge 21.1.x** (no longer advertise untested 26.x binary compat)
+
 ## 0.1.1
 
 Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

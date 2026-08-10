@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 
 import java.util.EnumSet;
 
-/** Night sleep; prefers Kon bed / home bed. Leaves bed if owner moves far. */
+/** Night sleep; home bed, and Kon bed preference only when named Kon. Leaves bed if owner moves far. */
 public final class FabricCompanionSleepInBedGoal extends Goal {
     private static final int SEARCH_RADIUS = 48;
     private static final int WAKE_COOLDOWN_TICKS = 100;
@@ -120,6 +120,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
             companion.setHomeBedPos(null);
         }
         BlockPos origin = companion.blockPosition();
+        boolean preferKonBed = companion.isKonNamed();
         BlockPos bestKon = null;
         int bestKonDist = Integer.MAX_VALUE;
         BlockPos bestAny = null;
@@ -133,7 +134,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
                         continue;
                     }
                     int dist = origin.distManhattan(cursor);
-                    if (level.getBlockState(cursor).getBlock() instanceof FabricKonBedBlock) {
+                    if (preferKonBed && level.getBlockState(cursor).getBlock() instanceof FabricKonBedBlock) {
                         if (dist < bestKonDist) {
                             bestKonDist = dist;
                             bestKon = cursor.immutable();

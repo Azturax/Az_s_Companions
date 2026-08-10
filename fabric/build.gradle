@@ -7,7 +7,7 @@ base {
     archivesName = "${rootProject.archives_name}-fabric"
 }
 
-version = rootProject.mod_version
+version = "${rootProject.mod_version}+${rootProject.minecraft_version}"
 group = rootProject.mod_group_id
 
 repositories {

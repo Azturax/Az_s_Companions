@@ -261,9 +261,9 @@ public class FabricCompanionEntity extends PathfinderMob {
         ownerActivity.tick(owner.getX(), owner.getZ());
     }
 
-    /** Soft cat purr every few seconds while asleep — audible to nearby players. */
+    /** Soft cat purr every few seconds while asleep — Kon-named companions only. */
     private void tickSleepPurr() {
-        if (!isSleeping()) {
+        if (!isSleeping() || !isKonNamed()) {
             return;
         }
         if ((tickCount + getId()) % 100 != 0) {
