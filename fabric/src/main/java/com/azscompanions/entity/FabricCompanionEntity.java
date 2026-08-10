@@ -21,12 +21,14 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -73,6 +75,14 @@ public class FabricCompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_BUST_OFFSET =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<String> DATA_FORM =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_ATTITUDE =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_TEAM =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
     /** Synced so client UI ownership checks work without looking at NBT. */
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.OPTIONAL_UUID);
@@ -103,6 +113,12 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     @Override
+    public EntityDimensions getDefaultDimensions(Pose pose) {
+        CompanionForm form = getForm();
+        return EntityDimensions.scalable(form.width(), form.height());
+    }
+
+    @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_DEFINITION, FabricCompanionRegistry.KON_ID.toString());
@@ -117,6 +133,10 @@ public class FabricCompanionEntity extends PathfinderMob {
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
+        builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
+        builder.define(DATA_SHOW_NAME_TAG, true);
+        builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
+        builder.define(DATA_TEAM, "");
         builder.define(DATA_OWNER, Optional.empty());
     }
 
@@ -133,7 +153,8 @@ public class FabricCompanionEntity extends PathfinderMob {
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new FabricOwnerDefendTargetGoal(this));
-        targetSelector.addGoal(2, new HurtByTargetGoal(this));
+        targetSelector.addGoal(2, new FabricHostileTargetGoal(this));
+        targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
     @Override
@@ -201,6 +222,10 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public void safeTeleportNearOwner(Player owner) {
+        FabricCompanionMode mode = getMode();
+        if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
+            return;
+        }
         net.minecraft.world.phys.Vec3 away = position().subtract(owner.position());
         if (away.horizontalDistanceSqr() < 1.0e-4d) {
             away = new net.minecraft.world.phys.Vec3(1.0d, 0.0d, 0.0d);
@@ -419,43 +444,42 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     public ItemStack getItemBySlot(EquipmentSlot slot) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            return inventory.getMainHand();
-        }
-        if (slot == EquipmentSlot.OFFHAND) {
-            return inventory.getOffHand();
-        }
-        return super.getItemBySlot(slot);
+        return switch (slot) {
+            case MAINHAND -> inventory.getMainHand();
+            case OFFHAND -> inventory.getOffHand();
+            case HEAD -> inventory.getItem(FabricCompanionInventory.HEAD);
+            case CHEST -> inventory.getItem(FabricCompanionInventory.CHEST);
+            case LEGS -> inventory.getItem(FabricCompanionInventory.LEGS);
+            case FEET -> inventory.getItem(FabricCompanionInventory.FEET);
+            default -> super.getItemBySlot(slot);
+        };
     }
 
     @Override
     public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            inventory.setItem(FabricCompanionInventory.MAIN_HAND, stack);
-            return;
+        switch (slot) {
+            case MAINHAND -> inventory.setItem(FabricCompanionInventory.MAIN_HAND, stack);
+            case OFFHAND -> inventory.setItem(FabricCompanionInventory.OFF_HAND, stack);
+            case HEAD -> inventory.setItem(FabricCompanionInventory.HEAD, stack);
+            case CHEST -> inventory.setItem(FabricCompanionInventory.CHEST, stack);
+            case LEGS -> inventory.setItem(FabricCompanionInventory.LEGS, stack);
+            case FEET -> inventory.setItem(FabricCompanionInventory.FEET, stack);
+            default -> super.setItemSlot(slot, stack);
         }
-        if (slot == EquipmentSlot.OFFHAND) {
-            inventory.setItem(FabricCompanionInventory.OFF_HAND, stack);
-            return;
-        }
-        super.setItemSlot(slot, stack);
     }
 
     public boolean canAttackTarget(LivingEntity target) {
         if (!FabricServerConfig.ALLOW_COMBAT) {
             return false;
         }
-        if (target instanceof Player player && (isOwnedBy(player) || trusted.contains(player.getUUID()))) {
+        if (!isAllowedCombatant(target)) {
             return false;
         }
-        if (target instanceof OwnableEntity ownable) {
-            UUID petOwner = ownable.getOwnerUUID();
-            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trusted.contains(petOwner))) {
-                return false;
-            }
+        if (isTeamRival(target)) {
+            return true;
         }
-        if (target instanceof FabricCompanionEntity) {
-            return false;
+        if (getAttitude().isHostile()) {
+            return true;
         }
         // Never pick random passives. Hostiles only if targeting us/owner or recent hurt link.
         if (!target.getType().getCategory().isFriendly()) {
@@ -466,7 +490,6 @@ public class FabricCompanionEntity extends PathfinderMob {
                     || target.getLastHurtByMob() == this
                     || target.getLastHurtByMob() == getOwner();
         }
-        // Peaceful animals only if they hurt owner/companion.
         return target.getLastHurtByMob() == this || target.getLastHurtByMob() == getOwner();
     }
 
@@ -622,6 +645,96 @@ public class FabricCompanionEntity extends PathfinderMob {
         entityData.set(DATA_GENDER, value.getSerializedName());
     }
 
+    public CompanionForm getForm() {
+        return CompanionForm.byName(entityData.get(DATA_FORM));
+    }
+
+    public void setForm(CompanionForm form) {
+        CompanionForm value = form == null ? CompanionForm.PLAYER : form;
+        entityData.set(DATA_FORM, value.serializedName());
+        refreshDimensions();
+    }
+
+    public boolean isNameTagVisible() {
+        return entityData.get(DATA_SHOW_NAME_TAG);
+    }
+
+    public void setNameTagVisible(boolean visible) {
+        entityData.set(DATA_SHOW_NAME_TAG, visible);
+        setCustomNameVisible(visible);
+    }
+
+    public CompanionAttitude getAttitude() {
+        return CompanionAttitude.byName(entityData.get(DATA_ATTITUDE));
+    }
+
+    public void setAttitude(CompanionAttitude attitude) {
+        CompanionAttitude value = attitude == null ? CompanionAttitude.PASSIVE : attitude;
+        entityData.set(DATA_ATTITUDE, value.serializedName());
+        if (value == CompanionAttitude.PASSIVE && getTarget() != null && !isTeamRival(getTarget())) {
+            setTarget(null);
+        }
+    }
+
+    public String getTeamId() {
+        return entityData.get(DATA_TEAM);
+    }
+
+    public void setTeamId(String teamId) {
+        String sanitized = teamId == null ? "" : teamId.trim();
+        if (sanitized.length() > 32) {
+            sanitized = sanitized.substring(0, 32);
+        }
+        entityData.set(DATA_TEAM, sanitized);
+    }
+
+    public boolean wantsAggressiveTargets() {
+        return getAttitude().isHostile() || (getTeamId() != null && !getTeamId().isBlank());
+    }
+
+    public boolean isValidHostilePrey(LivingEntity target) {
+        if (!isAllowedCombatant(target)) {
+            return false;
+        }
+        if (isTeamRival(target)) {
+            return true;
+        }
+        return getAttitude().isHostile();
+    }
+
+    private boolean isAllowedCombatant(LivingEntity target) {
+        if (target == null || !target.isAlive() || target == this) {
+            return false;
+        }
+        if (target instanceof Player player && (isOwnedBy(player) || trusted.contains(player.getUUID()))) {
+            return false;
+        }
+        if (target instanceof FabricCompanionEntity other) {
+            if (CompanionTeamColors.sameTeam(getTeamId(), other.getTeamId())) {
+                return false;
+            }
+        }
+        if (target instanceof OwnableEntity ownable) {
+            UUID petOwner = ownable.getOwnerUUID();
+            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trusted.contains(petOwner))) {
+                return target instanceof FabricCompanionEntity && isTeamRival(target);
+            }
+        }
+        return true;
+    }
+
+    private boolean isTeamRival(LivingEntity target) {
+        if (!(target instanceof FabricCompanionEntity other)) {
+            return false;
+        }
+        String mine = getTeamId();
+        String theirs = other.getTeamId();
+        if (mine == null || mine.isBlank() || theirs == null || theirs.isBlank()) {
+            return false;
+        }
+        return !CompanionTeamColors.sameTeam(mine, theirs);
+    }
+
     public boolean isMale() {
         return getGender().isMale();
     }
@@ -658,6 +771,13 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public void applyOwnerAppearanceDefaults(ServerPlayer player) {
+        if (com.azscompanions.AzsCompanionsConstants.isPeckerOwner(player.getUUID())) {
+            setForm(CompanionForm.CHICKEN);
+            setCustomDisplayName(com.azscompanions.AzsCompanionsConstants.PECKER_COMPANION_NAME);
+            setSkinPath("");
+            setNameTagVisible(true);
+            return;
+        }
         setCustomDisplayName(player.getGameProfile().getName());
         if (!isKonNamed()) {
             setSkinPath("player:" + player.getUUID());
@@ -744,6 +864,10 @@ public class FabricCompanionEntity extends PathfinderMob {
         tag.putString("Mode", entityData.get(DATA_MODE));
         tag.putString("SkinPath", getSkinPath());
         tag.putString("CustomNameOverride", entityData.get(DATA_NAME));
+        tag.putString("CompanionForm", getForm().serializedName());
+        tag.putBoolean("ShowNameTag", isNameTagVisible());
+        tag.putString("Attitude", getAttitude().serializedName());
+        tag.putString("TeamId", getTeamId() == null ? "" : getTeamId());
         tag.putBoolean("SlimArms", isSlimArms());
         tag.putString("Gender", getGender().getSerializedName());
         tag.putBoolean("KonBedGranted", konBedGranted);
@@ -791,6 +915,26 @@ public class FabricCompanionEntity extends PathfinderMob {
             String override = tag.getString("CustomNameOverride");
             entityData.set(DATA_NAME, override);
             setCustomName(Component.literal(override));
+        }
+        if (tag.contains("CompanionForm")) {
+            setForm(CompanionForm.byName(tag.getString("CompanionForm")));
+        } else {
+            setForm(CompanionForm.PLAYER);
+        }
+        if (tag.contains("ShowNameTag")) {
+            setNameTagVisible(tag.getBoolean("ShowNameTag"));
+        } else {
+            setNameTagVisible(true);
+        }
+        if (tag.contains("Attitude")) {
+            setAttitude(CompanionAttitude.byName(tag.getString("Attitude")));
+        } else {
+            setAttitude(CompanionAttitude.PASSIVE);
+        }
+        if (tag.contains("TeamId")) {
+            setTeamId(tag.getString("TeamId"));
+        } else {
+            setTeamId("");
         }
         if (tag.contains("SlimArms")) {
             setSlimArms(tag.getBoolean("SlimArms"));

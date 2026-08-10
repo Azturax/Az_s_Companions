@@ -48,6 +48,8 @@ public final class FabricCompanionSkinTextures {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     private static final Map<UUID, ResourceLocation> CACHE = new ConcurrentHashMap<>();
+    private static final Map<UUID, ResourceLocation> CAPE_CACHE = new ConcurrentHashMap<>();
+    private static final Set<UUID> CAPE_ABSENT = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, Boolean> SLIM_CACHE = new ConcurrentHashMap<>();
     private static final Set<UUID> LOADING = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, List<Consumer<Optional<ReadySkin>>>> WAITERS = new ConcurrentHashMap<>();
@@ -78,6 +80,52 @@ public final class FabricCompanionSkinTextures {
             return DEFAULT_KON;
         }
         return resolve(skinPath);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    public static ResourceLocation resolveCape(FabricCompanionEntity entity) {
+        String skinPath = entity.getSkinPath();
+        if (FabricClientAppearanceDraft.matches(entity)
+                && FabricClientAppearanceDraft.ACTIVE.skinPath != null
+                && !FabricClientAppearanceDraft.ACTIVE.skinPath.isBlank()) {
+            skinPath = FabricClientAppearanceDraft.ACTIVE.skinPath;
+        }
+        UUID uuid = null;
+        if (skinPath != null && skinPath.startsWith("player:")) {
+            try {
+                uuid = UUID.fromString(skinPath.substring("player:".length()).trim());
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
+        } else if (skinPath == null || skinPath.isBlank()) {
+            if (entity.isKonNamed()) {
+                return null;
+            }
+            uuid = entity.getOwnerUuid();
+        }
+        if (uuid == null || CAPE_ABSENT.contains(uuid)) {
+            return null;
+        }
+        ResourceLocation cached = CAPE_CACHE.get(uuid);
+        if (cached != null) {
+            return cached;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() != null) {
+            var info = mc.getConnection().getPlayerInfo(uuid);
+            if (info != null && info.getSkin() != null && info.getSkin().capeTexture() != null) {
+                CAPE_CACHE.put(uuid, info.getSkin().capeTexture());
+                return info.getSkin().capeTexture();
+            }
+        }
+        if (mc.player != null && uuid.equals(mc.player.getUUID()) && mc.player.getSkin() != null
+                && mc.player.getSkin().capeTexture() != null) {
+            CAPE_CACHE.put(uuid, mc.player.getSkin().capeTexture());
+            return mc.player.getSkin().capeTexture();
+        }
+        // Kick async skin+cape download; do not mark absent until fetch finishes.
+        ensureLoaded(uuid);
+        return null;
     }
 
     public static void loadPlayerSkin(UUID uuid, Consumer<Optional<ReadySkin>> onReady) {
@@ -190,12 +238,37 @@ public final class FabricCompanionSkinTextures {
                                 && previous.getPath().startsWith("dynamic_player_skin/")) {
                             mc.getTextureManager().release(previous);
                         }
+                        registerCape(mc, uuid, payload.capeBytes());
                         notifyWaiters(uuid, Optional.of(new ReadySkin(uuid, id, payload.slim())));
                     } catch (Exception e) {
                         AzsCompanionsFabric.LOGGER.warn("Failed registering Fabric skin for {}", uuid, e);
                         notifyWaiters(uuid, Optional.empty());
                     }
                 }));
+    }
+
+    private static void registerCape(Minecraft mc, UUID uuid, byte[] capeBytes) {
+        if (capeBytes == null || capeBytes.length == 0) {
+            CAPE_ABSENT.add(uuid);
+            return;
+        }
+        try {
+            NativeImage capeImage = NativeImage.read(new ByteArrayInputStream(capeBytes));
+            ResourceLocation capeId = ResourceLocation.fromNamespaceAndPath(
+                    AzsCompanionsFabric.MOD_ID, "dynamic_player_cape/" + uuid.toString().replace("-", ""));
+            ResourceLocation previous = CAPE_CACHE.put(uuid, capeId);
+            CAPE_ABSENT.remove(uuid);
+            mc.getTextureManager().register(capeId, new DynamicTexture(capeImage));
+            if (previous != null
+                    && !previous.equals(capeId)
+                    && previous.getNamespace().equals(AzsCompanionsFabric.MOD_ID)
+                    && previous.getPath().startsWith("dynamic_player_cape/")) {
+                mc.getTextureManager().release(previous);
+            }
+        } catch (Exception e) {
+            CAPE_ABSENT.add(uuid);
+            AzsCompanionsFabric.LOGGER.debug("No usable Fabric cape for {}: {}", uuid, e.toString());
+        }
     }
 
     private static SkinPayload download(UUID uuid) {
@@ -215,6 +288,7 @@ public final class FabricCompanionSkinTextures {
                 return null;
             }
             String url = null;
+            String capeUrl = null;
             boolean slim = false;
             for (var el : json.getAsJsonArray("properties")) {
                 JsonObject prop = el.getAsJsonObject();
@@ -230,6 +304,12 @@ public final class FabricCompanionSkinTextures {
                         slim = "slim".equalsIgnoreCase(skin.getAsJsonObject("metadata").get("model").getAsString());
                     }
                 }
+                if (textures != null && textures.has("CAPE")) {
+                    JsonObject cape = textures.getAsJsonObject("CAPE");
+                    if (cape.has("url")) {
+                        capeUrl = cape.get("url").getAsString();
+                    }
+                }
             }
             if (url == null || !(url.startsWith("https://textures.minecraft.net/")
                     || url.startsWith("http://textures.minecraft.net/"))) {
@@ -237,7 +317,19 @@ public final class FabricCompanionSkinTextures {
             }
             HttpRequest skinReq = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(10)).GET().build();
             HttpResponse<byte[]> skinRes = HTTP.send(skinReq, HttpResponse.BodyHandlers.ofByteArray());
-            return skinRes.statusCode() == 200 ? new SkinPayload(skinRes.body(), slim) : null;
+            if (skinRes.statusCode() != 200 || skinRes.body() == null) {
+                return null;
+            }
+            byte[] capeBytes = null;
+            if (capeUrl != null && (capeUrl.startsWith("https://textures.minecraft.net/")
+                    || capeUrl.startsWith("http://textures.minecraft.net/"))) {
+                HttpRequest capeReq = HttpRequest.newBuilder().uri(URI.create(capeUrl)).timeout(Duration.ofSeconds(10)).GET().build();
+                HttpResponse<byte[]> capeRes = HTTP.send(capeReq, HttpResponse.BodyHandlers.ofByteArray());
+                if (capeRes.statusCode() == 200 && capeRes.body() != null && capeRes.body().length > 0) {
+                    capeBytes = capeRes.body();
+                }
+            }
+            return new SkinPayload(skinRes.body(), capeBytes, slim);
         } catch (Exception e) {
             AzsCompanionsFabric.LOGGER.warn("Fabric Mojang skin fetch failed for {}", uuid, e);
             return null;
@@ -317,6 +409,6 @@ public final class FabricCompanionSkinTextures {
         }
     }
 
-    private record SkinPayload(byte[] bytes, boolean slim) {
+    private record SkinPayload(byte[] bytes, byte[] capeBytes, boolean slim) {
     }
 }

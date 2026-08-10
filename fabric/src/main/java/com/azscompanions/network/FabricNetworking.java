@@ -1,6 +1,7 @@
 package com.azscompanions.network;
 
 import com.azscompanions.AzsCompanionsFabric;
+import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
@@ -102,6 +103,12 @@ public final class FabricNetworking {
                         companion.setShoulders(payload.shoulders());
                         companion.setBustOffset(payload.bustOffset());
                     }
+                    if ((payload.flags() & SettingsPayload.FLAG_FORM) != 0) {
+                        companion.setForm(CompanionForm.byName(payload.form()));
+                    }
+                    if ((payload.flags() & SettingsPayload.FLAG_SHOW_NAME) != 0) {
+                        companion.setNameTagVisible(payload.showNameTag());
+                    }
                 }));
     }
 
@@ -167,6 +174,8 @@ public final class FabricNetworking {
             float hips,
             float shoulders,
             float bustOffset,
+            String form,
+            boolean showNameTag,
             int flags
     ) implements CustomPacketPayload {
         public static final int FLAG_NAME = 1;
@@ -175,6 +184,8 @@ public final class FabricNetworking {
         public static final int FLAG_SLIM = 8;
         public static final int FLAG_PROPORTIONS = 16;
         public static final int FLAG_GENDER = 32;
+        public static final int FLAG_FORM = 64;
+        public static final int FLAG_SHOW_NAME = 128;
 
         public static final Type<SettingsPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_settings"));
@@ -194,6 +205,8 @@ public final class FabricNetworking {
             buf.writeFloat(p.hips);
             buf.writeFloat(p.shoulders);
             buf.writeFloat(p.bustOffset);
+            buf.writeUtf(p.form == null ? "player" : p.form, 32);
+            buf.writeBoolean(p.showNameTag);
             buf.writeVarInt(p.flags);
         }
 
@@ -202,6 +215,7 @@ public final class FabricNetworking {
                     buf.readVarInt(), buf.readUtf(64), buf.readFloat(), buf.readUtf(256),
                     buf.readBoolean(), buf.readBoolean(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+                    buf.readUtf(32), buf.readBoolean(),
                     buf.readVarInt());
         }
 

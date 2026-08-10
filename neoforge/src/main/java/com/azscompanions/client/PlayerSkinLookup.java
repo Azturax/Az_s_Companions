@@ -181,7 +181,14 @@ public final class PlayerSkinLookup {
                 if (skin.has("metadata") && skin.getAsJsonObject("metadata").has("model")) {
                     slim = "slim".equalsIgnoreCase(skin.getAsJsonObject("metadata").get("model").getAsString());
                 }
-                return new SessionTextures(url, slim);
+                String capeUrl = null;
+                if (textures.has("CAPE")) {
+                    JsonObject cape = textures.getAsJsonObject("CAPE");
+                    if (cape.has("url")) {
+                        capeUrl = cape.get("url").getAsString();
+                    }
+                }
+                return new SessionTextures(url, capeUrl, slim);
             }
         } catch (Exception e) {
             AzsCompanions.LOGGER.warn("Failed reading session textures for {}", uuid, e);
@@ -203,7 +210,7 @@ public final class PlayerSkinLookup {
     }
 
     /** Package-visible session texture payload used by {@link CompanionSkinTextures}. */
-    record SessionTextures(@Nullable String skinUrl, boolean slim) {
-        static final SessionTextures EMPTY = new SessionTextures(null, false);
+    record SessionTextures(@Nullable String skinUrl, @Nullable String capeUrl, boolean slim) {
+        static final SessionTextures EMPTY = new SessionTextures(null, null, false);
     }
 }

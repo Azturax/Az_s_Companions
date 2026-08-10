@@ -5,6 +5,7 @@ import com.azscompanions.client.FabricCompanionSkinTextures;
 import com.azscompanions.client.FabricPlayerSkinLookup;
 import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
 import com.azscompanions.network.FabricNetworking;
 import net.minecraft.client.gui.GuiGraphics;
@@ -30,7 +31,7 @@ import java.util.function.Supplier;
  */
 public final class FabricCompanionCreatorScreen extends Screen {
     public enum Category {
-        NAME, SKIN, BODY
+        NAME, FORM, SKIN, BODY
     }
 
     private static final int PANEL_BG = 0xC0101010;
@@ -141,11 +142,31 @@ public final class FabricCompanionCreatorScreen extends Screen {
             addRightWidget(nameBox, y, 18);
             y += 24;
             y = addRightWrapped(y,
-                    "Valid Minecraft names fetch that player's Mojang skin. \"Kon\" uses the Kon special skin.",
+                    "Valid Minecraft usernames fetch that player's Mojang skin.",
                     0xA0A0A0);
             y += 8;
+            Button nameTagBtn = Button.builder(
+                    Component.literal(draft.showNameTag ? "Nametag: Show" : "Nametag: Hide"),
+                    b -> {
+                        draft.showNameTag = !draft.showNameTag;
+                        b.setMessage(Component.literal(draft.showNameTag ? "Nametag: Show" : "Nametag: Hide"));
+                        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_SHOW_NAME);
+                    }).bounds(rightX, 0, rightW, 20).build();
+            addRightWidget(nameTagBtn, y, 20);
+            y += 28;
             nameStatusContentY = y;
-            y += 36; // reserve space for live lookup status
+            y += 36;
+        } else if (category == Category.FORM) {
+            addRightLabel(y, "Companion form", 0xA0A0A0);
+            y += 14;
+            y = addRightWrapped(y, "Current: " + draft.form.displayLabel(), 0xFFFFFF);
+            y += 8;
+            y = addFormGroupButtons(y, "Player", CompanionForm.FormGroup.PLAYER);
+            y = addFormGroupButtons(y, "Animals", CompanionForm.FormGroup.ANIMAL);
+            y = addFormGroupButtons(y, "Hostiles", CompanionForm.FormGroup.HOSTILE);
+            y = addRightWrapped(y,
+                    "Forms keep ownership, charm, Follow/Stay/Wander, and CCI actions. Creeper excluded.",
+                    0xA0A0A0);
         } else if (category == Category.SKIN) {
             addRightLabel(y, "Mojang skin", 0xA0A0A0);
             y += 14;
@@ -353,7 +374,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
         }
         if (trimmed.equalsIgnoreCase("Kon")) {
             applyDraftSkin(FabricCompanionSkinTextures.DEFAULT_KON.toString(), draft.slimArms);
-            skinStatusMessage = "Kon special skin";
+            skinStatusMessage = null;
             pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_NAME
                     | FabricNetworking.SettingsPayload.FLAG_SKIN
                     | FabricNetworking.SettingsPayload.FLAG_SLIM);
@@ -420,6 +441,32 @@ public final class FabricCompanionCreatorScreen extends Screen {
         }
     }
 
+    private int addFormGroupButtons(int y, String title, CompanionForm.FormGroup group) {
+        addRightLabel(y, title, 0xA0A0A0);
+        y += 14;
+        int col = 0;
+        int half = (rightW - 6) / 2;
+        for (CompanionForm form : CompanionForm.byGroup(group)) {
+            boolean selected = draft.form == form;
+            Button btn = Button.builder(
+                    Component.literal(selected ? "[" + form.displayLabel() + "]" : form.displayLabel()),
+                    b -> {
+                        draft.form = form;
+                        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_FORM);
+                        init();
+                    }).bounds(rightX + (col % 2) * (half + 6), 0, half, 18).build();
+            addRightWidget(btn, y, 18);
+            col++;
+            if (col % 2 == 0) {
+                y += 22;
+            }
+        }
+        if (col % 2 != 0) {
+            y += 22;
+        }
+        return y + 6;
+    }
+
     private void pushLiveAppearance(int flags) {
         com.azscompanions.network.FabricNetworkingClient.sendSettings(new FabricNetworking.SettingsPayload(
                 companion.getId(),
@@ -433,6 +480,8 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.hips,
                 draft.shoulders,
                 draft.bustOffset,
+                draft.form.serializedName(),
+                draft.showNameTag,
                 flags
         ));
     }
@@ -440,6 +489,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
     private static String catLabel(Category cat) {
         return switch (cat) {
             case NAME -> "Name";
+            case FORM -> "Form";
             case SKIN -> "Face/Skin";
             case BODY -> "Body";
         };
@@ -449,7 +499,8 @@ public final class FabricCompanionCreatorScreen extends Screen {
         syncEditBoxesToDraft();
         int flags = FabricNetworking.SettingsPayload.FLAG_NAME | FabricNetworking.SettingsPayload.FLAG_SCALE
                 | FabricNetworking.SettingsPayload.FLAG_SKIN | FabricNetworking.SettingsPayload.FLAG_SLIM
-                | FabricNetworking.SettingsPayload.FLAG_PROPORTIONS | FabricNetworking.SettingsPayload.FLAG_GENDER;
+                | FabricNetworking.SettingsPayload.FLAG_PROPORTIONS | FabricNetworking.SettingsPayload.FLAG_GENDER
+                | FabricNetworking.SettingsPayload.FLAG_FORM | FabricNetworking.SettingsPayload.FLAG_SHOW_NAME;
         com.azscompanions.network.FabricNetworkingClient.sendSettings(new FabricNetworking.SettingsPayload(
                 companion.getId(),
                 draft.name,
@@ -462,6 +513,8 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.hips,
                 draft.shoulders,
                 draft.bustOffset,
+                draft.form.serializedName(),
+                draft.showNameTag,
                 flags
         ));
         FabricClientAppearanceDraft.ACTIVE = null;

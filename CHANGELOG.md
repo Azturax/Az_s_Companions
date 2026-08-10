@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.3.0
+
+Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Companion forms
+- **Form system:** companions can look like a player or selected animals/hostiles (`CompanionForm` in NBT + synched data). Customize → **Form** tab: Player / Animals / Hostiles.
+- **Animals:** Chicken, Wolf, Cat, Cow, Pig, Sheep, Fox, Rabbit, Bee
+- **Hostiles:** Zombie, Skeleton, Spider, Enderman, Husk, Stray (no Creeper)
+- Ownership, charm store/recall, Follow/Stay/Wander, inventory, and CCI actions still apply to any form
+- **Pecker:** UUID `966ebb69-a63d-4bb2-ac90-ed39d8c64b80` recruits a chicken-form companion named **Pecker** by default
+
+### Attitude / teams (CCI + NBT)
+- Persisted **`Attitude`**: `PASSIVE` (defend-owner) or `HOSTILE` (aggro nearby players/mobs except owner/trusted)
+- Persisted **`TeamId`**: different teams fight each other; same team allied; never attack owner
+- Nametag tint for known team colors (red/blue/…)
+
+### CCI IMC (full parity in NeoForge CCI + Fabric CCI jars)
+- Modes/chat: `companion_say` / `greet` / `wave` / `follow` / `sit` / `stay`
+- `companion_set_attitude`, `companion_set_team`
+- `companion_summon` / `companion_summon_passive` / `companion_summon_hostile` with `form=` / `skin=` / `team=` / `attitude=`
+- Equipment: `companion_set_mainhand` / `set_offhand` / `set_armor` / `set_hand` (`mainhand=…;helmet=…;clear`)
+- Docs: `docs/CCI_STREAMING_GUIDE.md` + `cci-examples/`
+
+### UI / polish
+- Inventory: shield under armor column, 9-slot companion hotbar, gap before player inventory, plain vanilla slots (no colored specialty frames), label alignment
+- Customize: **Nametag Show/Hide** toggle (persisted; charm store/recall syncs)
+- Removed UI hints that advertised the Kon name easter egg (behavior unchanged)
+
+### Capes / AI
+- Mojang player skins also fetch/render that player's cape when present (client cache only)
+- **Stay/Sit:** never teleport to owner (home-bed, follow rescue, or special-perk snaps)
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.0+1.21.1.jar` | `azscompanions-fabric-0.3.0+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.0+1.21.1.jar` | `azscompanions-fabric-cci-0.3.0+1.21.1.jar` |
+
+### Build / metadata
+- Mod version **0.3.0**; published archives tagged `+1.21.1`
+
 ## 0.2.1
 
 Release: [v0.2.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.1) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

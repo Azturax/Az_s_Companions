@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_summon_hostile",
+  "message": "form=zombie;team=red;name=Threat"
+}

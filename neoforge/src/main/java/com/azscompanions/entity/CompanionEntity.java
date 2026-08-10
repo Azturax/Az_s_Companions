@@ -3,6 +3,7 @@ package com.azscompanions.entity;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.ai.CompanionFollowGoal;
+import com.azscompanions.entity.ai.CompanionHostileTargetGoal;
 import com.azscompanions.entity.ai.CompanionLookAtOwnerGoal;
 import com.azscompanions.entity.ai.CompanionOwnerDefendTargetGoal;
 import com.azscompanions.entity.ai.CompanionPotionBehaviorGoal;
@@ -36,12 +37,14 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -98,6 +101,14 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_BUST_OFFSET =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<String> DATA_FORM =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_ATTITUDE =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_TEAM =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     /** Synced so client UI ownership checks work without looking at NBT. */
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.OPTIONAL_UUID);
@@ -155,6 +166,12 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     @Override
+    public EntityDimensions getDefaultDimensions(Pose pose) {
+        CompanionForm form = getForm();
+        return EntityDimensions.scalable(form.width(), form.height());
+    }
+
+    @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_DEFINITION, CompanionRegistry.KON_ID.toString());
@@ -170,6 +187,10 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_HIPS, CompanionBodyProportions.DEFAULT_HIPS);
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
+        builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
+        builder.define(DATA_SHOW_NAME_TAG, true);
+        builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
+        builder.define(DATA_TEAM, "");
         builder.define(DATA_OWNER, Optional.empty());
     }
 
@@ -189,7 +210,8 @@ public class CompanionEntity extends PathfinderMob {
         goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new CompanionOwnerDefendTargetGoal(this));
-        targetSelector.addGoal(2, new HurtByTargetGoal(this));
+        targetSelector.addGoal(2, new CompanionHostileTargetGoal(this));
+        targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
     @Override
@@ -425,6 +447,11 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void safeTeleportNear(BlockPos target) {
+        // Stay/Sit hold position — never teleport (like sitting cats/dogs).
+        CompanionMode mode = getMode();
+        if (mode == CompanionMode.STAY || mode == CompanionMode.SIT || isSitting()) {
+            return;
+        }
         // Keep personal space — land in the preferred follow ring, not on the owner's feet.
         int ring = (int) Math.round(CompanionFollowDistances.PREFERRED_DISTANCE);
         for (int i = 0; i < 12; i++) {
@@ -543,29 +570,31 @@ public class CompanionEntity extends PathfinderMob {
         return InteractionResult.PASS;
     }
 
-    /** Hand slots are backed by companion inventory so items render and persist with charm NBT. */
+    /** Hand + armor slots are backed by companion inventory so items render and persist with charm NBT. */
     @Override
     public ItemStack getItemBySlot(EquipmentSlot slot) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            return inventory.getMainHand();
-        }
-        if (slot == EquipmentSlot.OFFHAND) {
-            return inventory.getOffHand();
-        }
-        return super.getItemBySlot(slot);
+        return switch (slot) {
+            case MAINHAND -> inventory.getMainHand();
+            case OFFHAND -> inventory.getOffHand();
+            case HEAD -> inventory.getStackInSlot(CompanionInventory.HEAD);
+            case CHEST -> inventory.getStackInSlot(CompanionInventory.CHEST);
+            case LEGS -> inventory.getStackInSlot(CompanionInventory.LEGS);
+            case FEET -> inventory.getStackInSlot(CompanionInventory.FEET);
+            default -> super.getItemBySlot(slot);
+        };
     }
 
     @Override
     public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
-        if (slot == EquipmentSlot.MAINHAND) {
-            inventory.setStackInSlot(CompanionInventory.MAIN_HAND, stack);
-            return;
+        switch (slot) {
+            case MAINHAND -> inventory.setStackInSlot(CompanionInventory.MAIN_HAND, stack);
+            case OFFHAND -> inventory.setStackInSlot(CompanionInventory.OFF_HAND, stack);
+            case HEAD -> inventory.setStackInSlot(CompanionInventory.HEAD, stack);
+            case CHEST -> inventory.setStackInSlot(CompanionInventory.CHEST, stack);
+            case LEGS -> inventory.setStackInSlot(CompanionInventory.LEGS, stack);
+            case FEET -> inventory.setStackInSlot(CompanionInventory.FEET, stack);
+            default -> super.setItemSlot(slot, stack);
         }
-        if (slot == EquipmentSlot.OFFHAND) {
-            inventory.setStackInSlot(CompanionInventory.OFF_HAND, stack);
-            return;
-        }
-        super.setItemSlot(slot, stack);
     }
 
     public void openManagement(ServerPlayer player) {
@@ -616,20 +645,19 @@ public class CompanionEntity extends PathfinderMob {
         if (!ServerConfig.ALLOW_COMBAT.get() || !hasPermission("combat")) {
             return false;
         }
-        if (target instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
+        if (!isAllowedCombatant(target)) {
             return false;
-        }
-        if (target instanceof OwnableEntity ownable) {
-            UUID petOwner = ownable.getOwnerUUID();
-            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trustedPlayers.contains(petOwner))) {
-                return false;
-            }
         }
         if (ProtectionHelper.isProtectedEntity(target)) {
             return false;
         }
+        if (isTeamRival(target)) {
+            return true;
+        }
+        if (getAttitude().isHostile()) {
+            return true;
+        }
         if (ServerConfig.ATTACK_NEUTRALS_ONLY_IF_HIT.get() && !target.getType().getCategory().isFriendly()) {
-            // Hostile mobs are always fair game when combat is allowed.
             return true;
         }
         return target.getLastHurtByMob() == this || target.getLastHurtByMob() == getOwner();
@@ -849,6 +877,98 @@ public class CompanionEntity extends PathfinderMob {
         entityData.set(DATA_GENDER, value.getSerializedName());
     }
 
+    public CompanionForm getForm() {
+        return CompanionForm.byName(entityData.get(DATA_FORM));
+    }
+
+    public void setForm(CompanionForm form) {
+        CompanionForm value = form == null ? CompanionForm.PLAYER : form;
+        entityData.set(DATA_FORM, value.serializedName());
+        refreshDimensions();
+    }
+
+    public boolean isNameTagVisible() {
+        return entityData.get(DATA_SHOW_NAME_TAG);
+    }
+
+    public void setNameTagVisible(boolean visible) {
+        entityData.set(DATA_SHOW_NAME_TAG, visible);
+        setCustomNameVisible(visible);
+    }
+
+    public CompanionAttitude getAttitude() {
+        return CompanionAttitude.byName(entityData.get(DATA_ATTITUDE));
+    }
+
+    public void setAttitude(CompanionAttitude attitude) {
+        CompanionAttitude value = attitude == null ? CompanionAttitude.PASSIVE : attitude;
+        entityData.set(DATA_ATTITUDE, value.serializedName());
+        if (value == CompanionAttitude.PASSIVE && getTarget() != null && !isTeamRival(getTarget())) {
+            setTarget(null);
+        }
+    }
+
+    public String getTeamId() {
+        return entityData.get(DATA_TEAM);
+    }
+
+    public void setTeamId(String teamId) {
+        String sanitized = teamId == null ? "" : teamId.trim();
+        if (sanitized.length() > 32) {
+            sanitized = sanitized.substring(0, 32);
+        }
+        entityData.set(DATA_TEAM, sanitized);
+    }
+
+    public boolean wantsAggressiveTargets() {
+        return getAttitude().isHostile() || (getTeamId() != null && !getTeamId().isBlank());
+    }
+
+    /** Prey filter for hostile attitude / team rivals — never owner or trusted. */
+    public boolean isValidHostilePrey(LivingEntity target) {
+        if (!isAllowedCombatant(target) || ProtectionHelper.isProtectedEntity(target)) {
+            return false;
+        }
+        if (isTeamRival(target)) {
+            return true;
+        }
+        return getAttitude().isHostile();
+    }
+
+    private boolean isAllowedCombatant(LivingEntity target) {
+        if (target == null || !target.isAlive() || target == this) {
+            return false;
+        }
+        if (target instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
+            return false;
+        }
+        if (target instanceof CompanionEntity other) {
+            if (CompanionTeamColors.sameTeam(getTeamId(), other.getTeamId())) {
+                return false;
+            }
+        }
+        if (target instanceof OwnableEntity ownable) {
+            UUID petOwner = ownable.getOwnerUUID();
+            if (petOwner != null && (petOwner.equals(getOwnerUuid()) || trustedPlayers.contains(petOwner))) {
+                // Same-owner pets: only fight other teammates when both have rival teams.
+                return target instanceof CompanionEntity && isTeamRival(target);
+            }
+        }
+        return true;
+    }
+
+    private boolean isTeamRival(LivingEntity target) {
+        if (!(target instanceof CompanionEntity other)) {
+            return false;
+        }
+        String mine = getTeamId();
+        String theirs = other.getTeamId();
+        if (mine == null || mine.isBlank() || theirs == null || theirs.isBlank()) {
+            return false;
+        }
+        return !CompanionTeamColors.sameTeam(mine, theirs);
+    }
+
     public boolean isMale() {
         return getGender().isMale();
     }
@@ -912,6 +1032,13 @@ public class CompanionEntity extends PathfinderMob {
      * If the player is literally named Kon, Kon special defaults apply instead.
      */
     public void applyOwnerAppearanceDefaults(ServerPlayer player) {
+        if (com.azscompanions.AzsCompanionsConstants.isPeckerOwner(player.getUUID())) {
+            setForm(CompanionForm.CHICKEN);
+            setCustomDisplayName(com.azscompanions.AzsCompanionsConstants.PECKER_COMPANION_NAME);
+            setSkinPath("");
+            setNameTagVisible(true);
+            return;
+        }
         String playerName = player.getGameProfile().getName();
         setCustomDisplayName(playerName);
         if (!isKonNamed()) {
@@ -1012,6 +1139,10 @@ public class CompanionEntity extends PathfinderMob {
         tag.putString("Pronouns", pronouns);
         tag.putString("BehaviorStyle", behaviorStyle);
         tag.putString("CustomNameOverride", entityData.get(DATA_CUSTOM_NAME_OVERRIDE));
+        tag.putString("CompanionForm", getForm().serializedName());
+        tag.putBoolean("ShowNameTag", isNameTagVisible());
+        tag.putString("Attitude", getAttitude().serializedName());
+        tag.putString("TeamId", getTeamId() == null ? "" : getTeamId());
         tag.put("Inventory", inventory.save(level().registryAccess()));
         tag.put("Tasks", taskQueue.save());
         if (homePos != null) {
@@ -1085,6 +1216,26 @@ public class CompanionEntity extends PathfinderMob {
             if (!override.isEmpty()) {
                 setCustomName(Component.literal(override));
             }
+        }
+        if (tag.contains("CompanionForm")) {
+            setForm(CompanionForm.byName(tag.getString("CompanionForm")));
+        } else {
+            setForm(CompanionForm.PLAYER);
+        }
+        if (tag.contains("ShowNameTag")) {
+            setNameTagVisible(tag.getBoolean("ShowNameTag"));
+        } else {
+            setNameTagVisible(true);
+        }
+        if (tag.contains("Attitude")) {
+            setAttitude(CompanionAttitude.byName(tag.getString("Attitude")));
+        } else {
+            setAttitude(CompanionAttitude.PASSIVE);
+        }
+        if (tag.contains("TeamId")) {
+            setTeamId(tag.getString("TeamId"));
+        } else {
+            setTeamId("");
         }
         if (tag.contains("Inventory")) {
             inventory.load(tag.getCompound("Inventory"), level().registryAccess());

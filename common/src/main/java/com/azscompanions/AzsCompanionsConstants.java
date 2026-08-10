@@ -37,6 +37,18 @@ public final class AzsCompanionsConstants {
      */
     public static final String WIGGLY_DOG_NAME = "Wiggly";
 
+    /**
+     * Pecker: chicken-form companion default for this owner on recruit/summon.
+     */
+    public static final UUID PECKER_PLAYER_UUID =
+            UUID.fromString("966ebb69-a63d-4bb2-ac90-ed39d8c64b80");
+
+    public static final String PECKER_COMPANION_NAME = "Pecker";
+
     private AzsCompanionsConstants() {
+    }
+
+    public static boolean isPeckerOwner(UUID uuid) {
+        return uuid != null && PECKER_PLAYER_UUID.equals(uuid);
     }
 }

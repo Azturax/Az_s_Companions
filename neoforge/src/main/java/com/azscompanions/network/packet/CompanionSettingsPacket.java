@@ -2,6 +2,7 @@ package com.azscompanions.network.packet;
 
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,7 +13,7 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client → server update for name, scale, skin, slim arms, gender, and body proportions.
+ * Client → server update for appearance fields (owner/trusted, distance-gated).
  */
 public record CompanionSettingsPacket(
         int entityId,
@@ -26,6 +27,8 @@ public record CompanionSettingsPacket(
         float hips,
         float shoulders,
         float bustOffset,
+        String form,
+        boolean showNameTag,
         int flags
 ) implements CustomPacketPayload {
     public static final int FLAG_NAME = 1;
@@ -34,6 +37,8 @@ public record CompanionSettingsPacket(
     public static final int FLAG_SLIM = 8;
     public static final int FLAG_PROPORTIONS = 16;
     public static final int FLAG_GENDER = 32;
+    public static final int FLAG_FORM = 64;
+    public static final int FLAG_SHOW_NAME = 128;
 
     public static final Type<CompanionSettingsPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "companion_settings"));
@@ -53,6 +58,8 @@ public record CompanionSettingsPacket(
         buf.writeFloat(packet.hips);
         buf.writeFloat(packet.shoulders);
         buf.writeFloat(packet.bustOffset);
+        buf.writeUtf(packet.form == null ? CompanionForm.PLAYER.serializedName() : packet.form, 32);
+        buf.writeBoolean(packet.showNameTag);
         buf.writeVarInt(packet.flags);
     }
 
@@ -69,6 +76,8 @@ public record CompanionSettingsPacket(
                 buf.readFloat(),
                 buf.readFloat(),
                 buf.readFloat(),
+                buf.readUtf(32),
+                buf.readBoolean(),
                 buf.readVarInt()
         );
     }
@@ -110,7 +119,6 @@ public record CompanionSettingsPacket(
                 if (skin.length() > 256) {
                     skin = skin.substring(0, 256);
                 }
-                // Mojang player skins + mod resource locations only (no http / local files).
                 if (!skin.startsWith("http:") && !skin.startsWith("https:") && !skin.startsWith("local:")) {
                     companion.setSkinPath(skin);
                 }
@@ -127,6 +135,12 @@ public record CompanionSettingsPacket(
                 companion.setHips(packet.hips());
                 companion.setShoulders(packet.shoulders());
                 companion.setBustOffset(packet.bustOffset());
+            }
+            if ((packet.flags() & FLAG_FORM) != 0) {
+                companion.setForm(CompanionForm.byName(packet.form()));
+            }
+            if ((packet.flags() & FLAG_SHOW_NAME) != 0) {
+                companion.setNameTagVisible(packet.showNameTag());
             }
         });
     }

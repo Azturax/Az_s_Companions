@@ -18,18 +18,19 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Companion inventory layout (mirrors vanilla player armor column):
- * armor left, 3×9 storage right, companion hotbar under storage, player inv below.
+ * Companion inventory: armor+shield column, 3×9 storage, 9-slot hotbar, gapped player inv.
  */
 public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
     public static final int IMAGE_WIDTH = 194;
-    public static final int IMAGE_HEIGHT = 204;
+    public static final int IMAGE_HEIGHT = 220;
 
     public static final int ARMOR_X = 8;
     public static final int STORAGE_X = 26;
     public static final int STORAGE_Y = 18;
-    public static final int COMPANION_HOTBAR_Y = 90;
-    public static final int PLAYER_INV_Y = 120;
+    public static final int COMPANION_HOTBAR_Y = 76;
+    public static final int COMPANION_PANEL_BOTTOM = 112;
+    public static final int PANEL_GAP = 12;
+    public static final int PLAYER_INV_Y = COMPANION_PANEL_BOTTOM + PANEL_GAP + 11;
 
     private final FabricCompanionEntity companion;
 
@@ -52,13 +53,16 @@ public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
         addSlot(new ArmorSlot(inv, FabricCompanionInventory.CHEST, ARMOR_X, STORAGE_Y + 18, EquipmentSlot.CHEST));
         addSlot(new ArmorSlot(inv, FabricCompanionInventory.LEGS, ARMOR_X, STORAGE_Y + 36, EquipmentSlot.LEGS));
         addSlot(new ArmorSlot(inv, FabricCompanionInventory.FEET, ARMOR_X, STORAGE_Y + 54, EquipmentSlot.FEET));
+        addSlot(new OffhandSlot(inv, FabricCompanionInventory.OFF_HAND, ARMOR_X, STORAGE_Y + 72));
 
         int hbY = COMPANION_HOTBAR_Y;
         addSlot(new Slot(inv, FabricCompanionInventory.MAIN_HAND, STORAGE_X, hbY));
-        addSlot(new OffhandSlot(inv, FabricCompanionInventory.OFF_HAND, STORAGE_X + 18, hbY));
-        addSlot(new Slot(inv, FabricCompanionInventory.FOOD, STORAGE_X + 36, hbY));
+        addSlot(new Slot(inv, FabricCompanionInventory.FOOD, STORAGE_X + 18, hbY));
         for (int i = 0; i < FabricCompanionInventory.COSMETIC_SLOTS; i++) {
-            addSlot(new Slot(inv, FabricCompanionInventory.COSMETIC_START + i, STORAGE_X + 54 + i * 18, hbY));
+            addSlot(new Slot(inv, FabricCompanionInventory.COSMETIC_START + i, STORAGE_X + 36 + i * 18, hbY));
+        }
+        for (int i = 0; i < FabricCompanionInventory.HOTBAR_EXTRA_SLOTS; i++) {
+            addSlot(new Slot(inv, FabricCompanionInventory.HOTBAR_EXTRA_START + i, STORAGE_X + 90 + i * 18, hbY));
         }
 
         int playerInvY = PLAYER_INV_Y;

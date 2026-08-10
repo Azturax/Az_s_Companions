@@ -19,25 +19,29 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 /**
- * Companion inventory layout (mirrors vanilla player armor column):
+ * Companion inventory layout:
  * <pre>
  * [Armor] [ 3×9 storage grid     ]
  * [col ]  [                      ]
- *         [ companion hotbar row ]
+ * [Shield][ 9-slot companion bar ]
+ *
  *         [ player inventory     ]
  * </pre>
  */
 public final class CompanionInventoryMenu extends AbstractContainerMenu {
-    /** Wide enough for left armor column + 3×9 storage. */
     public static final int IMAGE_WIDTH = 194;
-    public static final int IMAGE_HEIGHT = 204;
+    public static final int IMAGE_HEIGHT = 220;
 
     public static final int ARMOR_X = 8;
     public static final int STORAGE_X = 26;
     public static final int STORAGE_Y = 18;
-    /** Companion tool/hotbar row — still inside the companion panel. */
-    public static final int COMPANION_HOTBAR_Y = 90;
-    public static final int PLAYER_INV_Y = 120;
+    /** Full-width companion hotbar under the storage grid. */
+    public static final int COMPANION_HOTBAR_Y = 76;
+    /** Bottom of companion panel content (armor+shield column is taller). */
+    public static final int COMPANION_PANEL_BOTTOM = 112;
+    /** Clear gap between companion panel and player inventory panel. */
+    public static final int PANEL_GAP = 12;
+    public static final int PLAYER_INV_Y = COMPANION_PANEL_BOTTOM + PANEL_GAP + 11;
 
     private final CompanionEntity companion;
 
@@ -50,26 +54,28 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
         this.companion = companion;
         CompanionInventory inv = companion.getCompanionInventory();
 
-        // Main storage 3×9 to the right of the armor column
         for (int slot = 0; slot < CompanionInventory.BACKPACK_SIZE; slot++) {
             int row = slot / 9;
             int col = slot % 9;
             addSlot(new SlotItemHandler(inv, slot, STORAGE_X + col * 18, STORAGE_Y + row * 18));
         }
 
-        // Armor column (helmet → boots), vanilla empty icons
+        // Vertical equipment: helmet → boots → shield
         addSlot(new ArmorSlot(inv, CompanionInventory.HEAD, ARMOR_X, STORAGE_Y, EquipmentSlot.HEAD));
         addSlot(new ArmorSlot(inv, CompanionInventory.CHEST, ARMOR_X, STORAGE_Y + 18, EquipmentSlot.CHEST));
         addSlot(new ArmorSlot(inv, CompanionInventory.LEGS, ARMOR_X, STORAGE_Y + 36, EquipmentSlot.LEGS));
         addSlot(new ArmorSlot(inv, CompanionInventory.FEET, ARMOR_X, STORAGE_Y + 54, EquipmentSlot.FEET));
+        addSlot(new OffhandSlot(inv, CompanionInventory.OFF_HAND, ARMOR_X, STORAGE_Y + 72));
 
-        // Companion hotbar / tools row under storage (inside companion panel)
+        // 9-slot companion hotbar aligned under storage
         int hbY = COMPANION_HOTBAR_Y;
         addSlot(new SlotItemHandler(inv, CompanionInventory.MAIN_HAND, STORAGE_X, hbY));
-        addSlot(new OffhandSlot(inv, CompanionInventory.OFF_HAND, STORAGE_X + 18, hbY));
-        addSlot(new SlotItemHandler(inv, CompanionInventory.FOOD, STORAGE_X + 36, hbY));
+        addSlot(new SlotItemHandler(inv, CompanionInventory.FOOD, STORAGE_X + 18, hbY));
         for (int i = 0; i < CompanionInventory.COSMETIC_SLOTS; i++) {
-            addSlot(new SlotItemHandler(inv, CompanionInventory.COSMETIC_START + i, STORAGE_X + 54 + i * 18, hbY));
+            addSlot(new SlotItemHandler(inv, CompanionInventory.COSMETIC_START + i, STORAGE_X + 36 + i * 18, hbY));
+        }
+        for (int i = 0; i < CompanionInventory.HOTBAR_EXTRA_SLOTS; i++) {
+            addSlot(new SlotItemHandler(inv, CompanionInventory.HOTBAR_EXTRA_START + i, STORAGE_X + 90 + i * 18, hbY));
         }
 
         int playerInvY = PLAYER_INV_Y;

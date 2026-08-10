@@ -27,7 +27,8 @@ public final class CciImcBridge {
     }
 
     static void bootstrap() {
-        AzsCompanions.LOGGER.info("CCI IMC bridge listening for subjects companion_say/greet/follow/sit/stay/wave");
+        AzsCompanions.LOGGER.info(
+                "CCI IMC bridge listening for subjects say/greet/wave/follow/sit/stay/set_attitude/set_team/summon*/set_*hand/set_armor");
         if (FMLEnvironment.dist == Dist.CLIENT) {
             CciImcBridgeClient.register();
         }

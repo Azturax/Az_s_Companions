@@ -50,6 +50,8 @@ public final class CompanionSkinTextures {
             .build();
 
     private static final Map<UUID, ResourceLocation> PLAYER_TEXTURE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<UUID, ResourceLocation> PLAYER_CAPE_CACHE = new ConcurrentHashMap<>();
+    private static final Set<UUID> CAPE_ABSENT = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, Boolean> PLAYER_SLIM_CACHE = new ConcurrentHashMap<>();
     private static final Set<UUID> LOADING = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, List<Consumer<Optional<ReadySkin>>>> WAITERS = new ConcurrentHashMap<>();
@@ -80,6 +82,85 @@ public final class CompanionSkinTextures {
             return DEFAULT_KON;
         }
         return resolve(skinPath);
+    }
+
+    /**
+     * Cape for Mojang {@code player:<uuid>} skins only. Kon default / resource / local → none.
+     * Texture id is cached client-side with the skin; nothing persisted on the entity.
+     */
+    @Nullable
+    public static ResourceLocation resolveCape(CompanionEntity entity) {
+        UUID uuid = resolvePlayerUuid(entity);
+        if (uuid == null) {
+            return null;
+        }
+        return resolveCape(uuid);
+    }
+
+    @Nullable
+    public static ResourceLocation resolveCape(UUID uuid) {
+        if (uuid == null || CAPE_ABSENT.contains(uuid)) {
+            return null;
+        }
+        ResourceLocation cached = PLAYER_CAPE_CACHE.get(uuid);
+        if (cached != null) {
+            return cached;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (tryCacheCapeFromConnection(mc, uuid)) {
+            return PLAYER_CAPE_CACHE.get(uuid);
+        }
+        if (mc.player != null && uuid.equals(mc.player.getUUID())) {
+            PlayerSkin skin = mc.player.getSkin();
+            if (skin != null && skin.capeTexture() != null) {
+                PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
+                return skin.capeTexture();
+            }
+            CAPE_ABSENT.add(uuid);
+            return null;
+        }
+        // Cape downloads with skin fetch; kick load if needed.
+        ensurePlayerSkinLoaded(uuid);
+        return null;
+    }
+
+    @Nullable
+    private static UUID resolvePlayerUuid(CompanionEntity entity) {
+        if (ClientAppearanceDraft.matches(entity)) {
+            String draftSkin = ClientAppearanceDraft.ACTIVE.skinPath;
+            UUID fromDraft = parsePlayerUuid(draftSkin);
+            if (fromDraft != null) {
+                return fromDraft;
+            }
+            String draftName = ClientAppearanceDraft.ACTIVE.name;
+            if (draftName != null && draftName.trim().equalsIgnoreCase("Kon")) {
+                return null;
+            }
+        }
+        String skinPath = entity.getSkinPath();
+        UUID fromPath = parsePlayerUuid(skinPath);
+        if (fromPath != null) {
+            return fromPath;
+        }
+        if (skinPath == null || skinPath.isBlank()) {
+            if (entity.isKonNamed()) {
+                return null;
+            }
+            return entity.getOwnerUuid();
+        }
+        return null;
+    }
+
+    @Nullable
+    private static UUID parsePlayerUuid(@Nullable String skinPath) {
+        if (skinPath == null || !skinPath.startsWith("player:")) {
+            return null;
+        }
+        try {
+            return UUID.fromString(skinPath.substring("player:".length()).trim());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     public static ResourceLocation resolve(String skinPath) {
@@ -115,11 +196,17 @@ public final class CompanionSkinTextures {
             return;
         }
         ResourceLocation id = PLAYER_TEXTURE_CACHE.remove(uuid);
+        ResourceLocation capeId = PLAYER_CAPE_CACHE.remove(uuid);
+        CAPE_ABSENT.remove(uuid);
         PLAYER_SLIM_CACHE.remove(uuid);
         LOADING.remove(uuid);
         if (id != null && id.getNamespace().equals(AzsCompanions.MOD_ID)
                 && id.getPath().startsWith("dynamic_player_skin/")) {
             Minecraft.getInstance().getTextureManager().release(id);
+        }
+        if (capeId != null && capeId.getNamespace().equals(AzsCompanions.MOD_ID)
+                && capeId.getPath().startsWith("dynamic_player_cape/")) {
+            Minecraft.getInstance().getTextureManager().release(capeId);
         }
     }
 
@@ -164,6 +251,12 @@ public final class CompanionSkinTextures {
             if (skin != null && skin.texture() != null) {
                 PLAYER_TEXTURE_CACHE.put(uuid, skin.texture());
                 PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerSkin.Model.SLIM);
+                if (skin.capeTexture() != null) {
+                    PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
+                    CAPE_ABSENT.remove(uuid);
+                } else {
+                    CAPE_ABSENT.add(uuid);
+                }
                 LOADING.remove(uuid);
                 notifyWaiters(uuid, Optional.of(new ReadySkin(
                         uuid, skin.texture(), skin.model() == PlayerSkin.Model.SLIM)));
@@ -187,7 +280,6 @@ public final class CompanionSkinTextures {
                         image = processSkinImage(image);
                         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(
                                 AzsCompanions.MOD_ID, "dynamic_player_skin/" + uuid.toString().replace("-", ""));
-                        // Replace atomically: register first, then release any previous dynamic id.
                         ResourceLocation previous = PLAYER_TEXTURE_CACHE.put(uuid, id);
                         PLAYER_SLIM_CACHE.put(uuid, payload.slim());
                         mc.getTextureManager().register(id, new DynamicTexture(image));
@@ -197,6 +289,7 @@ public final class CompanionSkinTextures {
                                 && previous.getPath().startsWith("dynamic_player_skin/")) {
                             mc.getTextureManager().release(previous);
                         }
+                        registerCapeTexture(mc, uuid, payload.capeBytes());
                         AzsCompanions.LOGGER.debug("Cached Mojang skin for {} (slim={})", uuid, payload.slim());
                         notifyWaiters(uuid, Optional.of(new ReadySkin(uuid, id, payload.slim())));
                     } catch (Exception e) {
@@ -259,6 +352,30 @@ public final class CompanionSkinTextures {
         }
         PLAYER_TEXTURE_CACHE.put(uuid, skin.texture());
         PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerSkin.Model.SLIM);
+        if (skin.capeTexture() != null) {
+            PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
+            CAPE_ABSENT.remove(uuid);
+        } else {
+            CAPE_ABSENT.add(uuid);
+        }
+        return true;
+    }
+
+    private static boolean tryCacheCapeFromConnection(Minecraft mc, UUID uuid) {
+        if (mc.getConnection() == null) {
+            return false;
+        }
+        var info = mc.getConnection().getPlayerInfo(uuid);
+        if (info == null || info.getSkin() == null) {
+            return false;
+        }
+        ResourceLocation cape = info.getSkin().capeTexture();
+        if (cape == null) {
+            CAPE_ABSENT.add(uuid);
+            return false;
+        }
+        PLAYER_CAPE_CACHE.put(uuid, cape);
+        CAPE_ABSENT.remove(uuid);
         return true;
     }
 
@@ -286,7 +403,21 @@ public final class CompanionSkinTextures {
                 AzsCompanions.LOGGER.warn("Skin texture HTTP {} for {}", response.statusCode(), uuid);
                 return null;
             }
-            return new SkinPayload(response.body(), session.slim());
+            byte[] capeBytes = null;
+            String capeUrl = session.capeUrl();
+            if (capeUrl != null && (capeUrl.startsWith("https://textures.minecraft.net/")
+                    || capeUrl.startsWith("http://textures.minecraft.net/"))) {
+                HttpRequest capeReq = HttpRequest.newBuilder()
+                        .uri(URI.create(capeUrl))
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                HttpResponse<byte[]> capeRes = HTTP.send(capeReq, HttpResponse.BodyHandlers.ofByteArray());
+                if (capeRes.statusCode() == 200 && capeRes.body() != null && capeRes.body().length > 0) {
+                    capeBytes = capeRes.body();
+                }
+            }
+            return new SkinPayload(response.body(), capeBytes, session.slim());
         } catch (Exception e) {
             AzsCompanions.LOGGER.warn("Failed downloading skin for {}", uuid, e);
             return null;
@@ -371,6 +502,30 @@ public final class CompanionSkinTextures {
         }
     }
 
-    private record SkinPayload(byte[] bytes, boolean slim) {
+    private static void registerCapeTexture(Minecraft mc, UUID uuid, @Nullable byte[] capeBytes) {
+        if (capeBytes == null || capeBytes.length == 0) {
+            CAPE_ABSENT.add(uuid);
+            return;
+        }
+        try {
+            NativeImage capeImage = NativeImage.read(new ByteArrayInputStream(capeBytes));
+            ResourceLocation capeId = ResourceLocation.fromNamespaceAndPath(
+                    AzsCompanions.MOD_ID, "dynamic_player_cape/" + uuid.toString().replace("-", ""));
+            ResourceLocation previous = PLAYER_CAPE_CACHE.put(uuid, capeId);
+            CAPE_ABSENT.remove(uuid);
+            mc.getTextureManager().register(capeId, new DynamicTexture(capeImage));
+            if (previous != null
+                    && !previous.equals(capeId)
+                    && previous.getNamespace().equals(AzsCompanions.MOD_ID)
+                    && previous.getPath().startsWith("dynamic_player_cape/")) {
+                mc.getTextureManager().release(previous);
+            }
+        } catch (Exception e) {
+            CAPE_ABSENT.add(uuid);
+            AzsCompanions.LOGGER.debug("No usable cape for {}: {}", uuid, e.toString());
+        }
+    }
+
+    private record SkinPayload(byte[] bytes, @Nullable byte[] capeBytes, boolean slim) {
     }
 }

@@ -2,6 +2,7 @@ package com.azscompanions.client;
 
 import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -10,7 +11,6 @@ import javax.annotation.Nullable;
 
 /**
  * Client-only draft of companion appearance for live creator preview.
- * Applied in the feminine model when the active draft matches the entity id.
  */
 @OnlyIn(Dist.CLIENT)
 public final class ClientAppearanceDraft {
@@ -28,6 +28,8 @@ public final class ClientAppearanceDraft {
     public float hips = CompanionBodyProportions.DEFAULT_HIPS;
     public float shoulders = CompanionBodyProportions.DEFAULT_SHOULDERS;
     public float bustOffset = CompanionBodyProportions.DEFAULT_BUST_OFFSET;
+    public CompanionForm form = CompanionForm.PLAYER;
+    public boolean showNameTag = true;
 
     public ClientAppearanceDraft(int entityId) {
         this.entityId = entityId;
@@ -47,6 +49,8 @@ public final class ClientAppearanceDraft {
         d.hips = entity.getHips();
         d.shoulders = entity.getShoulders();
         d.bustOffset = entity.getBustOffset();
+        d.form = entity.getForm();
+        d.showNameTag = entity.isNameTagVisible();
         return d;
     }
 

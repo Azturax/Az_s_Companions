@@ -238,6 +238,8 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 editHips,
                 editShoulders,
                 editBustOffset,
+                c.getForm().serializedName(),
+                c.isNameTagVisible(),
                 flags
         ));
     }
@@ -260,7 +262,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
             graphics.drawString(font, "Mode: " + c.getMode().getSerializedName(),
                     leftPos + 12, topPos + 168, 0xA0A0A0, false);
             graphics.drawWordWrap(font, Component.literal(
-                            "Set Name looks up the Mojang profile skin. \"Kon\" uses the Kon special skin."),
+                            "Set Name looks up the Mojang profile skin."),
                     leftPos + 12, topPos + 186, 290, 0xA0A0A0);
         } else if (menu.tab() == CompanionManagementMenu.Tab.BODY) {
             int y = topPos + 74;

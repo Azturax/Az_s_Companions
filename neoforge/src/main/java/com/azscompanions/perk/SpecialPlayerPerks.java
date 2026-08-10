@@ -1,6 +1,8 @@
 package com.azscompanions.perk;
 
 import com.azscompanions.AzsCompanionsConstants;
+import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionMode;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -76,6 +78,13 @@ public final class SpecialPlayerPerks {
         if (isSpecial(ownerUuid)) {
             ensureGlow(companion);
             Player owner = companion.level().getPlayerByUUID(ownerUuid);
+            // Stay/Sit: hold position like a sitting wolf — no flight follow / land snaps.
+            if (isHoldingStayPosition(companion)) {
+                if (companion.isNoGravity()) {
+                    companion.setNoGravity(false);
+                }
+                return;
+            }
             if (owner != null && isOwnerActivelyFlying(owner)) {
                 companion.setNoGravity(true);
             } else if (owner != null) {
@@ -89,6 +98,15 @@ public final class SpecialPlayerPerks {
         }
     }
 
+    /** Stay/Sit companions never teleport via special-perk snaps. */
+    public static boolean isHoldingStayPosition(Mob companion) {
+        if (companion instanceof CompanionEntity c) {
+            CompanionMode mode = c.getMode();
+            return mode == CompanionMode.STAY || mode == CompanionMode.SIT || c.isSitting();
+        }
+        return false;
+    }
+
     /**
      * Special-UUID flying companion follow.
      *
@@ -98,6 +116,12 @@ public final class SpecialPlayerPerks {
     public static boolean tickCompanionFlightFollow(Mob companion, Player owner, double teleportDistance) {
         if (owner == null || !isSpecial(owner.getUUID())) {
             return false;
+        }
+        if (isHoldingStayPosition(companion)) {
+            if (companion.isNoGravity()) {
+                companion.setNoGravity(false);
+            }
+            return true; // fully handled: stay put
         }
 
         if (!isOwnerActivelyFlying(owner)) {

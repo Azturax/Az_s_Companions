@@ -1,6 +1,8 @@
 package com.azscompanions.perk;
 
 import com.azscompanions.AzsCompanionsConstants;
+import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.FabricCompanionMode;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -68,6 +70,12 @@ public final class SpecialPlayerPerks {
         if (isSpecial(ownerUuid)) {
             ensureGlow(companion);
             Player owner = companion.level().getPlayerByUUID(ownerUuid);
+            if (isHoldingStayPosition(companion)) {
+                if (companion.isNoGravity()) {
+                    companion.setNoGravity(false);
+                }
+                return;
+            }
             if (owner != null && isOwnerActivelyFlying(owner)) {
                 companion.setNoGravity(true);
             } else if (owner != null) {
@@ -80,6 +88,15 @@ public final class SpecialPlayerPerks {
         }
     }
 
+    /** Stay/Sit companions never teleport via special-perk snaps. */
+    public static boolean isHoldingStayPosition(Mob companion) {
+        if (companion instanceof FabricCompanionEntity c) {
+            FabricCompanionMode mode = c.getMode();
+            return mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT;
+        }
+        return false;
+    }
+
     /**
      * Special-UUID flying companion follow.
      *
@@ -89,6 +106,12 @@ public final class SpecialPlayerPerks {
     public static boolean tickCompanionFlightFollow(Mob companion, Player owner, double teleportDistance) {
         if (owner == null || !isSpecial(owner.getUUID())) {
             return false;
+        }
+        if (isHoldingStayPosition(companion)) {
+            if (companion.isNoGravity()) {
+                companion.setNoGravity(false);
+            }
+            return true;
         }
 
         if (!isOwnerActivelyFlying(owner)) {

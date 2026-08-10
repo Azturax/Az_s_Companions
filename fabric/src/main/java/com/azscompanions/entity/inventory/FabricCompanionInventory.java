@@ -17,7 +17,10 @@ public final class FabricCompanionInventory extends SimpleContainer {
     public static final int FOOD = BACKPACK_SIZE + 6;
     public static final int COSMETIC_START = BACKPACK_SIZE + 7;
     public static final int COSMETIC_SLOTS = 3;
-    public static final int TOTAL_SIZE = COSMETIC_START + COSMETIC_SLOTS;
+    /** Extra utility slots so the companion hotbar row is a full 9 wide. */
+    public static final int HOTBAR_EXTRA_START = COSMETIC_START + COSMETIC_SLOTS;
+    public static final int HOTBAR_EXTRA_SLOTS = 4;
+    public static final int TOTAL_SIZE = HOTBAR_EXTRA_START + HOTBAR_EXTRA_SLOTS;
 
     public FabricCompanionInventory() {
         super(TOTAL_SIZE);

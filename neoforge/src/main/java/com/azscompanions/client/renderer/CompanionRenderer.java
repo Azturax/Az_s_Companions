@@ -4,32 +4,56 @@ import com.azscompanions.client.ClientAppearanceDraft;
 import com.azscompanions.client.CompanionSkinTextures;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.inventory.CompanionInventory;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * Renders companions with an adult feminine player-derived model.
- * Skins are classic Minecraft 64×64 player skins (resource location or local import).
- * Held items use {@link ItemInHandLayer} and scale with body {@code SCALE}.
+ * Humanoid companions + optional Mojang cape; non-player forms use {@link CompanionMobFormRenderer}.
  */
 public final class CompanionRenderer extends MobRenderer<CompanionEntity, FeminineCompanionModel<CompanionEntity>> {
     private final FeminineCompanionModel<CompanionEntity> wideModel;
     private final FeminineCompanionModel<CompanionEntity> slimModel;
+    private final CompanionMobFormRenderer formRenderer;
 
     public CompanionRenderer(EntityRendererProvider.Context context) {
         super(context, new FeminineCompanionModel<>(context.bakeLayer(FeminineCompanionModel.LAYER_WIDE), false), 0.5f);
         this.wideModel = this.getModel();
         this.slimModel = new FeminineCompanionModel<>(context.bakeLayer(FeminineCompanionModel.LAYER_SLIM), true);
+        this.formRenderer = new CompanionMobFormRenderer(context);
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new CompanionCapeLayer(this));
     }
 
     @Override
     public void render(CompanionEntity entity, float entityYaw, float partialTicks, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
+        CompanionForm form = entity.getForm();
+        if (ClientAppearanceDraft.matches(entity) && ClientAppearanceDraft.ACTIVE.form != null) {
+            form = ClientAppearanceDraft.ACTIVE.form;
+        }
+        if (!form.isPlayer()) {
+            this.shadowRadius = 0.4f * entity.getBodyScale();
+            formRenderer.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+            if (this.shouldShowName(entity)) {
+                this.renderNameTag(entity, entity.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
+            }
+            return;
+        }
+
         boolean slim = entity.isSlimArms();
         float scale = entity.getBodyScale();
         if (ClientAppearanceDraft.matches(entity)) {
@@ -42,7 +66,68 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
     }
 
     @Override
+    protected boolean shouldShowName(CompanionEntity entity) {
+        if (ClientAppearanceDraft.matches(entity)) {
+            if (!ClientAppearanceDraft.ACTIVE.showNameTag) {
+                return false;
+            }
+        } else if (!entity.isNameTagVisible()) {
+            return false;
+        }
+        return super.shouldShowName(entity);
+    }
+
+    @Override
     public ResourceLocation getTextureLocation(CompanionEntity entity) {
         return CompanionSkinTextures.resolve(entity);
+    }
+
+    private static final class CompanionCapeLayer
+            extends RenderLayer<CompanionEntity, FeminineCompanionModel<CompanionEntity>> {
+        CompanionCapeLayer(CompanionRenderer parent) {
+            super(parent);
+        }
+
+        @Override
+        public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, CompanionEntity entity,
+                           float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+                           float netHeadYaw, float headPitch) {
+            if (!entity.getForm().isPlayer() || entity.isInvisible()) {
+                return;
+            }
+            ResourceLocation cape = CompanionSkinTextures.resolveCape(entity);
+            if (cape == null) {
+                return;
+            }
+            if (entity.getCompanionInventory().getStackInSlot(CompanionInventory.CHEST).is(Items.ELYTRA)) {
+                return;
+            }
+
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.0F, 0.125F);
+            Vec3 delta = entity.getDeltaMovement();
+            float bodyYaw = Mth.rotLerp(partialTick, entity.yBodyRotO, entity.yBodyRot);
+            double sin = Mth.sin(bodyYaw * ((float) Math.PI / 180F));
+            double cos = -Mth.cos(bodyYaw * ((float) Math.PI / 180F));
+            float bob = (float) (delta.y * 10.0F);
+            bob = Mth.clamp(bob, -6.0F, 32.0F);
+            float flare = (float) (delta.x * sin + delta.z * cos) * 100.0F;
+            flare = Mth.clamp(flare, 0.0F, 150.0F);
+            float side = (float) (delta.x * cos - delta.z * sin) * 100.0F;
+            side = Mth.clamp(side, -20.0F, 20.0F);
+            if (flare < 0.0F) {
+                flare = 0.0F;
+            }
+            bob += Mth.sin(limbSwing * 6.0F) * 32.0F * limbSwingAmount;
+            if (entity.isCrouching()) {
+                bob += 25.0F;
+            }
+            poseStack.mulPose(Axis.XP.rotationDegrees(6.0F + flare / 2.0F + bob));
+            poseStack.mulPose(Axis.ZP.rotationDegrees(side / 2.0F));
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - side / 2.0F));
+            VertexConsumer consumer = buffer.getBuffer(RenderType.entitySolid(cape));
+            getParentModel().renderCloak(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);
+            poseStack.popPose();
+        }
     }
 }
