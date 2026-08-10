@@ -283,7 +283,7 @@ public final class CompanionSkinTextures {
                                 AzsCompanions.MOD_ID, "dynamic_player_skin/" + uuid.toString().replace("-", ""));
                         Identifier previous = PLAYER_TEXTURE_CACHE.put(uuid, id);
                         PLAYER_SLIM_CACHE.put(uuid, payload.slim());
-                        mc.getTextureManager().register(id, new DynamicTexture(image));
+                        mc.getTextureManager().register(id, new DynamicTexture(() -> "azscompanions/player_skin", image));
                         if (previous != null
                                 && !previous.equals(id)
                                 && previous.getNamespace().equals(AzsCompanions.MOD_ID)
@@ -514,7 +514,7 @@ public final class CompanionSkinTextures {
                     AzsCompanions.MOD_ID, "dynamic_player_cape/" + uuid.toString().replace("-", ""));
             Identifier previous = PLAYER_CAPE_CACHE.put(uuid, capeId);
             CAPE_ABSENT.remove(uuid);
-            mc.getTextureManager().register(capeId, new DynamicTexture(capeImage));
+            mc.getTextureManager().register(capeId, new DynamicTexture(() -> "azscompanions/player_cape", capeImage));
             if (previous != null
                     && !previous.equals(capeId)
                     && previous.getNamespace().equals(AzsCompanions.MOD_ID)

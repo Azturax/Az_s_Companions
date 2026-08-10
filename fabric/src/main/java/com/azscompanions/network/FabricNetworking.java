@@ -41,6 +41,8 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playS2C().register(OpenAdminPayload.TYPE, OpenAdminPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(TeamFightHudPayload.TYPE, TeamFightHudPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AiThinkingPayload.TYPE, AiThinkingPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(DepositSelectionPayload.TYPE, DepositSelectionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(DepositExitPayload.TYPE, DepositExitPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -114,12 +116,12 @@ public final class FabricNetworking {
                                 }
                             }
                         }
-                        case "TOGGLE_AI_MODE" -> {
-                            companion.toggleAiMode();
-                            toastMode(player, companion, companion.isAiModeEnabled()
-                                    ? "message.azscompanions.ai_mode_on"
-                                    : "message.azscompanions.ai_mode_off");
+                        case "DEPOSIT_SELECT" -> {
+                            player.closeContainer();
+                            com.azscompanions.deposit.FabricDepositCommands.enable(player);
                         }
+                        case "DEPOSIT_DONE" -> com.azscompanions.deposit.FabricDepositCommands.done(player);
+                        case "DEPOSIT_CLEAR" -> com.azscompanions.deposit.FabricDepositCommands.clear(player);
                         default -> {
                         }
                     }
@@ -227,6 +229,20 @@ public final class FabricNetworking {
         ServerPlayNetworking.registerGlobalReceiver(AdminActionPayload.TYPE, (payload, context) ->
                 context.server().execute(() ->
                         com.azscompanions.admin.FabricAzAdminActions.handleAction(context.player(), payload.action())));
+
+        ServerPlayNetworking.registerGlobalReceiver(DepositExitPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    com.azscompanions.deposit.DepositChestSelection sel =
+                            com.azscompanions.deposit.DepositChestSelection.of(player.getUUID());
+                    if (!sel.isSelecting()) {
+                        return;
+                    }
+                    sel.finishKeepingSelection();
+                    com.azscompanions.deposit.FabricDepositCommands.sync(player, sel);
+                    player.displayClientMessage(Component.translatable(
+                            "message.azscompanions.deposit_done", sel.size()), true);
+                }));
     }
 
     public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
@@ -566,6 +582,30 @@ public final class FabricNetworking {
                         ByteBufCodecs.VAR_INT, AiThinkingPayload::timeoutSeconds,
                         ByteBufCodecs.FLOAT, AiThinkingPayload::progress,
                         AiThinkingPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record DepositSelectionPayload(String payload) implements CustomPacketPayload {
+        public static final Type<DepositSelectionPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "deposit_selection"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, DepositSelectionPayload> CODEC =
+                StreamCodec.composite(ByteBufCodecs.STRING_UTF8, DepositSelectionPayload::payload, DepositSelectionPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record DepositExitPayload() implements CustomPacketPayload {
+        public static final Type<DepositExitPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "deposit_exit"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, DepositExitPayload> CODEC =
+                StreamCodec.unit(new DepositExitPayload());
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

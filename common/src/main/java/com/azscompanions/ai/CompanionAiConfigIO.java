@@ -243,7 +243,7 @@ public final class CompanionAiConfigIO {
     public static JsonObject toJson(CompanionAiSettings s) {
         JsonObject root = new JsonObject();
         root.addProperty("_comment",
-                "Text dialogue AI. provider: disabled|local|openai_compatible|mcp. "
+                "Text dialogue AI. provider: disabled|local|openai_compatible|mcp (aliases: litellm, openrouter, …). "
                         + "chatListenMode: off|player|global. Multiplayer: shared server LLM endpoint "
                         + "(serverLlmOnly), separate minds per companion (perCompanionMemory). Prefer env API keys.");
         root.addProperty("provider", s.provider().name().toLowerCase());

@@ -23,8 +23,11 @@ public final class CompanionCommandActions {
         REMOVE_CHILD,
         /** Call next stored Bit (count down). */
         CALL_STORED_CHILD,
-        /** Toggle per-companion AI Mode (LLM play; pauses normal goals). */
-        TOGGLE_AI_MODE
+        DEPOSIT_SELECT,
+        DEPOSIT_DONE,
+        DEPOSIT_CLEAR,
+        GATHER_STATUS,
+        GATHER_CANCEL
     }
 
     private CompanionCommandActions() {
@@ -95,12 +98,14 @@ public final class CompanionCommandActions {
                             "message.azscompanions.child_limit_reached"), true);
                 }
             }
-            case TOGGLE_AI_MODE -> {
-                companion.toggleAiMode();
-                toast(serverPlayer, companion, companion.isAiModeEnabled()
-                        ? "message.azscompanions.ai_mode_on"
-                        : "message.azscompanions.ai_mode_off");
+            case DEPOSIT_SELECT -> {
+                serverPlayer.closeContainer();
+                com.azscompanions.deposit.DepositCommands.enable(serverPlayer);
             }
+            case DEPOSIT_DONE -> com.azscompanions.deposit.DepositCommands.done(serverPlayer);
+            case DEPOSIT_CLEAR -> com.azscompanions.deposit.DepositCommands.clear(serverPlayer);
+            case GATHER_STATUS -> com.azscompanions.task.CollectMaterialAssign.status(serverPlayer, companion);
+            case GATHER_CANCEL -> com.azscompanions.task.CollectMaterialAssign.cancel(serverPlayer, companion);
         }
     }
 

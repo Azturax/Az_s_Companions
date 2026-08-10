@@ -29,7 +29,7 @@ public final class NeoAzAdminActions {
 
     public static void openPanel(ServerPlayer player) {
         if (!NeoAzAdminAccess.mayUse(player)) {
-            player.sendOverlayMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
+            player.sendOverlayMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)));
             return;
         }
         AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(AiConfig.toAiSettings());
@@ -97,10 +97,10 @@ public final class NeoAzAdminActions {
                     "companionChunkLoading=" + ServerConfig.COMPANION_CHUNK_LOADING.get()
                             + " (entity tickets; not FTB claims). Edit server config + restart to change."));
             case "PERSONA_CLEAR_NEAREST" -> personaClearNearest(player);
-            case "SHOW_ARMOR_NEAREST" -> showArmorNearest(player);
+            case "SHOW_ARMOR_NEAREST" -> showArmorNearest(player, true);
             case "HIDE_ARMOR_NEAREST" -> showArmorNearest(player, false);
             case "BEHAVIOR_RESET_NEAREST" -> behaviorResetNearest(player);
-            default -> player.sendOverlayMessage(Component.literal("Unknown admin action: " + action), false);
+            default -> player.sendOverlayMessage(Component.literal("Unknown admin action: " + action));
         }
     }
 

@@ -186,20 +186,6 @@ public final class CompanionPersonaScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && maxScroll > 0) {
-            int trackX = panelX + panelW - 10;
-            if (mouseX >= trackX && mouseX <= trackX + SCROLLBAR_W
-                    && mouseY >= viewTop && mouseY <= viewBottom) {
-                float rel = (float) ((mouseY - viewTop) / Math.max(1.0, viewBottom - viewTop));
-                scroll = Mth.clamp((int) (rel * maxScroll), 0, maxScroll);
-                applyScroll();
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -232,7 +218,7 @@ public final class CompanionPersonaScreen extends Screen {
             entry.widget.visible = visible;
             entry.widget.active = visible;
             if (visible) {
-                entry.widget.render(graphics, mouseX, mouseY, partialTick);
+                entry.widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
         graphics.disableScissor();

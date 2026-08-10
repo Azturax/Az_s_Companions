@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Shared Shift+RMB companion menu: Customize, Command, Behavior, Inventory, Stats,
- * AI Mode, Remove/Dismiss child (store), stored-Bits badge, Donate.
+ * Remove/Dismiss child (store), stored-Bits badge, Donate.
  */
 public final class CompanionMenuScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
@@ -28,8 +28,7 @@ public final class CompanionMenuScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 220;
-    private final int panelH = 280;
-    private Button aiModeButton;
+    private final int panelH = 230;
 
     public CompanionMenuScreen(CompanionEntity companion) {
         super(Component.translatable("screen.azscompanions.menu"));
@@ -66,22 +65,13 @@ public final class CompanionMenuScreen extends Screen {
             PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_STATS"));
         }).bounds(bx, by + 112, 160, 22).build());
 
-        aiModeButton = Button.builder(aiModeLabel(), b -> {
-            PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "TOGGLE_AI_MODE"));
-        }).bounds(bx, by + 140, 160, 22).build();
-        aiModeButton.setTooltip(Tooltip.create(Component.translatable("screen.azscompanions.ai_mode.tooltip")));
-        addRenderableWidget(aiModeButton);
-
         String removeKey = child
                 ? "screen.azscompanions.dismiss_child"
                 : "screen.azscompanions.remove_child";
         addRenderableWidget(Button.builder(Component.translatable(removeKey), b -> {
             PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "REMOVE_CHILD"));
             onClose();
-        }).bounds(bx, by + 168, 160, 22).build());
-
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
-                .bounds(bx, by + 200, 160, 20).build());
+        }).bounds(bx, by + 140, 160, 22).build());
 
         if (!child) {
             addRenderableWidget(new StoredChildrenBadge(
@@ -96,19 +86,6 @@ public final class CompanionMenuScreen extends Screen {
         addRenderableWidget(new IconButton(
                 panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
                 b -> Util.getPlatform().openUri(DONATE_URL)));
-    }
-
-    private Component aiModeLabel() {
-        String state = companion.isAiModeEnabled() ? "ON" : "OFF";
-        return Component.translatable("screen.azscompanions.ai_mode", state);
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (aiModeButton != null) {
-            aiModeButton.setMessage(aiModeLabel());
-        }
     }
 
     @Override

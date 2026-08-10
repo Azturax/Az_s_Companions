@@ -45,7 +45,7 @@ public final class GuardAreaTask extends CompanionTask {
         if (target != null && companion.canAttackTarget(target)) {
             companion.getNavigation().moveTo(target, 1.2d);
             if (companion.distanceTo(target) < 2.5d) {
-                companion.doHurtTarget(target);
+                companion.doHurtTarget((net.minecraft.server.level.ServerLevel) companion.level(), target);
             }
             setProgress(50);
             return TaskTickResult.RUNNING;

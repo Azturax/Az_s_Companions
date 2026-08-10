@@ -1,5 +1,6 @@
 package com.azscompanions.entity.inventory;
 
+import com.azscompanions.item.CompanionCharmItem;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -31,6 +32,11 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
 
     public CompanionInventory() {
         super(TOTAL_SIZE);
+    }
+
+    @Override
+    public boolean isItemValid(int slot, ItemStack stack) {
+        return !CompanionCharmItem.isCharm(stack);
     }
 
     public ItemStack getMainHand() {

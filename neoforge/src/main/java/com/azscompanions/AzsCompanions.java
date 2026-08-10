@@ -15,6 +15,7 @@ import com.azscompanions.data.CompanionDefinitionReloadListener;
 import com.azscompanions.network.ModNetworking;
 import com.azscompanions.event.CompanionAiChatEvents;
 import com.azscompanions.event.CompanionGameEvents;
+import com.azscompanions.event.DepositSelectionEvents;
 import com.azscompanions.event.TeamFightGameEvents;
 import com.azscompanions.registry.ModBlockEntities;
 import com.azscompanions.registry.ModBlocks;
@@ -79,6 +80,7 @@ public final class AzsCompanions {
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
         NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
+        NeoForge.EVENT_BUS.register(DepositSelectionEvents.class);
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         container.registerConfig(ModConfig.Type.COMMON, AiConfig.SPEC, AiConfig.FILE_NAME);
@@ -128,6 +130,32 @@ public final class AzsCompanions {
         LOGGER.info("Az's Companions loaded on server — companions per player={} — {}",
                 ServerConfig.MAX_COMPANIONS_PER_PLAYER.get(),
                 CompanionAiRuntime.get().statusLine());
+        var ids = com.azscompanions.task.GatherItemCatalog.newBuffer();
+        for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+            var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+            if (key != null && item != net.minecraft.world.item.Items.AIR) {
+                ids.add(key.toString());
+            }
+        }
+        com.azscompanions.task.GatherItemCatalog.refresh(ids);
+        LOGGER.info("Gather item catalog: {} items", com.azscompanions.task.GatherItemCatalog.size());
+        var recipes = com.azscompanions.task.CraftRecipeCatalog.newBuffer();
+        for (var holder : event.getServer().getRecipeManager().getRecipes()) {
+            var result = holder.value().getResultItem(event.getServer().registryAccess());
+            if (result.isEmpty()) {
+                continue;
+            }
+            var itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(result.getItem());
+            if (itemKey == null) {
+                continue;
+            }
+            recipes.computeIfAbsent(itemKey.toString(), k -> new java.util.ArrayList<>())
+                    .add(holder.id().toString());
+        }
+        com.azscompanions.task.CraftRecipeCatalog.refresh(recipes);
+        LOGGER.info("Craft recipe catalog: {} recipes → {} results",
+                com.azscompanions.task.CraftRecipeCatalog.recipeCount(),
+                com.azscompanions.task.CraftRecipeCatalog.resultCount());
     }
 
     private void onServerStopped(ServerStoppedEvent event) {

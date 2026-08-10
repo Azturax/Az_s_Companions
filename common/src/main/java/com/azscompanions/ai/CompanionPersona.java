@@ -237,37 +237,6 @@ public final class CompanionPersona {
         return v == null || v.isBlank() ? "(empty — generic prompt)" : v;
     }
 
-    public static String onboardingIntro(String companionName) {
-        String name = companionName == null || companionName.isBlank() ? "I" : companionName.trim();
-        return "Hi! Before we adventure, help define me. Who am I? What am I doing? How will I be?"
-                + " Optional: speech style, relationship, quirks."
-                + " Open the Persona setup, or use /az persona set who|what|how|speech|relationship|quirks <text>.";
-    }
-
-    public static String onboardingLineWho() {
-        return "Who am I? Tell me my identity, role, or backstory.";
-    }
-
-    public static String onboardingLineWhat() {
-        return "What am I doing? What is my purpose, job, or goal with you?";
-    }
-
-    public static String onboardingLineHow() {
-        return "How will I be? Personality, tone, mannerisms, values.";
-    }
-
-    public static String onboardingLineSpeech() {
-        return "Speech style? (optional) How I talk — slang, formality, catchphrases.";
-    }
-
-    public static String onboardingLineRelationship() {
-        return "Relationship to you? (optional) Friend, partner, rival, guardian…";
-    }
-
-    public static String onboardingLineQuirks() {
-        return "Quirks? (optional) Habits, likes, oddities.";
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {

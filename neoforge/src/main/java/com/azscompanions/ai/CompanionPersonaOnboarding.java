@@ -6,8 +6,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * First-create persona onboarding (NeoForge). Ask once; charm recall never re-opens.
+ * First-create persona onboarding (NeoForge). Opens the persona GUI once; charm recall never re-opens.
  * CCI whoAmI/whatAmIDoing/howWillIBe (and optional speech/relationship/quirks) sets initialized and skips this.
+ * No chat spam — the GUI fields are enough.
  */
 public final class CompanionPersonaOnboarding {
     private CompanionPersonaOnboarding() {
@@ -23,11 +24,6 @@ public final class CompanionPersonaOnboarding {
                 companion.isPersonaInitialized())) {
             return;
         }
-        String name = companion.getChatDisplayName();
-        companion.speakLine(CompanionPersona.onboardingIntro(name));
-        companion.speakLine(CompanionPersona.onboardingLineWho());
-        companion.speakLine(CompanionPersona.onboardingLineWhat());
-        companion.speakLine(CompanionPersona.onboardingLineHow());
         PacketDistributor.sendToPlayer(player, OpenCompanionPersonaPacket.fromCompanion(companion));
     }
 }

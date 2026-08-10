@@ -248,6 +248,6 @@ public final class CompanionWanderNearOwnerGoal extends Goal {
     private static boolean isStandable(Level level, BlockPos pos) {
         return level.getBlockState(pos).isAir()
                 && level.getBlockState(pos.above()).isAir()
-                && level.getBlockState(pos.below()).isSolidRender(level, pos.below());
+                && level.getBlockState(pos.below()).isSolid();
     }
 }

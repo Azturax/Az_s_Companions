@@ -136,6 +136,13 @@ public final class CompanionAiRuntime {
                 && this.settings.mcpCommand().isBlank()) {
             LOGGER.warn("MCP stdio transport configured but mcpCommand is empty");
         }
+        if (this.settings.provider() == LlmProviderMode.MCP
+                && this.settings.mcpTransport() == McpTransportMode.HTTP
+                && this.settings.resolveApiKey().isBlank()) {
+            LOGGER.warn(
+                    "MCP HTTP has no API key (config or env {}). Secured proxies (e.g. LiteLLM /mcp/) will return 401.",
+                    this.settings.apiKeyEnv());
+        }
         if (!this.settings.apiKey().isBlank()) {
             LOGGER.warn("LLM API key is stored in config — prefer env {} for secrets", this.settings.apiKeyEnv());
         }
@@ -256,8 +263,7 @@ public final class CompanionAiRuntime {
                 context.child(),
                 context.speakerIsOwner(),
                 context.priorTurns(),
-                context.persona(),
-                context.aiPlayMode());
+                context.persona());
     }
 
     private void dispatch(CompanionChatContext context, BiConsumer<String, Throwable> onComplete) {
@@ -265,7 +271,8 @@ public final class CompanionAiRuntime {
         CompletableFuture.supplyAsync(() -> {
             try {
                 return chatBlocking(snap, context).orElse(null);
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // Never let LLM/MCP failures kill the AI worker or the server tick thread.
                 throw new RuntimeException(e);
             }
         }, executor).whenComplete((reply, err) -> {
@@ -273,13 +280,18 @@ public final class CompanionAiRuntime {
             if (err instanceof RuntimeException re && re.getCause() != null) {
                 cause = re.getCause();
             }
-            if (cause != null) {
-                LOGGER.warn("Companion AI chat failed: {}", cause.toString());
-                onComplete.accept(null, cause);
-            } else {
-                onComplete.accept(reply, null);
+            try {
+                if (cause != null) {
+                    LOGGER.warn("Companion AI chat failed: {}", cause.toString());
+                    onComplete.accept(null, cause);
+                } else {
+                    onComplete.accept(reply, null);
+                }
+            } catch (Throwable callbackError) {
+                LOGGER.warn("Companion AI completion callback failed: {}", callbackError.toString());
+            } finally {
+                drainQueue();
             }
-            drainQueue();
         });
     }
 

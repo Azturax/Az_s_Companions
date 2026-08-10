@@ -52,6 +52,7 @@ public final class MineTask extends CompanionTask {
             fail("missing_pickaxe");
             return TaskTickResult.FAILED;
         }
+        ToolSelectionHelper.preferTorchOffhand(companion, true);
         if (!companion.canBreakBlock(target)) {
             target = null;
             return TaskTickResult.RUNNING;

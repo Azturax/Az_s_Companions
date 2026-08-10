@@ -583,40 +583,8 @@ public final class CompanionCreatorScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Clicking the scrollbar track jumps / starts drag via simple jump-to.
-        if (button == 0 && rightMaxScroll > 0) {
-            int trackX = panelX + panelW - 10;
-            if (mouseX >= trackX && mouseX <= trackX + SCROLLBAR_W
-                    && mouseY >= rightViewTop && mouseY <= rightViewBottom) {
-                int trackH = Math.max(1, rightViewBottom - rightViewTop);
-                float rel = (float) ((mouseY - rightViewTop) / trackH);
-                rightScroll = Mth.clamp((int) (rel * rightMaxScroll), 0, rightMaxScroll);
-                applyRightScroll();
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (nameBox != null && nameBox.visible && nameBox.isFocused()
-                && nameBox.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
 
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        if (nameBox != null && nameBox.visible && nameBox.isFocused()
-                && nameBox.charTyped(codePoint, modifiers)) {
-            return true;
-        }
-        return super.charTyped(codePoint, modifiers);
-    }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -632,12 +600,7 @@ public final class CompanionCreatorScreen extends Screen {
 
         graphics.fill(previewX - 2, previewY - 2, previewX + PREVIEW_W + 2, previewY + previewH + 2, 0x66000000);
         try {
-            InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    graphics,
-                    previewX, previewY,
-                    previewX + PREVIEW_W, previewY + previewH,
-                    (int) (48 * draft.scale / CompanionEntity.DEFAULT_BODY_SCALE),
-                    0.0625f, mouseX, mouseY, companion);
+            // Entity preview deferred for NeoForge 26.2 InventoryScreen API.
         } catch (Throwable ignored) {
             graphics.text(font, "Preview", previewX + PREVIEW_W / 2, previewY + previewH / 2, TEXT_LABEL);
         }
@@ -671,7 +634,7 @@ public final class CompanionCreatorScreen extends Screen {
             entry.widget.visible = visible;
             entry.widget.active = visible;
             if (visible) {
-                entry.widget.render(graphics, mouseX, mouseY, partialTick);
+                entry.widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
         graphics.disableScissor();

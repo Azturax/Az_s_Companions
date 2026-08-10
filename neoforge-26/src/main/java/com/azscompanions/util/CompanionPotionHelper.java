@@ -86,8 +86,7 @@ public final class CompanionPotionHelper {
         if (level.isClientSide() || target == null || potionStack.isEmpty()) {
             return;
         }
-        ThrownSplashPotion thrown = new ThrownSplashPotion(level, thrower);
-        thrown.setItem(potionStack.copyWithCount(1));
+        ThrownSplashPotion thrown = new ThrownSplashPotion(level, thrower, potionStack.copyWithCount(1));
         Vec3 from = thrower.getEyePosition();
         Vec3 to = target.getEyePosition().add(0.0, target.getBbHeight() * 0.15, 0.0);
         Vec3 delta = to.subtract(from);
@@ -101,9 +100,12 @@ public final class CompanionPotionHelper {
             return;
         }
         PotionContents contents = potionStack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        if (!(beneficiary.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
+            return;
+        }
         for (MobEffectInstance effect : contents.getAllEffects()) {
-            if (effect.getEffect().value().isInstantenous()) {
-                effect.getEffect().value().applyInstantenousEffect(null, null, beneficiary, effect.getAmplifier(), 1.0);
+            if (effect.getEffect().value().isInstantaneous()) {
+                effect.getEffect().value().applyInstantaneousEffect(serverLevel, null, null, beneficiary, effect.getAmplifier(), 1.0);
             } else {
                 beneficiary.addEffect(new MobEffectInstance(effect));
             }

@@ -9,6 +9,7 @@ import com.azscompanions.util.ToolSelectionHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockItemTags;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -52,6 +53,7 @@ public final class MineTask extends CompanionTask {
             fail("missing_pickaxe");
             return TaskTickResult.FAILED;
         }
+        ToolSelectionHelper.preferTorchOffhand(companion, true);
         if (!companion.canBreakBlock(target)) {
             target = null;
             return TaskTickResult.RUNNING;
@@ -70,9 +72,9 @@ public final class MineTask extends CompanionTask {
                 break;
             }
             BlockState state = level.getBlockState(pos);
-            if ((state.is(BlockTags.COAL_ORES) || state.is(BlockTags.IRON_ORES) || state.is(BlockTags.COPPER_ORES)
-                    || state.is(BlockTags.GOLD_ORES) || state.is(BlockTags.DIAMOND_ORES) || state.is(BlockTags.EMERALD_ORES)
-                    || state.is(BlockTags.LAPIS_ORES) || state.is(BlockTags.REDSTONE_ORES)
+            if ((state.is(BlockItemTags.COAL_ORES.block()) || state.is(BlockTags.IRON_ORES) || state.is(BlockTags.COPPER_ORES)
+                    || state.is(BlockTags.GOLD_ORES) || state.is(BlockItemTags.DIAMOND_ORES.block()) || state.is(BlockItemTags.EMERALD_ORES.block())
+                    || state.is(BlockItemTags.LAPIS_ORES.block()) || state.is(BlockItemTags.REDSTONE_ORES.block())
                     || state.is(ModTags.Blocks.TASK_MATERIALS))
                     && !state.is(ModTags.Blocks.BLACKLISTED_BLOCKS)
                     && companion.canBreakBlock(pos)) {

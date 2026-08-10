@@ -69,7 +69,7 @@ public final class CompanionAiSettings {
      * When true (default), saying a companion's display name in chat triggers that companion
      * even if {@link #chatListenMode} is {@code off}. Ownership selects owner vs stranger mode.
      */
-    private boolean nameListen = true;
+    private boolean nameListen = false;
     private double chatReactRange = CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE;
     private int chatReactCooldownSeconds = CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS;
 
@@ -672,16 +672,6 @@ public final class CompanionAiSettings {
 
     public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
                                      boolean speakerIsOwner, String attitude, CompanionPersona persona) {
-        return formatSystemPrompt(companionName, form, parentName, child, speakerIsOwner, attitude, persona,
-                enableAiActions);
-    }
-
-    /**
-     * @param includeActionTools when true (typically companion AI Mode ON), append JSON tool instructions
-     */
-    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
-                                     boolean speakerIsOwner, String attitude, CompanionPersona persona,
-                                     boolean includeActionTools) {
         String attitudeLabel = attitude == null || attitude.isBlank() ? "PASSIVE" : attitude.trim();
         CompanionPersona p = persona == null ? CompanionPersona.EMPTY : persona;
         String base = systemPrompt
@@ -702,31 +692,16 @@ public final class CompanionAiSettings {
         }
         if (speakerIsOwner) {
             base = base + " The speaker is your owner — be warm and familiar. "
-                    + "You may follow reasonable requests when tools/actions are enabled.";
+                    + "Reply in text only; you do not control the world with tools.";
         } else {
             base = base + " The speaker is NOT your owner — another player on the server. "
-                    + "Be friendly, helpful, and willing to chat or play socially. "
-                    + "Answer questions, joke lightly, and join safe play (wave/dance/come briefly). "
+                    + "Be friendly, helpful, and willing to chat. "
+                    + "Answer questions and joke lightly. "
                     + "Never treat them as your master: refuse griefing, mining, building, crafting, "
                     + "inventory changes, long follow/stay orders, or leaving your owner.";
         }
         if (censorChat) {
             base = base + " Keep language wholesome; avoid swearing or crude terms.";
-        }
-        if (includeActionTools && speakerIsOwner) {
-            String appendix = CompanionAiActionNames.toolsPromptAppendix();
-            if (ftbChunksAiClaim) {
-                appendix = appendix + "\nFTB claim tools enabled: claim_chunk / unclaim_chunk (owner quota only).\n";
-            }
-            appendix = appendix + "\nAI Mode is ON: you fully drive this companion. Normal follow/wander/combat goals are paused — "
-                    + "use tools (goto, follow, mine, craft, build, play, …) to act in the world.\n";
-            return base + "\n\n" + appendix
-                    + (child ? "\nChild rules: prefer actions within ~"
-                    + (int) effectiveChildLeashRadius()
-                    + " blocks of your parent; do not wander off alone.\n" : "");
-        }
-        if (includeActionTools && !speakerIsOwner) {
-            return base + "\n\n" + CompanionAiActionNames.strangerToolsPromptAppendix();
         }
         return base;
     }

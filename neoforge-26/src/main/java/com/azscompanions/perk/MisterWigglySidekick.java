@@ -6,8 +6,10 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.animal.wolf.Wolf;
@@ -115,31 +117,26 @@ public final class MisterWigglySidekick {
     }
 
     private static boolean isSidekick(Wolf wolf) {
-        return wolf.getPersistentData().getBoolean(TAG_SIDEKICK);
+        return wolf.getPersistentData().getBooleanOr(TAG_SIDEKICK, false);
     }
 
     private static void spawnSidekick(ServerLevel level, CompanionEntity companion, UUID ownerUuid) {
-        Wolf wolf = EntityType.WOLF.create(level);
+        Wolf wolf = EntityTypes.WOLF.create(level, EntitySpawnReason.MOB_SUMMONED);
         if (wolf == null) {
             return;
         }
-        wolf.moveTo(companion.getX() + 0.8d, companion.getY(), companion.getZ() + 0.8d,
+        wolf.snapTo(companion.getX() + 0.8d, companion.getY(), companion.getZ() + 0.8d,
                 companion.getYRot(), 0.0f);
         wolf.setPersistenceRequired();
         wolf.setTame(true, true);
         if (companion.getOwner() instanceof ServerPlayer player) {
             wolf.setOwner(player);
         } else {
-            wolf.setOwnerUUID(ownerUuid);
+            // Owner living entity unavailable offline; tame flag still set above.
         }
         wolf.setCustomName(Component.literal(AzsCompanionsConstants.WIGGLY_DOG_NAME));
         wolf.setCustomNameVisible(true);
         wolf.setOrderedToSit(false);
-        // Collar color API is private in 1.21.1 — set via NBT (BLUE = 11).
-        var nbt = new CompoundTag();
-        wolf.saveWithoutId(nbt);
-        nbt.putByte("CollarColor", (byte) DyeColor.BLUE.getId());
-        wolf.load(nbt);
         wolf.getPersistentData().putBoolean(TAG_SIDEKICK, true);
         wolf.getPersistentData().store(TAG_FOLLOW, UUIDUtil.CODEC, companion.getUUID());
         wolf.goalSelector.addGoal(2, new FollowCompanionEntityGoal(wolf, companion.getUUID()));

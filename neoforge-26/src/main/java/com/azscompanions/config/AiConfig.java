@@ -85,7 +85,7 @@ public final class AiConfig {
         );
 
         PROVIDER = builder.comment(
-                        "disabled | local | openai_compatible | mcp. Default disabled (offline-safe).")
+                        "disabled | local | openai_compatible | mcp (aliases: litellm, openrouter, …). Default disabled (offline-safe).")
                 .define("provider", "disabled");
         BASE_URL = builder.comment("OpenAI-compatible base URL (…/v1).")
                 .define("baseUrl", CompanionAiSettings.DEFAULT_BASE_URL);
@@ -142,13 +142,13 @@ public final class AiConfig {
                 .defineListAllowEmpty("censorExtraWords", List.of(), () -> "", o -> o instanceof String);
         CHAT_LISTEN_MODE = builder.comment(
                         "Non-mention auto-reply: off | player | global.",
-                        "Name mentions are controlled by nameListen (default true).")
+                        "Name-mention chat listen is retired (nameListen default false; unused).")
                 .define("chatListenMode", "off");
         NAME_LISTEN = builder.comment(
                         "PRIMARY chat path (default true): say the companion's display name in normal chat",
                         "(Kon, how are you? / Bit come here please) — no /ask slash required.",
                         "Works even if chatListenMode is off. Owner vs stranger mode follows ownership.")
-                .define("nameListen", true);
+                .define("nameListen", false);
         CHAT_REACT_RANGE = builder.comment("Max blocks for chat auto-react / name mentions.")
                 .defineInRange("chatReactRange", CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE, 8.0d, 128.0d);
         CHAT_REACT_COOLDOWN_SECONDS = builder.comment("Per-companion and per-owner cooldown between auto-replies.")

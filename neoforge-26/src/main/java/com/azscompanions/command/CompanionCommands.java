@@ -127,7 +127,7 @@ public final class CompanionCommands {
                                         StringArgumentType.getString(ctx, "name")))))
                 .then(buildPersonaBranch())
                 .then(Commands.literal("teamfight")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("on").executes(ctx -> teamfight(ctx.getSource(), true)))
                         .then(Commands.literal("off").executes(ctx -> teamfight(ctx.getSource(), false)))
                         .then(Commands.literal("status").executes(ctx -> {
@@ -146,7 +146,7 @@ public final class CompanionCommands {
         CompanionAskResolve.AskTarget target = CompanionAskResolve.resolveGreedyAsk(greedy,
                 name -> CompanionAiAsk.ownsCompanionNamed(player, name, ASK_RANGE));
         if (!target.isValid()) {
-            player.sendOverlayMessage(Component.literal("Usage: /ask <message> or /az ask [Name] <message>"), false);
+            player.sendOverlayMessage(Component.literal("Usage: /ask <message> or /az ask [Name] <message>"));
             return 0;
         }
         CompanionEntity companion;

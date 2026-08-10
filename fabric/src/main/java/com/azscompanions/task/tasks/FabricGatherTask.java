@@ -29,6 +29,8 @@ public final class FabricGatherTask extends FabricCompanionTask {
             companion.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, 1.0d);
             return Result.RUNNING;
         }
+        BlockState state = level.getBlockState(target);
+        com.azscompanions.util.FabricToolSelectionHelper.equipForBreaking(companion, state);
         level.destroyBlock(target, true, companion);
         target = null;
         companion.speakSuccess();

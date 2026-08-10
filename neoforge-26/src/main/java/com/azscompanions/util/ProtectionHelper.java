@@ -19,7 +19,7 @@ public final class ProtectionHelper {
     }
 
     public static boolean isProtectedEntity(LivingEntity entity) {
-        return entity.getType().is(ModTags.EntityTypes.PROTECTED_ENTITIES);
+        return entity.getType().builtInRegistryHolder().is(ModTags.EntityTypes.PROTECTED_ENTITIES);
     }
 
     public static boolean isProtectedBlock(Level level, BlockPos pos, @Nullable Player owner) {

@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Fabric helper: ask nearby owned companion via configured LLM / MCP provider.
- * Primary chat path is name-mention ({@code Kon, how are you?}) — slash ask is optional.
+ * Requires server AI config (provider ≠ disabled). Text dialogue only — no AI Mode world control.
  */
 public final class FabricCompanionAiAsk {
     private FabricCompanionAiAsk() {
@@ -41,7 +41,7 @@ public final class FabricCompanionAiAsk {
         if (!runtime.isEnabled()) {
             if (reportErrors) {
                 player.displayClientMessage(Component.literal(
-                        "Companion AI is disabled. Edit config/azscompanions-ai.json on the server (provider)."), false);
+                        "Companion AI isn't available on this server. /ask requires server AI config (set provider in config/azscompanions-ai.json — not disabled). There is no client-side LLM fallback."), false);
             }
             return 0;
         }
@@ -144,12 +144,10 @@ public final class FabricCompanionAiAsk {
                 }
                 String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
                 CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-                boolean runActions = effective.allowsActions()
-                        && companion.isAiModeEnabled()
-                        && FtbCompat.mayAiActions(owner);
-                CompanionAiActionParser.ParsedReply parsed = runActions
-                        ? CompanionAiActionParser.parse(clipped)
-                        : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+                // AI Mode removed — /ask is text dialogue only (no LLM world tools).
+                CompanionAiActionParser.ParsedReply parsed =
+                        new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+                boolean runActions = false;
                 String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
                 if (!speak.isBlank()) {
                     String line = speak.length() > 512 ? speak.substring(0, 509) + "…" : speak;
@@ -231,10 +229,10 @@ public final class FabricCompanionAiAsk {
         }
         String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
         CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-        boolean allowActions = companion.isAiModeEnabled() && FtbCompat.mayAiActions(player);
-        CompanionAiActionParser.ParsedReply parsed = allowActions
-                ? CompanionAiActionParser.parse(clipped)
-                : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+        // AI Mode removed — text dialogue only.
+        CompanionAiActionParser.ParsedReply parsed =
+                new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+        boolean allowActions = false;
         String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
         if (!speak.isBlank()) {
             companion.speakLine(speak.length() > 512 ? speak.substring(0, 509) + "…" : speak);
@@ -387,8 +385,7 @@ public final class FabricCompanionAiAsk {
                 child,
                 speakerIsOwner,
                 List.of(),
-                companion.getPersona(),
-                companion.isAiModeEnabled()
+                companion.getPersona()
         );
     }
 }

@@ -15,9 +15,7 @@ public final class CompanionCommandActions {
         CUSTOMIZE,
         FOLLOW,
         STAY,
-        WANDER,
-        /** Toggle per-companion AI Mode (LLM play; pauses normal goals). */
-        TOGGLE_AI_MODE
+        WANDER
     }
 
     private CompanionCommandActions() {
@@ -51,12 +49,6 @@ public final class CompanionCommandActions {
             case WANDER -> {
                 companion.setMode(CompanionMode.WANDER);
                 toast(serverPlayer, companion, "message.azscompanions.mode_wander");
-            }
-            case TOGGLE_AI_MODE -> {
-                companion.toggleAiMode();
-                toast(serverPlayer, companion, companion.isAiModeEnabled()
-                        ? "message.azscompanions.ai_mode_on"
-                        : "message.azscompanions.ai_mode_off");
             }
         }
     }

@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * NeoForge helper: ask nearby owned companion via configured LLM / MCP provider.
  * Replies are text dialogue for every {@link com.azscompanions.entity.CompanionForm}.
- * Primary chat path is name-mention ({@code Kon, how are you?}) — slash ask is optional.
+ * Requires server AI config (provider ≠ disabled). Text dialogue only — no AI Mode world control.
  */
 public final class CompanionAiAsk {
     private CompanionAiAsk() {
@@ -31,7 +31,7 @@ public final class CompanionAiAsk {
         if (player == null || companion == null || companion.isRemoved() || !companion.isOwnedBy(player)) {
             if (reportErrors && player != null) {
                 player.sendOverlayMessage(Component.literal(
-                        "Ask only works on your own companions (multiplayer-safe)."), false);
+                        "Ask only works on your own companions (multiplayer-safe)."));
             }
             return 0;
         }
@@ -39,7 +39,7 @@ public final class CompanionAiAsk {
         if (!runtime.isEnabled()) {
             if (reportErrors) {
                 player.sendSystemMessage(Component.literal(
-                        "Companion AI is disabled. Edit config/azscompanions-ai.toml on the server (provider)."));
+                        "Companion AI isn't available on this server. /ask requires server AI config (set provider in config/azscompanions-ai.toml — not disabled). There is no client-side LLM fallback."));
             }
             return 0;
         }
@@ -50,7 +50,7 @@ public final class CompanionAiAsk {
             }
             return 0;
         }
-        String safeMessage = censorPrompt(message, runtime.settings());
+        String safeMessage = censorPrompt(message, runtime.settings(), true);
         CompanionChatContext ctx = buildContext(companion, player.getGameProfile().name(), safeMessage, runtime);
         boolean showChat = runtime.settings().enableChatMessages();
         if (announceThinking) {
@@ -144,12 +144,10 @@ public final class CompanionAiAsk {
                 }
                 String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
                 CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-                boolean runActions = effective.allowsActions()
-                        && companion.isAiModeEnabled()
-                        && FtbCompat.mayAiActions(owner);
-                CompanionAiActionParser.ParsedReply parsed = runActions
-                        ? CompanionAiActionParser.parse(clipped)
-                        : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+                // AI Mode removed — /ask is text dialogue only (no LLM world tools).
+                CompanionAiActionParser.ParsedReply parsed =
+                        new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+                boolean runActions = false;
                 String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
                 if (!speak.isBlank()) {
                     String line = speak.length() > 512 ? speak.substring(0, 509) + "…" : speak;
@@ -157,7 +155,7 @@ public final class CompanionAiAsk {
                     if (showChat) {
                         companion.speakLine(line);
                     } else {
-                        owner.sendOverlayMessage(Component.literal(line), false);
+                        owner.sendOverlayMessage(Component.literal(line));
                     }
                     notifySpeakerLine(companion, owner, notifySpeaker, line);
                 }
@@ -237,10 +235,10 @@ public final class CompanionAiAsk {
         }
         String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
         CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-        boolean allowActions = companion.isAiModeEnabled() && FtbCompat.mayAiActions(player);
-        CompanionAiActionParser.ParsedReply parsed = allowActions
-                ? CompanionAiActionParser.parse(clipped)
-                : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+        // AI Mode removed — text dialogue only.
+        CompanionAiActionParser.ParsedReply parsed =
+                new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
+        boolean allowActions = false;
         String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
         if (!speak.isBlank()) {
             if (showChat) {
@@ -392,8 +390,7 @@ public final class CompanionAiAsk {
                 child,
                 speakerIsOwner,
                 List.of(),
-                companion.getPersona(),
-                companion.isAiModeEnabled()
+                companion.getPersona()
         );
     }
 }

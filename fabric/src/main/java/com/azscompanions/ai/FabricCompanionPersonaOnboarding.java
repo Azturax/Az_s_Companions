@@ -5,8 +5,9 @@ import com.azscompanions.network.FabricNetworking;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * First-create persona onboarding (Fabric). Ask once; charm recall never re-opens.
+ * First-create persona onboarding (Fabric). Opens the persona GUI once; charm recall never re-opens.
  * CCI whoAmI/whatAmIDoing/howWillIBe sets initialized and skips this.
+ * No chat spam — the GUI fields are enough.
  */
 public final class FabricCompanionPersonaOnboarding {
     private FabricCompanionPersonaOnboarding() {
@@ -22,11 +23,6 @@ public final class FabricCompanionPersonaOnboarding {
                 companion.isPersonaInitialized())) {
             return;
         }
-        String name = companion.getChatDisplayName();
-        companion.speakLine(CompanionPersona.onboardingIntro(name));
-        companion.speakLine(CompanionPersona.onboardingLineWho());
-        companion.speakLine(CompanionPersona.onboardingLineWhat());
-        companion.speakLine(CompanionPersona.onboardingLineHow());
         FabricNetworking.openPersonaSetup(player, companion);
     }
 }

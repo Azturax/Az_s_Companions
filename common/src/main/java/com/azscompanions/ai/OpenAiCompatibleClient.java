@@ -16,7 +16,7 @@ import java.util.Optional;
 /**
  * Unified OpenAI-compatible {@code POST /v1/chat/completions} client.
  * Works for local Ollama ({@code http://127.0.0.1:11434/v1}), LM Studio, llama.cpp server,
- * OpenAI, OpenRouter, Groq, Together, Azure OpenAI-compatible proxies, etc.
+ * OpenAI, OpenRouter, Groq, Together, LiteLLM, Azure OpenAI-compatible proxies, etc.
  */
 public final class OpenAiCompatibleClient implements CompanionAiClient {
     private final HttpClient http = HttpClient.newBuilder()
@@ -25,7 +25,15 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
 
     @Override
     public Optional<String> chat(CompanionAiSettings settings, CompanionChatContext context) throws Exception {
-        String base = settings.baseUrl().replaceAll("/+$", "");
+        String rawBase = settings.baseUrl() == null ? "" : settings.baseUrl().trim();
+        if (rawBase.isBlank()) {
+            throw new IllegalStateException("Companion AI baseUrl is empty — set baseUrl in azscompanions-ai config");
+        }
+        if (settings.provider() == LlmProviderMode.OPENAI_COMPATIBLE && settings.resolveApiKey().isBlank()) {
+            throw new IllegalStateException(
+                    "Missing LLM API key — set env " + settings.apiKeyEnv() + " or apiKey in config");
+        }
+        String base = rawBase.replaceAll("/+$", "");
         if (!base.endsWith("/v1")) {
             // Allow either http://host:11434/v1 or http://host:11434
             if (!base.contains("/v1")) {
@@ -33,6 +41,12 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
             }
         }
         String url = base + "/chat/completions";
+        URI uri;
+        try {
+            uri = URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Invalid Companion AI baseUrl: " + rawBase);
+        }
 
         JsonObject body = new JsonObject();
         body.addProperty("model", settings.model());
@@ -43,7 +57,7 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         system.addProperty("role", "system");
         system.addProperty("content", settings.formatSystemPrompt(
                 context.companionName(), context.form(), context.parentName(), context.child(),
-                context.speakerIsOwner(), context.attitude(), context.persona(), context.aiPlayMode()));
+                context.speakerIsOwner(), context.attitude(), context.persona()));
         messages.add(system);
         for (CompanionChatMemory.Turn turn : context.priorTurns()) {
             if (turn == null || turn.isBlank()) {
@@ -61,18 +75,28 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         messages.add(user);
         body.add("messages", messages);
 
-        HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url))
+        HttpRequest.Builder req = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(settings.timeoutSeconds()))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8));
 
-        String key = settings.resolveApiKey();
-        if (!key.isBlank()) {
-            req.header("Authorization", "Bearer " + key);
-        }
+        LlmHttpAuth.applyBearer(req, settings.resolveApiKey());
 
-        HttpResponse<String> response = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> response;
+        try {
+            response = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (java.net.ConnectException e) {
+            throw new IllegalStateException("LLM connection refused at " + base + " — is the proxy/server running?", e);
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new IllegalStateException("LLM request timed out after " + settings.timeoutSeconds() + "s", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("LLM request interrupted", e);
+        }
+        if (response == null) {
+            throw new IllegalStateException("LLM returned no HTTP response");
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("LLM HTTP " + response.statusCode() + ": " + truncate(response.body()));
         }
@@ -80,7 +104,15 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
     }
 
     static String extractAssistantText(String json) {
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        JsonObject root;
+        try {
+            root = JsonParser.parseString(json).getAsJsonObject();
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("LLM returned malformed JSON: " + truncate(json), e);
+        }
         JsonArray choices = root.getAsJsonArray("choices");
         if (choices == null || choices.isEmpty()) {
             return null;

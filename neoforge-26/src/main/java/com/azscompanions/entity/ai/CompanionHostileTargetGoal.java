@@ -12,7 +12,8 @@ public final class CompanionHostileTargetGoal extends NearestAttackableTargetGoa
     private final CompanionEntity companion;
 
     public CompanionHostileTargetGoal(CompanionEntity companion) {
-        super(companion, LivingEntity.class, 10, true, false, companion::isValidHostilePrey);
+        super(companion, LivingEntity.class, 10, true, false,
+                (living, level) -> companion.isValidHostilePrey(living));
         this.companion = companion;
     }
 

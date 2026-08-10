@@ -3,6 +3,8 @@ package com.azscompanions.ai;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpenAiCompatibleClientTest {
@@ -12,6 +14,22 @@ class OpenAiCompatibleClientTest {
                 {"choices":[{"message":{"role":"assistant","content":"Hi there!"}}]}
                 """;
         assertEquals("Hi there!", OpenAiCompatibleClient.extractAssistantText(json));
+    }
+
+    @Test
+    void rejectsMalformedJson() {
+        assertThrows(IllegalStateException.class, () -> OpenAiCompatibleClient.extractAssistantText("{not-json"));
+    }
+}
+
+class LlmHttpAuthTest {
+    @Test
+    void prefixesBearerOnce() {
+        assertEquals("Bearer sk-test", LlmHttpAuth.bearerAuthorizationHeader("sk-test"));
+        assertEquals("Bearer sk-test", LlmHttpAuth.bearerAuthorizationHeader("Bearer sk-test"));
+        assertEquals("Bearer sk-test", LlmHttpAuth.bearerAuthorizationHeader("bearer sk-test"));
+        assertNull(LlmHttpAuth.bearerAuthorizationHeader(""));
+        assertNull(LlmHttpAuth.bearerAuthorizationHeader(null));
     }
 }
 
@@ -28,6 +46,7 @@ class McpCompanionClientTest {
     void providerAliases() {
         assertEquals(LlmProviderMode.LOCAL, LlmProviderMode.fromConfig("ollama"));
         assertEquals(LlmProviderMode.OPENAI_COMPATIBLE, LlmProviderMode.fromConfig("openrouter"));
+        assertEquals(LlmProviderMode.OPENAI_COMPATIBLE, LlmProviderMode.fromConfig("litellm"));
         assertEquals(LlmProviderMode.MCP, LlmProviderMode.fromConfig("mcp"));
         assertTrue(LlmProviderMode.LOCAL.usesOpenAiCompatibleHttp());
     }

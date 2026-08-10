@@ -13,6 +13,7 @@ import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.entity.inventory.CompanionInventory;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.util.CompanionArmorRules;
 import me.ichun.mods.cci.api.CCIApi;
 import me.ichun.mods.cci.api.IApi;
@@ -153,6 +154,29 @@ public final class CciCompanionActions {
             }
             case ASK -> askAi(player, companion, params, safe);
             case AI_CHAT -> aiChat(player, companion, params, safe);
+            case TASK -> {
+                String item = params.first("item", "block", "material", "id");
+                int count = 64;
+                String countRaw = params.first("count", "n", "num", "amount");
+                if (countRaw != null && !countRaw.isBlank()) {
+                    try {
+                        count = Math.max(1, Math.min(1_000_000, Integer.parseInt(countRaw.trim())));
+                    } catch (NumberFormatException ignored) {
+                        count = 64;
+                    }
+                }
+                String deposit = params.first("deposit", "chest", "to");
+                if (deposit == null || deposit.isBlank()) {
+                    deposit = "nearest";
+                }
+                if (item == null || item.isBlank()) {
+                    toast(player, companion.getChatDisplayName(),
+                            "companion_task needs item=…;count=… (optional deposit=nearest|look)");
+                } else {
+                    com.azscompanions.task.CollectMaterialAssign.assign(
+                            player, companion, item, count, deposit);
+                }
+            }
             default -> {
             }
         }
@@ -268,7 +292,7 @@ public final class CciCompanionActions {
         } else {
             toast(player, companion.getChatDisplayName(),
                     "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/followRadius="
-                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/aiMode=/gear keys.");
+                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/gear keys.");
         }
     }
 
@@ -488,11 +512,6 @@ public final class CciCompanionActions {
             companion.setChunkLoadingEnabled(chunkLoading);
             changed = true;
         }
-        Boolean aiMode = params.aiModeOrNull();
-        if (aiMode != null) {
-            companion.setAiModeEnabled(aiMode);
-            changed = true;
-        }
         return changed;
     }
 
@@ -554,6 +573,9 @@ public final class CciCompanionActions {
             stack = parsed.get();
         }
         EquipmentSlot eq = equipmentSlot(slotKey);
+        if (CompanionCharmItem.isCharm(stack)) {
+            return false;
+        }
         if (!stack.isEmpty() && eq != null && eq.isArmor()
                 && !CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), eq, stack)) {
             return false;

@@ -100,9 +100,9 @@ public final class PlayerSkinLookup {
         }
         for (PlayerInfo info : mc.getConnection().getOnlinePlayers()) {
             if (info.getProfile() != null
-                    && info.getProfile().getName() != null
-                    && info.getProfile().getName().equalsIgnoreCase(username)) {
-                return Optional.of(info.getProfile().getId());
+                    && info.getProfile().name() != null
+                    && info.getProfile().name().equalsIgnoreCase(username)) {
+                return Optional.of(info.getProfile().id());
             }
         }
         if (mc.player != null

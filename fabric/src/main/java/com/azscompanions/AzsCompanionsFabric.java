@@ -54,6 +54,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricNetworking.register();
         FabricTeamFightEvents.register();
         FabricCompanionAiChatEvents.register();
+        com.azscompanions.deposit.FabricDepositEvents.register();
         FabricTaskRegistry.bootstrap();
         FabricBuiltinCompanions.registerDefaults();
         com.azscompanions.compat.FabricFtbCompat.bootstrap();
@@ -84,10 +85,36 @@ public final class AzsCompanionsFabric implements ModInitializer {
                     server.isPublished(),
                     server.getPlayerList().getPlayerCount());
             LOGGER.info("Az's Companions server starting — {}", CompanionAiRuntime.get().statusLine());
+            var ids = com.azscompanions.task.GatherItemCatalog.newBuffer();
+            for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+                var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+                if (key != null && item != net.minecraft.world.item.Items.AIR) {
+                    ids.add(key.toString());
+                }
+            }
+            com.azscompanions.task.GatherItemCatalog.refresh(ids);
+            var recipes = com.azscompanions.task.CraftRecipeCatalog.newBuffer();
+            for (var holder : server.getRecipeManager().getRecipes()) {
+                var result = holder.value().getResultItem(server.registryAccess());
+                if (result.isEmpty()) {
+                    continue;
+                }
+                var itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(result.getItem());
+                if (itemKey == null) {
+                    continue;
+                }
+                recipes.computeIfAbsent(itemKey.toString(), k -> new java.util.ArrayList<>())
+                        .add(holder.id().toString());
+            }
+            com.azscompanions.task.CraftRecipeCatalog.refresh(recipes);
+            LOGGER.info("Gather catalog {} items; craft catalog {} recipes",
+                    com.azscompanions.task.GatherItemCatalog.size(),
+                    com.azscompanions.task.CraftRecipeCatalog.recipeCount());
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             CompanionAiRuntime.get().clearServerContext();
             CompanionChunkLoading.clearAll();
+            com.azscompanions.deposit.DepositChestSelection.clearAll();
         });
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {

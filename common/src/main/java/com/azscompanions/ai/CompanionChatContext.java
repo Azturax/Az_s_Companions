@@ -8,7 +8,6 @@ import java.util.UUID;
  * {@code speakerIsOwner} selects owner vs stranger prompt / action policy.
  * History is per {@link #companionId()} — never shared across companions.
  * {@link #persona()} is per-companion identity injected into the system prompt.
- * {@link #aiPlayMode()} is the per-companion AI Mode flag (menu / CCI); when true, tools may drive play.
  */
 public record CompanionChatContext(
         UUID companionId,
@@ -22,8 +21,7 @@ public record CompanionChatContext(
         boolean child,
         boolean speakerIsOwner,
         List<CompanionChatMemory.Turn> priorTurns,
-        CompanionPersona persona,
-        boolean aiPlayMode
+        CompanionPersona persona
 ) {
     public CompanionChatContext(
             String companionName,
@@ -33,7 +31,7 @@ public record CompanionChatContext(
             String inputLanguage
     ) {
         this(null, companionName, form, "", playerName, playerMessage, inputLanguage, "", false, true, List.of(),
-                CompanionPersona.EMPTY, false);
+                CompanionPersona.EMPTY);
     }
 
     public CompanionChatContext(
@@ -46,7 +44,7 @@ public record CompanionChatContext(
             boolean child
     ) {
         this(null, companionName, form, "", playerName, playerMessage, inputLanguage, parentName, child, true, List.of(),
-                CompanionPersona.EMPTY, false);
+                CompanionPersona.EMPTY);
     }
 
     public CompanionChatContext(
@@ -60,7 +58,7 @@ public record CompanionChatContext(
             boolean speakerIsOwner
     ) {
         this(null, companionName, form, "", playerName, playerMessage, inputLanguage, parentName, child, speakerIsOwner,
-                List.of(), CompanionPersona.EMPTY, false);
+                List.of(), CompanionPersona.EMPTY);
     }
 
     /** Full context without persona (uses empty defaults). */
@@ -78,26 +76,7 @@ public record CompanionChatContext(
             List<CompanionChatMemory.Turn> priorTurns
     ) {
         this(companionId, companionName, form, attitude, playerName, playerMessage, inputLanguage, parentName, child,
-                speakerIsOwner, priorTurns, CompanionPersona.EMPTY, false);
-    }
-
-    /** Full context with persona; AI play mode off. */
-    public CompanionChatContext(
-            UUID companionId,
-            String companionName,
-            String form,
-            String attitude,
-            String playerName,
-            String playerMessage,
-            String inputLanguage,
-            String parentName,
-            boolean child,
-            boolean speakerIsOwner,
-            List<CompanionChatMemory.Turn> priorTurns,
-            CompanionPersona persona
-    ) {
-        this(companionId, companionName, form, attitude, playerName, playerMessage, inputLanguage, parentName, child,
-                speakerIsOwner, priorTurns, persona, false);
+                speakerIsOwner, priorTurns, CompanionPersona.EMPTY);
     }
 
     public CompanionChatContext {
@@ -115,19 +94,13 @@ public record CompanionChatContext(
     public CompanionChatContext withPriorTurns(List<CompanionChatMemory.Turn> turns) {
         return new CompanionChatContext(
                 companionId, companionName, form, attitude, playerName, playerMessage,
-                inputLanguage, parentName, child, speakerIsOwner, turns, persona, aiPlayMode);
+                inputLanguage, parentName, child, speakerIsOwner, turns, persona);
     }
 
     public CompanionChatContext withPersona(CompanionPersona next) {
         return new CompanionChatContext(
                 companionId, companionName, form, attitude, playerName, playerMessage,
-                inputLanguage, parentName, child, speakerIsOwner, priorTurns, next, aiPlayMode);
-    }
-
-    public CompanionChatContext withAiPlayMode(boolean enabled) {
-        return new CompanionChatContext(
-                companionId, companionName, form, attitude, playerName, playerMessage,
-                inputLanguage, parentName, child, speakerIsOwner, priorTurns, persona, enabled);
+                inputLanguage, parentName, child, speakerIsOwner, priorTurns, next);
     }
 
     /** User message content as sent to the LLM (and stored in per-companion memory). */

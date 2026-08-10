@@ -30,7 +30,7 @@ Restart the game / server (or reload NeoForge config if your tooling supports it
 
 Ops / host / whitelist can open **`/az admin`** (or **`/az ai config`**) → **AI Config** tab:
 
-1. Pick a **Profile** (LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP, Disabled) or **Custom...**
+1. Pick a **Profile** (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled) or **Custom...**
 2. Edit `model` / `apiKeyEnv` / listen flags as needed
 3. **Save** writes `azscompanions-ai.json` / `.toml` on the **server**
 4. Chat confirms save; **restart** the server/game for the LLM client to pick up changes (no hot-reload in this slice)
@@ -45,7 +45,7 @@ Details + whitelist: [ADMIN.md](ADMIN.md).
 |------------|---------|
 | `disabled` | No network AI (**default**, offline-safe) |
 | `local` | OpenAI-compatible HTTP → local server (Ollama, LM Studio, llama.cpp) |
-| `openai_compatible` | Same HTTP client → **remote** API (OpenAI, OpenRouter, Groq, Together, Azure-compatible proxies) |
+| `openai_compatible` | Same HTTP client → **remote** API (OpenAI, OpenRouter, Groq, Together, LiteLLM, Azure-compatible proxies) |
 | `mcp` | Chat routed through an MCP server tool (default name `companion_chat`) |
 
 Aliases accepted in config (map to the canonical value):
@@ -53,13 +53,13 @@ Aliases accepted in config (map to the canonical value):
 | You can write | Resolves to |
 |---------------|-------------|
 | `ollama`, `lmstudio`, `llama_cpp` | `local` |
-| `openai`, `openrouter`, `groq`, `together`, `azure_openai` | `openai_compatible` |
+| `openai`, `openrouter`, `groq`, `together`, `azure_openai`, `litellm` | `openai_compatible` |
 
 `local` and `openai_compatible` share one client (`POST …/v1/chat/completions`). Only `baseUrl` / API key typically differ.
 
 ### Admin UI profiles
 
-In `/az admin` → AI Config, a profile cycle fills `provider` + `baseUrl` (and a model placeholder). **Custom...** unlocks free editing. Presets: Disabled, Local (LM Studio `…:1234/v1`), Local (Ollama `…:11434/v1`), OpenRouter, OpenAI, Groq, MCP (HTTP). See [ADMIN.md](ADMIN.md).
+In `/az admin` → AI Config, a profile cycle fills `provider` + `baseUrl` (and a model placeholder). **Custom...** unlocks free editing. Presets: Disabled, Local (LM Studio `…:1234/v1`), Local (Ollama `…:11434/v1`), OpenRouter, OpenAI, Groq, LiteLLM (`…:4000/v1`), MCP (HTTP). See [ADMIN.md](ADMIN.md).
 
 ---
 
@@ -100,7 +100,54 @@ Common bases:
 | OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-4o-mini` |
 | Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
 | Together | `https://api.together.xyz/v1` | (provider model id) |
+| **LiteLLM** (local/remote proxy) | `http://127.0.0.1:4000/v1` | model id as configured in LiteLLM |
 | Azure / custom proxy | your gateway’s `…/v1` | as exposed by the proxy |
+
+Auth: HTTP clients send `Authorization: Bearer <key>` from `AZS_LLM_API_KEY` / `apiKey`. If the value already starts with `Bearer `, it is not double-prefixed. LiteLLM’s master key (and virtual keys) require this header on **chat** and on **MCP** (`POST /mcp/`).
+
+### Fabric — LiteLLM proxy (JSON)
+
+```json
+{
+  "provider": "openai_compatible",
+  "baseUrl": "http://127.0.0.1:4000/v1",
+  "model": "gpt-4o-mini",
+  "apiKey": "",
+  "apiKeyEnv": "AZS_LLM_API_KEY",
+  "inputLanguage": "en",
+  "timeoutSeconds": 30,
+  "maxTokens": 256,
+  "enableChatMessages": true,
+  "chatListenMode": "off"
+}
+```
+
+Alias: `provider` may also be `"litellm"` (maps to `openai_compatible`). In `/az admin` → AI Config, pick profile **LiteLLM** to fill these defaults (and seed `mcp.url` to `http://127.0.0.1:4000/mcp/` for MCP use).
+
+### NeoForge — LiteLLM proxy (TOML)
+
+```toml
+provider = "openai_compatible"
+baseUrl = "http://127.0.0.1:4000/v1"
+model = "gpt-4o-mini"
+apiKey = ""
+apiKeyEnv = "AZS_LLM_API_KEY"
+inputLanguage = "en"
+timeoutSeconds = 30
+maxTokens = 256
+enableChatMessages = true
+chatListenMode = "off"
+```
+
+Set the LiteLLM master key (or a virtual key) in the server JVM env:
+
+```bash
+# Windows PowerShell
+$env:AZS_LLM_API_KEY = "sk-..."
+
+# Verify proxy (same Bearer as the mod uses)
+curl -s -H "Authorization: Bearer $env:AZS_LLM_API_KEY" http://127.0.0.1:4000/v1/model/info
+```
 
 ### Fabric — OpenRouter (JSON)
 
@@ -264,7 +311,49 @@ inputLanguage = "en"
 
 Set `provider` to `mcp`. The client calls `initialize` then `tools/call` on your server (HTTP Streamable-style or stdio).
 
+**Auth:** every MCP HTTP request (including `POST /mcp/`) sends `Authorization: Bearer <key>` from the same `apiKey` / `AZS_LLM_API_KEY` resolution used for chat. LiteLLM’s MCP gateway (`http://127.0.0.1:4000/mcp/`) needs the same master/virtual key as `/v1/chat/completions` — without Bearer you get `401` / “Malformed API Key… Ensure Key has `Bearer ` prefix.”
+
 Expected tool arguments: `message`, `companion_name`, `form`, `player_name`, `language`, `system_prompt` → text content reply.
+
+### MCP via LiteLLM — Fabric
+
+```json
+{
+  "provider": "mcp",
+  "apiKey": "",
+  "apiKeyEnv": "AZS_LLM_API_KEY",
+  "inputLanguage": "en",
+  "enableChatMessages": true,
+  "mcp": {
+    "transport": "http",
+    "url": "http://127.0.0.1:4000/mcp/",
+    "command": "",
+    "args": [],
+    "toolName": "companion_chat",
+    "protocolVersion": "2025-03-26",
+    "toolAllowlist": ""
+  }
+}
+```
+
+### MCP via LiteLLM — NeoForge
+
+```toml
+provider = "mcp"
+apiKey = ""
+apiKeyEnv = "AZS_LLM_API_KEY"
+inputLanguage = "en"
+enableChatMessages = true
+
+[mcp]
+	transport = "http"
+	url = "http://127.0.0.1:4000/mcp/"
+	command = ""
+	args = []
+	toolName = "companion_chat"
+	protocolVersion = "2025-03-26"
+	toolAllowlist = ""
+```
 
 ### MCP HTTP — Fabric
 
@@ -409,8 +498,8 @@ When `nameListen` is on and AI is enabled:
 
 | Speaker | Mode | Behavior |
 |---------|------|----------|
-| **Owner** | Owner address | Obey/help tone; full AI actions if companion **AI Mode** ON; **no** auto-react cooldown |
-| **Other player** | Stranger | Friendly, helpful social chat + **safe** play only: `come_here`, `run_at_player`, `dance`, `peekaboo`, `say`, `play_stop`. **Blocked:** mine/place/build/craft, follow/stay/goto, pickup/drop/equip/inventory, hide/seek |
+| **Owner** | Owner address | Obey/help tone; **text dialogue only** (no LLM world tools); **no** auto-react cooldown |
+| **Other player** | Stranger | Friendly, helpful social chat only (text). No LLM world tools for anyone. |
 
 Stranger `come_here` / `run_at_player` approaches the **speaker** briefly without permanent FOLLOW, and looks at them. Speak lines notify **speaker and owner**. Public chat is **not** canceled for name mentions.
 
@@ -435,35 +524,21 @@ While an AI request is in flight, the owner (and stranger speaker when relevant)
 | `callPlayerDistance` | double | `48` | Owner farther than this (blocks) counts as away; clamped **8–128** |
 | `callPlayerCooldownSeconds` | int | `60` | Cooldown between call lines; clamped **5–600** |
 
-### AI Mode + AI actions
+### Ask requires server AI config
 
-**AI Mode** (per companion) is the player-facing opt-in for autonomous LLM play:
+**`/ask` and `/az ask` only work when the server has AI configured** (`provider` ≠ `disabled` in the server’s `azscompanions-ai.toml` / `.json`). The host’s LLM is authoritative (`serverLlmOnly` default true) — joining clients do **not** run their own model. If AI is unavailable, ask replies with a clear “not available on this server” message (no client-side fallback).
 
-| How | Detail |
-|-----|--------|
-| Shift+RMB menu | **AI Mode: ON/OFF** — tooltip “Let the LLM play the game!” |
-| CCI | `companion_modify` with `aiMode=true` / `aiMode=false` (aliases `aiPlayMode=`, `llmPlay=`) |
-| NBT | `AiPlayMode` (synced entity data) |
+### AI Mode removed
 
-When **AI Mode is ON** for a companion:
+**AI Mode** (“Let the LLM play the game”) is **removed** — no menu button, no `AiPlayMode` UI, no goal pausing for LLM world tools, no CCI `aiMode=`. Companions keep normal follow/wander/combat goals. LLM is **text chat only** via `/ask` when the server provider is enabled.
 
-- Provider must be ≠ `disabled` (otherwise chat/actions do not run).
-- Idle + name chat may issue move/mine/craft/build/play tools.
-- **Normal goals pause:** sit, sleep-in-bed, potion self-care, follow, wander, look-at, owner-defend, hostile target, hurt-by-target. Kept: float (water), open doors (NeoForge), melee (only if something sets a target).
-- Tick leashes (home-bed rescue, child soft leash, stuck recovery, force-FOLLOW) are skipped so they do not fight the LLM.
-- Turning **OFF** clears and re-registers the full goal set.
-
-When **AI Mode is OFF**: text/chat only — tools are not executed for that companion even if server `enableAiActions` is true.
+Use material gather tasks instead (`/az gather <item> <count> [nearest|look]` or CCI `companion_task`).
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `enableAiActions` | bool | `false` | Legacy / admin global hint (CCI session, admin UI). **Does not** alone enable tools — companion **AI Mode** is required |
-| `aiActionReach` | int | `5` | Max Manhattan reach for mine/place; clamped **2–16** |
-| `aiActionCooldownTicks` | int | `10` | Ticks between accepting action batches; clamped **0–100** |
-
-Action names include: `goto`, `follow`, `stop`, `stay`, `sit`, `wander`, `come_here`, `mine`, `place`, `build`, `craft`, `pickup`, `take`, `use_item`, `equip`, `move_item`, `drop`, `select_hotbar`, `run_at_player`, `hide`, `seek`, `hide_and_seek`, `dance`, `peekaboo`, `play_stop`, `say`, and when FTB Chunks + `ftbChunksAiClaim`: `claim_chunk`, `unclaim_chunk` (owner-only).
-
-Owners get the full tool set when AI Mode is on. Strangers (name mention / global listen) only get stranger-safe social actions — brief approach without permanent FOLLOW, dance/peekaboo/say — never mine/build/inventory/follow/stay.
+| `enableAiActions` | bool | `false` | Unused for world puppeting (AI Mode removed); kept for admin/CCI session hints only |
+| `aiActionReach` | int | `5` | Legacy reach clamp **2–16** |
+| `aiActionCooldownTicks` | int | `10` | Legacy cooldown clamp **0–100** |
 
 ### Child Bit autonomy
 
@@ -677,7 +752,7 @@ Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speech
   - `nameListen` (default true) — `Bit, come here` listens by name even when `chatListenMode=off`; prefers speaker’s owned companion, else nearest with online owner; strangers socialize safely; does **not** cancel public chat.
   - `censorChat` / `censorExtraWords` — filter prompts and speak lines.
   - Per-companion **and** per-owner cooldowns (`chatReactCooldownSeconds`) rate-limit listen spam on dedicated servers.
-- **AI Mode / actions:** Owners get the full tool set when companion **AI Mode** is ON (provider ≠ disabled). Strangers are filtered to dance/play/come_here/say only. Mine/place/build respect the owner’s `mayBuild`. Normal follow/wander/combat goals pause while AI Mode is ON.
+- **LLM scope:** Text chat only (`/ask`, name listen, idle/call-away). World control uses Behavior tasks (gather/deposit/mine/…), not LLM tools. AI Mode menu/NBT/CCI toggle is removed.
 - **FTB suite (optional):** Same FTB team / claim walk-vs-interact / AI claim tools / rank gates — see [COMPAT.md](COMPAT.md) (`ftbTeamsCompat`, `ftbChunksAllowPresence`, `ftbChunksBlockInteraction`, `ftbChunksAiClaim`, `ftbRanksCompat`, `trustSameTeamAsOwner`).
 - **Children / Bits:** Same owner UUID as the parent/streamer; ask and AI actions use the same ownership checks. Each Bit still has an **independent** AI memory buffer.
 - **CCI:** Streamer client packet binds summons and AI to that player on dedicated servers (see [CCI.md](CCI.md)); LLM still uses the **server** AI config.

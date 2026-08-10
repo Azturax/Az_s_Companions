@@ -13,6 +13,7 @@ import com.azscompanions.entity.FabricCompanionMode;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.FabricCompanionRegistry;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
+import com.azscompanions.item.FabricCompanionCharmItem;
 import com.azscompanions.util.CompanionArmorRules;
 import me.ichun.mods.cci.api.CCIApi;
 import me.ichun.mods.cci.api.IApi;
@@ -154,6 +155,8 @@ public final class FabricCciCompanionActions {
             }
             case ASK -> askAi(player, companion, params, safe);
             case AI_CHAT -> aiChat(player, companion, params, safe);
+            case TASK -> toast(player, companion.getChatDisplayName(),
+                    "companion_task gather is NeoForge-ready; Fabric collect_material port next. Use /az gather on NeoForge.");
             default -> {
             }
         }
@@ -267,7 +270,7 @@ public final class FabricCciCompanionActions {
         } else {
             toast(player, companion.getChatDisplayName(),
                     "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/followRadius="
-                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/aiMode=/gear keys.");
+                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/gear keys.");
         }
     }
 
@@ -491,11 +494,6 @@ public final class FabricCciCompanionActions {
             companion.setChunkLoadingEnabled(chunkLoading);
             changed = true;
         }
-        Boolean aiMode = params.aiModeOrNull();
-        if (aiMode != null) {
-            companion.setAiModeEnabled(aiMode);
-            changed = true;
-        }
         return changed;
     }
 
@@ -557,6 +555,9 @@ public final class FabricCciCompanionActions {
             stack = parsed.get();
         }
         EquipmentSlot eq = equipmentSlot(slotKey);
+        if (FabricCompanionCharmItem.isCharm(stack)) {
+            return false;
+        }
         if (!stack.isEmpty() && eq != null && eq.isArmor()
                 && !CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), eq, stack)) {
             return false;

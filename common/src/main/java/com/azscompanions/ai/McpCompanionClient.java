@@ -50,19 +50,27 @@ public final class McpCompanionClient implements CompanionAiClient {
 
     private Optional<String> chatHttp(CompanionAiSettings settings, CompanionChatContext context, String tool)
             throws Exception {
-        String endpoint = settings.mcpUrl();
+        String endpoint = settings.mcpUrl() == null ? "" : settings.mcpUrl().trim();
+        if (endpoint.isBlank()) {
+            throw new IllegalStateException("MCP HTTP url is empty — set mcp.url (e.g. LiteLLM http://127.0.0.1:4000/mcp/)");
+        }
         Duration timeout = Duration.ofSeconds(settings.timeoutSeconds());
+        String apiKey = settings.resolveApiKey();
 
         JsonObject initParams = new JsonObject();
         initParams.addProperty("protocolVersion", settings.mcpProtocolVersion());
         initParams.add("capabilities", new JsonObject());
         JsonObject clientInfo = new JsonObject();
         clientInfo.addProperty("name", "azscompanions");
-        clientInfo.addProperty("version", "0.3.3");
+        clientInfo.addProperty("version", "0.3.10");
         initParams.add("clientInfo", clientInfo);
 
         HttpResponse<String> initResponse = postJsonRpc(endpoint, timeout, null, settings.mcpProtocolVersion(),
-                rpcRequest("initialize", initParams));
+                apiKey, rpcRequest("initialize", initParams));
+        if (initResponse.statusCode() < 200 || initResponse.statusCode() >= 300) {
+            throw new IllegalStateException(
+                    "MCP HTTP initialize " + initResponse.statusCode() + ": " + truncate(initResponse.body()));
+        }
         String sessionId = initResponse.headers().firstValue("Mcp-Session-Id")
                 .or(() -> initResponse.headers().firstValue("mcp-session-id"))
                 .orElse(null);
@@ -70,7 +78,7 @@ public final class McpCompanionClient implements CompanionAiClient {
         // Best-effort initialized notification (ignore failures).
         try {
             postJsonRpc(endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
-                    rpcNotification("notifications/initialized", new JsonObject()));
+                    apiKey, rpcNotification("notifications/initialized", new JsonObject()));
         } catch (Exception ignored) {
             // Older or sessionless servers may not accept notifications.
         }
@@ -80,7 +88,7 @@ public final class McpCompanionClient implements CompanionAiClient {
         callParams.add("arguments", toolArguments(settings, context));
 
         HttpResponse<String> callResponse = postJsonRpc(endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
-                rpcRequest("tools/call", callParams));
+                apiKey, rpcRequest("tools/call", callParams));
         if (callResponse.statusCode() < 200 || callResponse.statusCode() >= 300) {
             throw new IllegalStateException("MCP HTTP " + callResponse.statusCode() + ": " + truncate(callResponse.body()));
         }
@@ -107,7 +115,7 @@ public final class McpCompanionClient implements CompanionAiClient {
             initParams.add("capabilities", new JsonObject());
             JsonObject clientInfo = new JsonObject();
             clientInfo.addProperty("name", "azscompanions");
-            clientInfo.addProperty("version", "0.3.3");
+            clientInfo.addProperty("version", "0.3.10");
             initParams.add("clientInfo", clientInfo);
             writeLine(out, rpcRequest("initialize", initParams));
             readJsonRpcResult(in, settings.timeoutSeconds());
@@ -142,8 +150,7 @@ public final class McpCompanionClient implements CompanionAiClient {
         }
         args.addProperty("system_prompt", settings.formatSystemPrompt(
                 context.companionName(), context.form(), context.parentName(), context.child(),
-                context.speakerIsOwner(), context.attitude(), context.persona(), context.aiPlayMode()));
-        args.addProperty("ai_play_mode", context.aiPlayMode());
+                context.speakerIsOwner(), context.attitude(), context.persona()));
         args.addProperty("who_am_i", context.persona().whoAmI());
         args.addProperty("what_am_i_doing", context.persona().whatAmIDoing());
         args.addProperty("how_will_i_be", context.persona().howWillIBe());
@@ -165,13 +172,22 @@ public final class McpCompanionClient implements CompanionAiClient {
     }
 
     private HttpResponse<String> postJsonRpc(String endpoint, Duration timeout, String sessionId,
-                                             String protocolVersion, JsonObject body) throws Exception {
-        HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(endpoint))
+                                             String protocolVersion, String apiKey, JsonObject body)
+            throws Exception {
+        URI uri;
+        try {
+            uri = URI.create(endpoint);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Invalid MCP HTTP url: " + endpoint);
+        }
+        HttpRequest.Builder req = HttpRequest.newBuilder(uri)
                 .timeout(timeout)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json, text/event-stream")
                 .header("MCP-Protocol-Version", protocolVersion)
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8));
+        // LiteLLM / secured MCP proxies require Bearer on every request including POST /mcp/
+        LlmHttpAuth.applyBearer(req, apiKey);
         if (sessionId != null && !sessionId.isBlank()) {
             req.header("Mcp-Session-Id", sessionId);
         }
@@ -184,7 +200,16 @@ public final class McpCompanionClient implements CompanionAiClient {
                 req.header("Mcp-Name", params.get("name").getAsString());
             }
         }
-        return http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        try {
+            return http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (java.net.ConnectException e) {
+            throw new IllegalStateException("MCP connection refused at " + endpoint + " — is the proxy/server running?", e);
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new IllegalStateException("MCP request timed out", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("MCP request interrupted", e);
+        }
     }
 
     private JsonObject rpcRequest(String method, JsonObject params) {
@@ -240,7 +265,12 @@ public final class McpCompanionClient implements CompanionAiClient {
 
     static String extractToolText(String httpBody) {
         String json = unwrapSse(httpBody);
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonObject root;
+        try {
+            root = JsonParser.parseString(json).getAsJsonObject();
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("MCP returned malformed JSON: " + truncate(json), e);
+        }
         if (root.has("error")) {
             throw new IllegalStateException("MCP error: " + root.get("error"));
         }
@@ -251,7 +281,12 @@ public final class McpCompanionClient implements CompanionAiClient {
     }
 
     static String extractToolTextFromResult(String resultJson) {
-        JsonElement el = JsonParser.parseString(resultJson);
+        JsonElement el;
+        try {
+            el = JsonParser.parseString(resultJson);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("MCP result malformed JSON: " + truncate(resultJson), e);
+        }
         if (el.isJsonPrimitive()) {
             return el.getAsString().trim();
         }

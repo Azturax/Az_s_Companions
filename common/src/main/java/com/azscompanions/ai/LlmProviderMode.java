@@ -22,7 +22,7 @@ public enum LlmProviderMode {
         String key = raw.trim().toLowerCase().replace('-', '_');
         return switch (key) {
             case "local", "ollama", "lmstudio", "llama_cpp" -> LOCAL;
-            case "openai_compatible", "openai", "openrouter", "groq", "together", "azure_openai" -> OPENAI_COMPATIBLE;
+            case "openai_compatible", "openai", "openrouter", "groq", "together", "azure_openai", "litellm" -> OPENAI_COMPATIBLE;
             case "mcp" -> MCP;
             default -> DISABLED;
         };

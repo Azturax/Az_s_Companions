@@ -71,6 +71,8 @@ public final class FabricNetworkingClient {
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.AiThinkingPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> ClientCompanionAiHud.apply(
                         payload.active(), payload.companionName(), payload.timeoutSeconds(), payload.progress())));
+        ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.DepositSelectionPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> com.azscompanions.deposit.ClientDepositSelection.apply(payload.payload())));
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.OpenAdminPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     Minecraft mc = Minecraft.getInstance();

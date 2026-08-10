@@ -148,7 +148,7 @@ public final class SpecialPlayerPerks {
                 motion = new Vec3(motion.x, clamp(yDelta * 0.22d, -0.4d, 0.4d), motion.z);
             }
             companion.setDeltaMovement(motion);
-            companion.hasImpulse = true;
+            companion.hurtMarked = true;
             companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
             return true;
         }
@@ -156,7 +156,7 @@ public final class SpecialPlayerPerks {
         // Strong pull so the companion cannot drift near the 5-block edge.
         double speed = dist > 3.0d ? 0.72d : (dist > 1.5d ? 0.52d : 0.38d);
         companion.setDeltaMovement(delta.scale(1.0d / len).scale(speed));
-        companion.hasImpulse = true;
+        companion.hurtMarked = true;
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
         return true;
     }
@@ -171,19 +171,19 @@ public final class SpecialPlayerPerks {
         if (floatingAbove && dist < MIN_SAFE_LAND_TELEPORT) {
             Vec3 motion = companion.getDeltaMovement();
             companion.setDeltaMovement(motion.x * 0.5d, Math.min(motion.y, -0.15d), motion.z * 0.5d);
-            companion.hasImpulse = true;
+            companion.hurtMarked = true;
             return;
         }
         if (dist >= MIN_SAFE_LAND_TELEPORT && (floatingAbove || dist > FLIGHT_KEEP_RADIUS * 3.0d)) {
             companion.teleportTo(owner.getX() + 0.5d, owner.getY(), owner.getZ() + 0.5d);
             companion.setDeltaMovement(Vec3.ZERO);
             companion.getNavigation().stop();
-            companion.hasImpulse = true;
+            companion.hurtMarked = true;
         } else {
             Vec3 motion = companion.getDeltaMovement();
             if (Math.abs(motion.y) > 0.05d && motion.y > 0.0d) {
                 companion.setDeltaMovement(motion.x * 0.6d, Math.min(motion.y, 0.0d), motion.z * 0.6d);
-                companion.hasImpulse = true;
+                companion.hurtMarked = true;
             }
         }
     }
@@ -203,7 +203,7 @@ public final class SpecialPlayerPerks {
                 owner.getY() + FLIGHT_HOVER_Y,
                 owner.getZ() + offset.z);
         companion.setDeltaMovement(Vec3.ZERO);
-        companion.hasImpulse = true;
+        companion.hurtMarked = true;
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
     }
 

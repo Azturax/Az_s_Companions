@@ -45,6 +45,12 @@ public enum LlmProviderProfile {
             "https://api.groq.com/openai/v1",
             "llama-3.3-70b-versatile",
             null),
+    LITELLM(
+            "LiteLLM",
+            LlmProviderMode.OPENAI_COMPATIBLE,
+            CompanionAiDefaults.LITELLM_BASE,
+            "gpt-4o-mini",
+            CompanionAiDefaults.LITELLM_MCP_URL),
     MCP_HTTP(
             "MCP (HTTP)",
             LlmProviderMode.MCP,
@@ -114,7 +120,7 @@ public enum LlmProviderProfile {
         if (modelPlaceholder != null && !modelPlaceholder.isBlank()) {
             snap.setModel(modelPlaceholder);
         }
-        if (this == MCP_HTTP && mcpUrl != null) {
+        if ((this == MCP_HTTP || this == LITELLM) && mcpUrl != null) {
             snap.setMcpUrl(mcpUrl);
         }
         if (this == DISABLED) {
@@ -187,6 +193,10 @@ public enum LlmProviderProfile {
         static final String OLLAMA_BASE = "http://127.0.0.1:11434/v1";
         static final String MODEL_LOCAL = "llama3.2";
         static final String MCP_URL = "http://127.0.0.1:3001/mcp";
+        /** LiteLLM proxy default OpenAI-compatible base. */
+        static final String LITELLM_BASE = "http://127.0.0.1:4000/v1";
+        /** LiteLLM MCP gateway (same master key / Bearer as chat). */
+        static final String LITELLM_MCP_URL = "http://127.0.0.1:4000/mcp/";
 
         private CompanionAiDefaults() {
         }

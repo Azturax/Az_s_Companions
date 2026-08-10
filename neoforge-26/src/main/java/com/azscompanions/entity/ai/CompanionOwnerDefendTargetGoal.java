@@ -124,7 +124,8 @@ public final class CompanionOwnerDefendTargetGoal extends TargetGoal {
         if (!(threat instanceof Mob) && !(threat instanceof Player)) {
             return false;
         }
-        if (!TargetingConditions.forCombat().test(companion, threat)) {
+        if (!(companion.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)
+                || !TargetingConditions.forCombat().test(serverLevel, companion, threat)) {
             return false;
         }
         return companion.canAttackTarget(threat);

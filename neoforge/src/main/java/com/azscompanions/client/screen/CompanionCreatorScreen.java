@@ -70,6 +70,8 @@ public final class CompanionCreatorScreen extends Screen {
     private int rightViewTop;
     private int rightViewBottom;
     private int rightContentHeight;
+    private boolean draggingScrollbar;
+    private int scrollbarDragGrab;
     private final List<ScrollEntry> rightWidgets = new ArrayList<>();
     private final List<ScrollLabel> rightLabels = new ArrayList<>();
     /** Relative Y for live Mojang lookup status under the Name tab. */
@@ -584,19 +586,53 @@ public final class CompanionCreatorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Clicking the scrollbar track jumps / starts drag via simple jump-to.
         if (button == 0 && rightMaxScroll > 0) {
             int trackX = panelX + panelW - 10;
             if (mouseX >= trackX && mouseX <= trackX + SCROLLBAR_W
                     && mouseY >= rightViewTop && mouseY <= rightViewBottom) {
                 int trackH = Math.max(1, rightViewBottom - rightViewTop);
-                float rel = (float) ((mouseY - rightViewTop) / trackH);
-                rightScroll = Mth.clamp((int) (rel * rightMaxScroll), 0, rightMaxScroll);
-                applyRightScroll();
+                int thumbH = Math.max(16, (int) (trackH * (trackH / (float) (trackH + rightMaxScroll))));
+                int travel = trackH - thumbH;
+                int thumbY = rightViewTop + (travel <= 0 ? 0 : (int) (travel * (rightScroll / (float) rightMaxScroll)));
+                if (mouseY >= thumbY && mouseY <= thumbY + thumbH) {
+                    draggingScrollbar = true;
+                    scrollbarDragGrab = (int) mouseY - thumbY;
+                } else {
+                    float rel = (float) ((mouseY - rightViewTop - thumbH / 2.0) / Math.max(1, travel));
+                    rightScroll = Mth.clamp((int) (rel * rightMaxScroll), 0, rightMaxScroll);
+                    applyRightScroll();
+                    draggingScrollbar = true;
+                    scrollbarDragGrab = thumbH / 2;
+                }
                 return true;
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (draggingScrollbar && rightMaxScroll > 0) {
+            int trackH = Math.max(1, rightViewBottom - rightViewTop);
+            int thumbH = Math.max(16, (int) (trackH * (trackH / (float) (trackH + rightMaxScroll))));
+            int travel = trackH - thumbH;
+            if (travel > 0) {
+                float rel = (float) ((mouseY - rightViewTop - scrollbarDragGrab) / (float) travel);
+                rightScroll = Mth.clamp((int) (rel * rightMaxScroll), 0, rightMaxScroll);
+                applyRightScroll();
+            }
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && draggingScrollbar) {
+            draggingScrollbar = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override

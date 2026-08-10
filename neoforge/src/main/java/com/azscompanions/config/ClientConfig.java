@@ -17,6 +17,7 @@ public final class ClientConfig {
     public static final ModConfigSpec.IntValue MAP_ICON_COLOR;
     public static final ModConfigSpec.BooleanValue TRANSLUCENT_PLAYER_SKINS;
     public static final ModConfigSpec.BooleanValue SYNC_MOB_FORM_UUID;
+    public static final ModConfigSpec.BooleanValue DYNAMIC_LIGHTS_COMPAT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -55,6 +56,12 @@ public final class ClientConfig {
         SYNC_MOB_FORM_UUID = builder.comment(
                         "Mob-form proxies share the companion UUID so Fresh Animations / ETF random & emissive variants stay stable on vanilla CEM paths.")
                 .define("syncMobFormUuid", true);
+        builder.pop();
+
+        builder.push("dynamicLights");
+        DYNAMIC_LIGHTS_COMPAT = builder.comment(
+                        "Soft-compat with LambDynamicLights / RyoamicLights / similar: register companion entity light handlers when those mods are present.")
+                .define("dynamicLightsCompat", true);
         builder.pop();
 
         SPEC = builder.build();

@@ -20,24 +20,7 @@ public final class VanillaFurnaceMachineHandler implements MachineHandler {
 
     @Override
     public Result interact(ServerLevel level, BlockPos pos, CompanionEntity companion) {
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
-        if (handler == null) {
-            return Result.FAILED;
-        }
-        // Slot 1 is fuel on AbstractFurnaceBlockEntity item handlers.
-        for (int i = 0; i < companion.getCompanionInventory().BACKPACK_SIZE; i++) {
-            ItemStack stack = companion.getCompanionInventory().getStackInSlot(i);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            if (stack.is(Items.COAL) || stack.is(Items.CHARCOAL) || stack.is(Items.LAVA_BUCKET) || stack.is(Items.BLAZE_ROD)) {
-                ItemStack leftover = handler.insertItem(1, stack.copyWithCount(1), false);
-                if (leftover.isEmpty()) {
-                    stack.shrink(1);
-                    return Result.DONE;
-                }
-            }
-        }
+        // Capability insert deferred for NeoForge 26.2 — furnace fueling disabled until ported.
         return Result.FAILED;
     }
 }

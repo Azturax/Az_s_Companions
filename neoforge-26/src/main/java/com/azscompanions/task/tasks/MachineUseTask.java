@@ -57,7 +57,7 @@ public final class MachineUseTask extends CompanionTask {
                 return TaskTickResult.RUNNING;
             }
         }
-        IItemHandler items = level.getCapability(Capabilities.ItemHandler.BLOCK, machinePos, null);
+        IItemHandler items = ((net.neoforged.neoforge.items.IItemHandler) null) /* capability deferred */;
         if (items == null) {
             fail("unsupported_machine");
             return TaskTickResult.FAILED;

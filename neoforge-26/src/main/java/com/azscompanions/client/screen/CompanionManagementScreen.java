@@ -286,14 +286,4 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 leftPos + 12, y + 5, 0xFFFFFF, false);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (nameBox != null && nameBox.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        if (skinBox != null && skinBox.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
 }

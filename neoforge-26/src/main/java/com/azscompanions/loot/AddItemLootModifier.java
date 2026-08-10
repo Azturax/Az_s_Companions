@@ -9,24 +9,29 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
-import net.neoforged.neoforge.common.loot.LootModifier;
 
-/** Always appends one item stack when conditions match. */
-public final class AddItemLootModifier extends LootModifier {
-    public static final MapCodec<AddItemLootModifier> CODEC = RecordCodecBuilder.mapCodec(inst ->
-            LootModifier.codecStart(inst)
-                    .and(BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(m -> m.item))
-                    .apply(inst, AddItemLootModifier::new));
+/** Minimal GLM stub for NeoForge 26.2 — LootModifier base ctor moved. */
+public final class AddItemLootModifier implements IGlobalLootModifier {
+    public static final MapCodec<AddItemLootModifier> CODEC = RecordCodecBuilder.mapCodec(inst -> inst.group(
+            IGlobalLootModifier.LOOT_CONDITIONS_CODEC.fieldOf("conditions").forGetter(m -> m.conditions),
+            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(m -> m.item)
+    ).apply(inst, AddItemLootModifier::new));
 
+    private final LootItemCondition[] conditions;
     private final Item item;
 
     public AddItemLootModifier(LootItemCondition[] conditions, Item item) {
-        super(conditions);
+        this.conditions = conditions;
         this.item = item;
     }
 
     @Override
-    protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
+    public ObjectArrayList<ItemStack> apply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
+        for (LootItemCondition condition : conditions) {
+            if (!condition.test(context)) {
+                return generatedLoot;
+            }
+        }
         generatedLoot.add(new ItemStack(item));
         return generatedLoot;
     }
@@ -34,5 +39,10 @@ public final class AddItemLootModifier extends LootModifier {
     @Override
     public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC;
+    }
+
+    @Override
+    public int priority() {
+        return IGlobalLootModifier.DEFAULT_PRIORITY;
     }
 }

@@ -67,7 +67,7 @@ public final class CompanionAiActionExecutor {
             results.add("not_owner");
             return results;
         }
-        if (!companion.isAiModeEnabled()) {
+        if (true) { // AI Mode removed — LLM world tools disabled
             results.add("actions_disabled");
             return results;
         }

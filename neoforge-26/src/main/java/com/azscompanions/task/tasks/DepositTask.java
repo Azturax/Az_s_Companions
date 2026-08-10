@@ -44,7 +44,7 @@ public final class DepositTask extends CompanionTask {
             fail("container_forbidden");
             return TaskTickResult.FAILED;
         }
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, chestPos, null);
+        IItemHandler handler = ((net.neoforged.neoforge.items.IItemHandler) null) /* capability deferred */;
         if (handler == null) {
             fail("not_a_container");
             return TaskTickResult.FAILED;

@@ -2,6 +2,7 @@ package com.azscompanions.menu;
 
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.inventory.CompanionInventory;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModMenus;
 import com.azscompanions.util.CompanionArmorRules;
 import com.mojang.datafixers.util.Pair;
@@ -133,7 +134,7 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            if (companion == null) {
+            if (companion == null || CompanionCharmItem.isCharm(stack)) {
                 return false;
             }
             return CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), type, stack);
@@ -160,6 +161,11 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
     private static final class OffhandSlot extends SlotItemHandler {
         OffhandSlot(CompanionInventory inv, int index, int x, int y) {
             super(inv, index, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return !CompanionCharmItem.isCharm(stack);
         }
 
         @Override

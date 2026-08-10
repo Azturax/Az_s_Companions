@@ -38,7 +38,7 @@ public final class ModNetworking {
 
         // Codecs must register on both sides. Client GUI/voice handlers must never be classloaded
         // on the dedicated server (OpenCompanionCreatorPacket used to import CompanionCreatorScreen).
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
             ClientNetworkHandlers.register(registrar);
         } else {
             registrar.playToClient(CompanionDialoguePacket.TYPE, CompanionDialoguePacket.STREAM_CODEC, (packet, context) -> {});

@@ -40,6 +40,8 @@ public final class FabricCompanionCommands {
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> askGreedy(ctx.getSource().getPlayerOrException(),
                                 StringArgumentType.getString(ctx, "message")))));
+
+        com.azscompanions.deposit.FabricDepositCommands.register(dispatcher);
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildRoot() {
@@ -175,6 +177,7 @@ public final class FabricCompanionCommands {
                             com.azscompanions.admin.FabricAzAdminActions.openPanel(player);
                             return 1;
                         }))
+                .then(com.azscompanions.deposit.FabricDepositCommands.buildBranch())
                 .then(buildPersonaBranch())
                 .then(Commands.literal("teamfight")
                         .requires(source -> source.hasPermission(2))

@@ -14,7 +14,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Shared Shift+RMB companion menu: Customize, Command, Behavior, Inventory, AI Mode, Donate.
+ * Shared Shift+RMB companion menu: Customize, Command, Behavior, Inventory, Donate.
  */
 public final class CompanionMenuScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
@@ -27,8 +27,7 @@ public final class CompanionMenuScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 220;
-    private final int panelH = 224;
-    private Button aiModeButton;
+    private final int panelH = 180;
 
     public CompanionMenuScreen(CompanionEntity companion) {
         super(Component.translatable("screen.azscompanions.menu"));
@@ -60,31 +59,9 @@ public final class CompanionMenuScreen extends Screen {
             ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_INVENTORY"));
         }).bounds(bx, by + 84, 160, 22).build());
 
-        aiModeButton = Button.builder(aiModeLabel(), b -> {
-            ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "TOGGLE_AI_MODE"));
-        }).bounds(bx, by + 112, 160, 22).build();
-        aiModeButton.setTooltip(Tooltip.create(Component.translatable("screen.azscompanions.ai_mode.tooltip")));
-        addRenderableWidget(aiModeButton);
-
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
-                .bounds(bx, by + 148, 160, 20).build());
-
         addRenderableWidget(new IconButton(
                 panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
                 b -> Util.getPlatform().openUri(DONATE_URL)));
-    }
-
-    private Component aiModeLabel() {
-        String state = companion.isAiModeEnabled() ? "ON" : "OFF";
-        return Component.translatable("screen.azscompanions.ai_mode", state);
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (aiModeButton != null) {
-            aiModeButton.setMessage(aiModeLabel());
-        }
     }
 
     @Override
@@ -117,7 +94,7 @@ public final class CompanionMenuScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
             graphics.blit(icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);

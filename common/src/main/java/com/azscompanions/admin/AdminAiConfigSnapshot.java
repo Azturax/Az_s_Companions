@@ -28,7 +28,7 @@ public final class AdminAiConfigSnapshot {
     private String chatListenMode = "off";
     private boolean enableAiActions;
     private boolean serverLlmOnly = true;
-    private boolean nameListen = true;
+    private boolean nameListen = false;
     private boolean enableChatMessages = true;
     private String mcpUrl = "http://127.0.0.1:3001/mcp";
 

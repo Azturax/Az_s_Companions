@@ -12,6 +12,7 @@ import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.menu.FabricCompanionInventoryMenu;
 import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.perk.SpecialPlayerPerks;
+import com.azscompanions.item.FabricCompanionCharmItem;
 import com.azscompanions.registry.FabricModItems;
 import com.azscompanions.task.FabricTaskQueue;
 import com.azscompanions.util.CompanionArmorRules;
@@ -95,9 +96,6 @@ public class FabricCompanionEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
-            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
-    /** Per-companion AI Mode — LLM play; pauses autonomous goals when true. */
-    private static final EntityDataAccessor<Boolean> DATA_AI_MODE =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_ATTITUDE =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.STRING);
@@ -193,7 +191,6 @@ public class FabricCompanionEntity extends PathfinderMob {
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
-        builder.define(DATA_AI_MODE, false);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
         builder.define(DATA_TEAM, "");
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
@@ -206,10 +203,6 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
-        registerNormalGoals();
-    }
-
-    private void registerNormalGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new FabricSitGoal(this));
         goalSelector.addGoal(2, new FabricCompanionSleepInBedGoal(this));
@@ -225,39 +218,12 @@ public class FabricCompanionEntity extends PathfinderMob {
         targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
-    /**
-     * AI Mode ON: drop follow/wander/sit/sleep/potion/look/target goals so the LLM drives play.
-     * Keeps {@link FloatGoal} and {@link MeleeAttackGoal} (for AI-set targets).
-     */
-    private void pauseGoalsForAiMode() {
-        if (level().isClientSide) {
-            return;
-        }
-        goalSelector.removeAllGoals(g -> !(g instanceof FloatGoal) && !(g instanceof MeleeAttackGoal));
-        targetSelector.removeAllGoals(g -> true);
-        setTarget(null);
-        getNavigation().stop();
-        if (isSleeping()) {
-            stopSleeping();
-        }
-    }
-
-    private void restoreGoalsAfterAiMode() {
-        if (level().isClientSide) {
-            return;
-        }
-        goalSelector.removeAllGoals(g -> true);
-        targetSelector.removeAllGoals(g -> true);
-        registerNormalGoals();
-    }
-
     @Override
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
-            boolean aiMode = isAiModeEnabled();
-            // Preserve player/CCI command modes. In AI Mode the LLM owns movement mode.
-            if (!aiMode) {
+            // Preserve player/CCI command modes; allow TASK while task queue is active.
+            {
                 FabricCompanionMode mode = getMode();
                 if (mode != FabricCompanionMode.FOLLOW
                         && mode != FabricCompanionMode.SIT
@@ -268,21 +234,19 @@ public class FabricCompanionEntity extends PathfinderMob {
                 }
             }
             taskQueue.tick(serverLevel);
+            if (getMode() == FabricCompanionMode.TASK) {
+                com.azscompanions.util.FabricToolSelectionHelper.preferTorchOffhand(this, true);
+            }
             tickOwnerActivity();
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickSleepPurr();
-            if (!aiMode) {
-                tickHomeBedLeash();
-            }
+            tickHomeBedLeash();
             tickPlayfulEvil();
             tickAiAmbientSpeech();
             tickPlayBehavior();
-            if (!aiMode) {
-                tickChildParentLeash();
-            }
-            // Follow-only ground leash — never during Wander stroll / home-idle / AI Mode.
-            if (!aiMode
-                    && getMode() == FabricCompanionMode.FOLLOW
+            tickChildParentLeash();
+            // Follow-only ground leash — never during Wander stroll / home-idle.
+            if (getMode() == FabricCompanionMode.FOLLOW
                     && shouldActivelyFollowOwner()
                     && isOwnerExploring()
                     && (getTarget() == null || !getTarget().isAlive())) {
@@ -296,6 +260,9 @@ public class FabricCompanionEntity extends PathfinderMob {
                 }
             }
             FabricCompanionChunkTickets.tick(this, serverLevel);
+            if (tickCount % 20 == 0) {
+                ejectForbiddenCharm();
+            }
         }
     }
 
@@ -669,14 +636,19 @@ public class FabricCompanionEntity extends PathfinderMob {
             }
             return InteractionResult.CONSUME;
         }
-        // Shift + right-click opens shared menu (Customize | Command | Inventory).
+        // Hold charm + Shift + right-click opens shared menu (Customize | Command | Inventory).
         if (player.isShiftKeyDown()) {
-            FabricNetworking.openMenu(serverPlayer, this);
-            return InteractionResult.CONSUME;
+            ItemStack heldForMenu = player.getItemInHand(hand);
+            if (FabricCompanionCharmItem.isCharm(heldForMenu)) {
+                FabricNetworking.openMenu(serverPlayer, this);
+                return InteractionResult.CONSUME;
+            }
+            // Shift without charm in this hand: do not open menu or swap items.
+            return InteractionResult.PASS;
         }
         ItemStack held = player.getItemInHand(hand);
         if (!isChildCompanion() && getStoredChildCount() > 0
-                && (held.isEmpty() || held.is(FabricModItems.COMPANION_CHARM))) {
+                && (held.isEmpty() || FabricCompanionCharmItem.isCharm(held))) {
             FabricCompanionEntity called = callNextStoredChild(serverPlayer);
             if (called != null) {
                 player.displayClientMessage(Component.translatable(
@@ -689,7 +661,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             }
         }
         if (!held.isEmpty()) {
-            if (held.is(FabricModItems.COMPANION_CHARM)) {
+            if (FabricCompanionCharmItem.isCharm(held)) {
                 return InteractionResult.PASS;
             }
             // Hidden easter egg: fermented spider eye → brief playful HOSTILE burst.
@@ -829,6 +801,9 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     private InteractionResult giveItemToHands(ServerPlayer player, InteractionHand hand, ItemStack held) {
+        if (FabricCompanionCharmItem.isCharm(held)) {
+            return InteractionResult.PASS;
+        }
         ItemStack main = inventory.getMainHand();
         ItemStack off = inventory.getOffHand();
         if (main.isEmpty()) {
@@ -891,6 +866,12 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
+        if (FabricCompanionCharmItem.isCharm(stack)) {
+            if (!level().isClientSide && !stack.isEmpty()) {
+                this.spawnAtLocation(stack.copy());
+            }
+            return;
+        }
         switch (slot) {
             case MAINHAND -> inventory.setItem(FabricCompanionInventory.MAIN_HAND, stack);
             case OFFHAND -> inventory.setItem(FabricCompanionInventory.OFF_HAND, stack);
@@ -1330,6 +1311,21 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
     }
 
+    /** Drop any Companion Charm that ended up in companion inventory/hands. */
+    public void ejectForbiddenCharm() {
+        if (level().isClientSide) {
+            return;
+        }
+        for (int i = 0; i < FabricCompanionInventory.TOTAL_SIZE; i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!FabricCompanionCharmItem.isCharm(stack)) {
+                continue;
+            }
+            inventory.setItem(i, ItemStack.EMPTY);
+            this.spawnAtLocation(stack);
+        }
+    }
+
     /**
      * Form/scale are synched data — clients must refresh hitbox + name-tag attachment
      * when they arrive, or nametag height sticks to the previous form after a swap.
@@ -1439,30 +1435,6 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
     }
 
-    /**
-     * Per-companion AI Mode (“Let the LLM play the game!”).
-     * When ON: pauses autonomous goals; idle/name chat may issue move/mine/craft tools (provider must be on).
-     */
-    public boolean isAiModeEnabled() {
-        return entityData.get(DATA_AI_MODE);
-    }
-
-    public void setAiModeEnabled(boolean enabled) {
-        boolean was = isAiModeEnabled();
-        entityData.set(DATA_AI_MODE, enabled);
-        if (level().isClientSide || was == enabled) {
-            return;
-        }
-        if (enabled) {
-            pauseGoalsForAiMode();
-        } else {
-            restoreGoalsAfterAiMode();
-        }
-    }
-
-    public void toggleAiMode() {
-        setAiModeEnabled(!isAiModeEnabled());
-    }
 
     /** Copy spacing from a parent; Bits get a slightly tighter leash. */
     public void inheritSpacingFrom(FabricCompanionEntity parent) {
@@ -1683,7 +1655,6 @@ public class FabricCompanionEntity extends PathfinderMob {
         tag.putString(com.azscompanions.ai.CompanionPersona.NBT_QUIRKS, persona.quirks());
         tag.putBoolean(com.azscompanions.ai.CompanionPersona.NBT_INITIALIZED, persona.initialized());
         tag.putBoolean("ChunkLoading", chunkLoadingEnabled);
-        tag.putBoolean("AiPlayMode", isAiModeEnabled());
         if (homePos != null) {
             tag.putLong("HomePos", homePos.asLong());
         }
@@ -1805,11 +1776,6 @@ public class FabricCompanionEntity extends PathfinderMob {
         } else {
             chunkLoadingEnabled = true;
         }
-        if (tag.contains("AiPlayMode")) {
-            setAiModeEnabled(tag.getBoolean("AiPlayMode"));
-        } else {
-            setAiModeEnabled(false);
-        }
         if (tag.contains("HomePos")) {
             homePos = BlockPos.of(tag.getLong("HomePos"));
         }
@@ -1835,5 +1801,6 @@ public class FabricCompanionEntity extends PathfinderMob {
             setMaxChildren(FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER);
         }
         ejectIncompatibleArmor();
+        ejectForbiddenCharm();
     }
 }

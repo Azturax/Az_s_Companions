@@ -87,7 +87,8 @@ Ownership: CCI summons / leaders / children are **owned by the streamer player**
 | Find target | Nearby companion lookup uses `isOwnedBy(streamer)` only (not trusted guests). |
 | Ask / AI chat | Same ownership gate as in-game `/ask` / `/az ask [Name]`. |
 | Chat listen | `player` = streamer’s chat; `global` = nearby chat may react; strangers get social-safe actions only |
-| Name mention | `Bit, come here` via `nameListen` (default on); owner obeys, strangers socialize (no grief/inventory) |
+| Ask | `/ask` / `/az ask` — **requires server AI config** (no client LLM) |
+| Name mention | Removed / disabled (`nameListen` default off) |
 | In-game commands | `/ask`, `/az ask`, `Name ask …` resolve names **per commanding player**. |
 
 See also [COMPANION_AI.md](COMPANION_AI.md#multiplayer-notes).
@@ -177,7 +178,7 @@ When AI is **disabled**, ask/ai_chat toast an error; greet/wave/say fall back to
 
 | Subject | Aliases | Message | Effect |
 |---------|---------|---------|--------|
-| `claim_chunk` | `companion_claim_chunk` | optional `chunkX=`/`chunkZ=` or block `x=`/`z=` | Claim chunk at companion feet (owner quota; never steals) |
+| `companion_task` | `task`, `gather_task` | `item=minecraft:cobblestone;count=2000;deposit=chest` | Assign material gather → nearest/look chest (NeoForge) |
 | `unclaim_chunk` | `companion_unclaim_chunk` | same | Release owner's claim |
 
 ### Team fight (8)

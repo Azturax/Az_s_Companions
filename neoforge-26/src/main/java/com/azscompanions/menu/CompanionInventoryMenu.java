@@ -2,6 +2,7 @@ package com.azscompanions.menu;
 
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.inventory.CompanionInventory;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModMenus;
 import com.azscompanions.util.CompanionArmorRules;
 import com.mojang.datafixers.util.Pair;
@@ -133,7 +134,7 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            if (companion == null) {
+            if (companion == null || CompanionCharmItem.isCharm(stack)) {
                 return false;
             }
             return CompanionArmorRules.mayPlaceInArmorSlot(companion.getForm(), type, stack);
@@ -145,15 +146,14 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
         }
 
         @Override
-        public Pair<Identifier, Identifier> getNoItemIcon() {
-            Identifier icon = switch (type) {
+        public Identifier getNoItemIcon() {
+            return switch (type) {
                 case HEAD -> InventoryMenu.EMPTY_ARMOR_SLOT_HELMET;
                 case CHEST -> InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE;
                 case LEGS -> InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS;
                 case FEET -> InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS;
                 default -> null;
             };
-            return icon == null ? null : Pair.of(InventoryMenu.BLOCK_ATLAS, icon);
         }
     }
 
@@ -163,8 +163,13 @@ public final class CompanionInventoryMenu extends AbstractContainerMenu {
         }
 
         @Override
-        public Pair<Identifier, Identifier> getNoItemIcon() {
-            return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
+        public boolean mayPlace(ItemStack stack) {
+            return !CompanionCharmItem.isCharm(stack);
+        }
+
+        @Override
+        public Identifier getNoItemIcon() {
+            return InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD;
         }
     }
 

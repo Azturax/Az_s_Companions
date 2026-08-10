@@ -137,7 +137,7 @@ public final class CompanionSleepInBedGoal extends Goal {
         if (owner != null && owner.isSleeping()) {
             return true;
         }
-        return level.isNight();
+        return !level.isBrightOutside();
     }
 
     /**

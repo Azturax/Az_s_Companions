@@ -4,6 +4,7 @@ import com.azscompanions.AzsCompanions;
 import com.azscompanions.task.tasks.BuildTask;
 import com.azscompanions.task.tasks.ChopTreesTask;
 import com.azscompanions.task.tasks.CollectItemsTask;
+import com.azscompanions.task.tasks.CollectMaterialTask;
 import com.azscompanions.task.tasks.CombatAssistTask;
 import com.azscompanions.task.tasks.CraftTask;
 import com.azscompanions.task.tasks.DepositTask;
@@ -42,6 +43,7 @@ public final class TaskRegistry {
         register("mine", MineTask::new);
         register("combat", CombatAssistTask::new);
         register("collect_items", CollectItemsTask::new);
+        register("collect_material", CollectMaterialTask::new);
         register("deposit", DepositTask::new);
         register("build", BuildTask::new);
         register("craft", CraftTask::new);

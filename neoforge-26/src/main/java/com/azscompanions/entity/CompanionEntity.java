@@ -23,6 +23,7 @@ import com.azscompanions.menu.CompanionManagementMenu;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
 import com.azscompanions.perk.MisterWigglySidekick;
 import com.azscompanions.perk.SpecialPlayerPerks;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModItems;
 import com.azscompanions.task.TaskQueue;
 import com.azscompanions.util.CompanionArmorRules;
@@ -120,9 +121,6 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
-    /** Per-companion AI Mode — LLM play; pauses autonomous goals when true. */
-    private static final EntityDataAccessor<Boolean> DATA_AI_MODE =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_ATTITUDE =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> DATA_TEAM =
@@ -187,12 +185,12 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean wantsToPickUp(ItemStack stack) {
+    public boolean wantsToPickUp(ServerLevel level, ItemStack stack) {
         // Vanilla loot vacuum must not scoop harmful/neutral potions; AI goal only targets beneficial.
         if (CompanionPotionHelper.isPotionItem(stack)) {
             return CompanionPotionHelper.isAutoPickupAllowed(stack);
         }
-        return super.wantsToPickUp(stack);
+        return super.wantsToPickUp(level, stack);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -233,7 +231,6 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
-        builder.define(DATA_AI_MODE, false);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
         builder.define(DATA_TEAM, "");
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
@@ -266,35 +263,12 @@ public class CompanionEntity extends PathfinderMob {
         targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
-    private void pauseGoalsForAiMode() {
-        if (level().isClientSide()) {
-            return;
-        }
-        goalSelector.removeAllGoals(g ->
-                !(g instanceof FloatGoal) && !(g instanceof OpenDoorGoal) && !(g instanceof MeleeAttackGoal));
-        targetSelector.removeAllGoals(g -> true);
-        setTarget(null);
-        getNavigation().stop();
-        if (isSleeping()) {
-            stopSleeping();
-        }
-    }
-
-    private void restoreGoalsAfterAiMode() {
-        if (level().isClientSide()) {
-            return;
-        }
-        goalSelector.removeAllGoals(g -> true);
-        targetSelector.removeAllGoals(g -> true);
-        registerNormalGoals();
-    }
 
     @Override
     public void tick() {
         super.tick();
         if (!level().isClientSide() && level() instanceof ServerLevel serverLevel) {
-            boolean aiMode = isAiModeEnabled();
-            if (!aiMode) {
+            {
                 CompanionMode mode = getMode();
                 if (mode != CompanionMode.FOLLOW
                         && mode != CompanionMode.SIT
@@ -307,23 +281,20 @@ public class CompanionEntity extends PathfinderMob {
             taskQueue.tick(serverLevel);
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickOwnerActivity();
-            if (!aiMode) {
-                tickHomeBedLeash();
-            }
+            tickHomeBedLeash();
             tickSleepPurr();
             tickPlayfulEvil();
             tickAiAmbientSpeech();
             tickPlayBehavior();
-            if (!aiMode) {
-                tickChildParentLeash();
-            }
+            tickChildParentLeash();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
-            if (!aiMode) {
-                tickStuckRecovery();
-            }
+            tickStuckRecovery();
             tickSurvival();
+            if (tickCount % 20 == 0) {
+                ejectForbiddenCharm();
+            }
         }
     }
 
@@ -758,14 +729,23 @@ public class CompanionEntity extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
 
-        // Shift + right-click opens shared menu (Customize | Command | Inventory).
+        // Hold charm + Shift + right-click opens shared menu (Customize | Command | Inventory).
         if (player.isShiftKeyDown()) {
-            PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionMenuPacket(getId()));
-            return InteractionResult.CONSUME;
+            ItemStack heldForMenu = player.getItemInHand(hand);
+            if (CompanionCharmItem.isCharm(heldForMenu)) {
+                PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionMenuPacket(getId()));
+                return InteractionResult.CONSUME;
+            }
+            // Shift without charm in this hand: do not open menu or swap items.
+            return InteractionResult.PASS;
         }
 
         ItemStack held = player.getItemInHand(hand);
         if (!held.isEmpty()) {
+            if (CompanionCharmItem.isCharm(held)) {
+                // Do not put the charm into companion hands.
+                return InteractionResult.PASS;
+            }
             // Hidden easter egg: fermented spider eye → brief playful HOSTILE burst.
             if (held.is(net.minecraft.world.item.Items.FERMENTED_SPIDER_EYE)) {
                 return feedPlayfulEvil(serverPlayer, hand);
@@ -907,6 +887,9 @@ public class CompanionEntity extends PathfinderMob {
      * Give held item: fill main hand first, then offhand; if both full, swap into main hand.
      */
     private InteractionResult giveItemToHands(ServerPlayer player, InteractionHand hand, ItemStack held) {
+        if (CompanionCharmItem.isCharm(held)) {
+            return InteractionResult.PASS;
+        }
         ItemStack main = inventory.getMainHand();
         ItemStack off = inventory.getOffHand();
         if (main.isEmpty()) {
@@ -972,6 +955,12 @@ public class CompanionEntity extends PathfinderMob {
 
     @Override
     public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
+        if (CompanionCharmItem.isCharm(stack)) {
+            if (!level().isClientSide() && !stack.isEmpty() && level() instanceof ServerLevel serverLevel) {
+                this.spawnAtLocation(serverLevel, stack.copy());
+            }
+            return;
+        }
         switch (slot) {
             case MAINHAND -> inventory.setStackInSlot(CompanionInventory.MAIN_HAND, stack);
             case OFFHAND -> inventory.setStackInSlot(CompanionInventory.OFF_HAND, stack);
@@ -999,39 +988,39 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean isInvulnerableTo(DamageSource source) {
+    public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
         if (CompanionHazardImmunity.ignores(source.typeHolder().unwrapKey()
                 .map(key -> key.identifier().getPath())
                 .orElse(""))) {
             return true;
         }
-        return super.isInvulnerableTo(source);
+        return super.isInvulnerableTo(level, source);
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
         if (source.getEntity() instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
             return false;
         }
-        if (isInvulnerableTo(source)) {
+        if (isInvulnerableTo(level, source)) {
             return false;
         }
-        boolean hurt = super.hurt(source, amount);
-        if (hurt && !level().isClientSide()) {
+        boolean hurt = super.hurtServer(level, source, amount);
+        if (hurt) {
             speak(DialogueCategory.DANGER);
         }
         return hurt;
     }
 
     @Override
-    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
+    public boolean doHurtTarget(ServerLevel level, net.minecraft.world.entity.Entity target) {
         if (!(target instanceof LivingEntity living)) {
             return false;
         }
         if (!canAttackTarget(living)) {
             return false;
         }
-        return super.doHurtTarget(target);
+        return super.doHurtTarget(level, target);
     }
 
     public boolean canAttackTarget(LivingEntity target) {
@@ -1091,7 +1080,7 @@ public class CompanionEntity extends PathfinderMob {
             return;
         }
         if (getOwner() instanceof ServerPlayer owner) {
-            owner.sendOverlayMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
+            owner.sendOverlayMessage(Component.literal("<" + getChatDisplayName() + "> " + text));
         }
     }
 
@@ -1388,8 +1377,23 @@ public class CompanionEntity extends PathfinderMob {
             inventory.setStackInSlot(slots[i], ItemStack.EMPTY);
             ItemStack leftover = inventory.insertItemAuto(stack, false);
             if (!leftover.isEmpty()) {
-                this.spawnAtLocation(leftover);
+                this.spawnAtLocation((ServerLevel) this.level(), leftover);
             }
+        }
+    }
+
+    /** Drop any Companion Charm that ended up in companion inventory/hands. */
+    public void ejectForbiddenCharm() {
+        if (level().isClientSide() || !(level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        for (int i = 0; i < CompanionInventory.TOTAL_SIZE; i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (!CompanionCharmItem.isCharm(stack)) {
+                continue;
+            }
+            inventory.setStackInSlot(i, ItemStack.EMPTY);
+            this.spawnAtLocation(serverLevel, stack);
         }
     }
 
@@ -1430,30 +1434,6 @@ public class CompanionEntity extends PathfinderMob {
         entityData.set(DATA_SHOW_ARMOR, visible);
     }
 
-    /**
-     * Per-companion AI Mode (“Let the LLM play the game!”).
-     * When ON: pauses autonomous goals; idle/name chat may issue move/mine/craft tools (provider must be on).
-     */
-    public boolean isAiModeEnabled() {
-        return entityData.get(DATA_AI_MODE);
-    }
-
-    public void setAiModeEnabled(boolean enabled) {
-        boolean was = isAiModeEnabled();
-        entityData.set(DATA_AI_MODE, enabled);
-        if (level().isClientSide() || was == enabled) {
-            return;
-        }
-        if (enabled) {
-            pauseGoalsForAiMode();
-        } else {
-            restoreGoalsAfterAiMode();
-        }
-    }
-
-    public void toggleAiMode() {
-        setAiModeEnabled(!isAiModeEnabled());
-    }
 
     public CompanionAttitude getAttitude() {
         return CompanionAttitude.byName(entityData.get(DATA_ATTITUDE));
@@ -1762,7 +1742,6 @@ public class CompanionEntity extends PathfinderMob {
         output.putString("CompanionForm", getForm().serializedName());
         output.putBoolean("ShowNameTag", isNameTagVisible());
         output.putBoolean("ShowArmor", isArmorVisible());
-        output.putBoolean("AiPlayMode", isAiModeEnabled());
         output.putString("Attitude", getAttitude().serializedName());
         output.putString("TeamId", getTeamId() == null ? "" : getTeamId());
         output.putFloat("FollowRadius", getFollowRadius());
@@ -1802,7 +1781,7 @@ public class CompanionEntity extends PathfinderMob {
         }
         input.read("Owner", UUIDUtil.CODEC).ifPresent(this::setOwnerUuid);
         leaderUuid = input.read("LeaderUuid", UUIDUtil.CODEC).orElse(null);
-        fightSpawn = input.getBooleanOr("FightSpawn");
+        fightSpawn = input.getBooleanOr("FightSpawn", false);
         entityData.set(DATA_DEFINITION, input.getStringOr("Definition", entityData.get(DATA_DEFINITION)));
         entityData.set(DATA_MODE, input.getStringOr("Mode", entityData.get(DATA_MODE)));
         voiceProfile = input.getStringOr("VoiceProfile", "");
@@ -1835,7 +1814,6 @@ public class CompanionEntity extends PathfinderMob {
         setForm(CompanionForm.byName(input.getStringOr("CompanionForm", CompanionForm.PLAYER.serializedName())));
         setNameTagVisible(input.getBooleanOr("ShowNameTag", true));
         setArmorVisible(input.getBooleanOr("ShowArmor", true));
-        setAiModeEnabled(input.getBooleanOr("AiPlayMode", false));
         setAttitude(CompanionAttitude.byName(input.getStringOr("Attitude", CompanionAttitude.PASSIVE.serializedName())));
         setTeamId(input.getStringOr("TeamId", ""));
         setFollowRadius(input.getFloatOr("FollowRadius", CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS));
@@ -1843,6 +1821,7 @@ public class CompanionEntity extends PathfinderMob {
         setWanderRadius(input.getFloatOr("WanderRadius", CompanionFollowDistances.DEFAULT_WANDER_RADIUS));
         input.read("Inventory", CompoundTag.CODEC).ifPresent(inv -> inventory.load(inv, level().registryAccess()));
         ejectIncompatibleArmor();
+        ejectForbiddenCharm();
         input.read("Tasks", CompoundTag.CODEC).ifPresent(taskQueue::load);
         input.getLong("HomePos").ifPresent(v -> homePos = BlockPos.of(v));
         input.getLong("HomeBedPos").ifPresentOrElse(

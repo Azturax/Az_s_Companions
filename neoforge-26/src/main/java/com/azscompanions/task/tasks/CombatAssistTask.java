@@ -43,7 +43,7 @@ public final class CombatAssistTask extends CompanionTask {
         }
         companion.getNavigation().moveTo(target, 1.25d);
         if (companion.distanceTo(target) < 2.5d) {
-            companion.doHurtTarget(target);
+            companion.doHurtTarget((net.minecraft.server.level.ServerLevel) companion.level(), target);
         }
         setProgress(60);
         return target.isAlive() ? TaskTickResult.RUNNING : TaskTickResult.COMPLETED;

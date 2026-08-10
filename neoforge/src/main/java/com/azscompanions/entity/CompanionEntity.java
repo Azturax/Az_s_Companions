@@ -20,6 +20,7 @@ import com.azscompanions.entity.ai.CompanionSitGoal;
 import com.azscompanions.entity.ai.CompanionSleepInBedGoal;
 import com.azscompanions.entity.ai.CompanionWanderNearOwnerGoal;
 import com.azscompanions.entity.inventory.CompanionInventory;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.menu.CompanionInventoryMenu;
 import com.azscompanions.menu.CompanionManagementMenu;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
@@ -124,9 +125,6 @@ public class CompanionEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
-    /** Per-companion AI Mode — LLM play; pauses autonomous goals when true. */
-    private static final EntityDataAccessor<Boolean> DATA_AI_MODE =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_ATTITUDE =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
@@ -253,7 +251,6 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
-        builder.define(DATA_AI_MODE, false);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
         builder.define(DATA_TEAM, "");
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
@@ -266,11 +263,6 @@ public class CompanionEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
-        registerNormalGoals();
-    }
-
-    /** Full autonomous companion goal set (used at spawn and when AI Mode turns OFF). */
-    private void registerNormalGoals() {
         // Sit/stay stop movement; combat/potions/sleep outrank follow; wander when owner idle nearby.
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new CompanionSitGoal(this));
@@ -289,42 +281,13 @@ public class CompanionEntity extends PathfinderMob {
         targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
-    /**
-     * AI Mode ON: drop follow/wander/sit/sleep/potion/look/target goals so the LLM drives play.
-     * Keeps {@link FloatGoal}, {@link OpenDoorGoal}, and {@link MeleeAttackGoal} (for AI-set targets).
-     */
-    private void pauseGoalsForAiMode() {
-        if (level().isClientSide) {
-            return;
-        }
-        goalSelector.removeAllGoals(g ->
-                !(g instanceof FloatGoal) && !(g instanceof OpenDoorGoal) && !(g instanceof MeleeAttackGoal));
-        targetSelector.removeAllGoals(g -> true);
-        setTarget(null);
-        getNavigation().stop();
-        if (isSleeping()) {
-            stopSleeping();
-        }
-    }
-
-    /** AI Mode OFF: clear and restore the full goal set. */
-    private void restoreGoalsAfterAiMode() {
-        if (level().isClientSide) {
-            return;
-        }
-        goalSelector.removeAllGoals(g -> true);
-        targetSelector.removeAllGoals(g -> true);
-        registerNormalGoals();
-    }
 
     @Override
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
-            boolean aiMode = isAiModeEnabled();
-            // Preserve player/CCI command modes; allow TASK while AI/task queue is active.
-            // In AI Mode the LLM owns movement mode — do not force FOLLOW.
-            if (!aiMode) {
+            // Preserve player/CCI command modes; allow TASK while task queue is active.
+            {
                 CompanionMode mode = getMode();
                 if (mode != CompanionMode.FOLLOW
                         && mode != CompanionMode.SIT
@@ -335,26 +298,26 @@ public class CompanionEntity extends PathfinderMob {
                 }
             }
             taskQueue.tick(serverLevel);
+            if (getMode() == CompanionMode.TASK) {
+                com.azscompanions.util.CompanionTorchHelper.tickWhileTasking(this, serverLevel);
+            }
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickOwnerActivity();
-            if (!aiMode) {
-                tickHomeBedLeash();
-            }
+            tickHomeBedLeash();
             tickSleepPurr();
             tickPlayfulEvil();
             tickAiAmbientSpeech();
             tickPlayBehavior();
-            if (!aiMode) {
-                tickChildParentLeash();
-            }
+            tickChildParentLeash();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
-            if (!aiMode) {
-                tickStuckRecovery();
-            }
+            tickStuckRecovery();
             tickSurvival();
             CompanionChunkTickets.tick(this, serverLevel);
+            if (tickCount % 20 == 0) {
+                ejectForbiddenCharm();
+            }
         }
     }
 
@@ -790,16 +753,21 @@ public class CompanionEntity extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
 
-        // Shift + right-click opens shared menu (Customize | Command | Inventory).
+        // Hold charm + Shift + right-click opens shared menu (Customize | Command | Inventory).
         if (player.isShiftKeyDown()) {
-            PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionMenuPacket(getId()));
-            return InteractionResult.CONSUME;
+            ItemStack heldForMenu = player.getItemInHand(hand);
+            if (CompanionCharmItem.isCharm(heldForMenu)) {
+                PacketDistributor.sendToPlayer(serverPlayer, new OpenCompanionMenuPacket(getId()));
+                return InteractionResult.CONSUME;
+            }
+            // Shift without charm in this hand: do not open menu or swap items.
+            return InteractionResult.PASS;
         }
 
         ItemStack held = player.getItemInHand(hand);
         // Charm or empty hand on parent: call next stored Bit (callable count decreases).
         if (!isChildCompanion() && getStoredChildCount() > 0
-                && (held.isEmpty() || held.is(ModItems.COMPANION_CHARM.get()))) {
+                && (held.isEmpty() || CompanionCharmItem.isCharm(held))) {
             CompanionEntity called = callNextStoredChild(serverPlayer);
             if (called != null) {
                 player.displayClientMessage(Component.translatable(
@@ -812,7 +780,7 @@ public class CompanionEntity extends PathfinderMob {
             }
         }
         if (!held.isEmpty()) {
-            if (held.is(ModItems.COMPANION_CHARM.get())) {
+            if (CompanionCharmItem.isCharm(held)) {
                 // Do not put the charm into companion hands.
                 return InteractionResult.PASS;
             }
@@ -957,6 +925,9 @@ public class CompanionEntity extends PathfinderMob {
      * Give held item: fill main hand first, then offhand; if both full, swap into main hand.
      */
     private InteractionResult giveItemToHands(ServerPlayer player, InteractionHand hand, ItemStack held) {
+        if (CompanionCharmItem.isCharm(held)) {
+            return InteractionResult.PASS;
+        }
         ItemStack main = inventory.getMainHand();
         ItemStack off = inventory.getOffHand();
         if (main.isEmpty()) {
@@ -1022,6 +993,12 @@ public class CompanionEntity extends PathfinderMob {
 
     @Override
     public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
+        if (CompanionCharmItem.isCharm(stack)) {
+            if (!level().isClientSide && !stack.isEmpty()) {
+                this.spawnAtLocation(stack.copy());
+            }
+            return;
+        }
         switch (slot) {
             case MAINHAND -> inventory.setStackInSlot(CompanionInventory.MAIN_HAND, stack);
             case OFFHAND -> inventory.setStackInSlot(CompanionInventory.OFF_HAND, stack);
@@ -1578,6 +1555,21 @@ public class CompanionEntity extends PathfinderMob {
         }
     }
 
+    /** Drop any Companion Charm that ended up in companion inventory/hands. */
+    public void ejectForbiddenCharm() {
+        if (level().isClientSide) {
+            return;
+        }
+        for (int i = 0; i < CompanionInventory.TOTAL_SIZE; i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (!CompanionCharmItem.isCharm(stack)) {
+                continue;
+            }
+            inventory.setStackInSlot(i, ItemStack.EMPTY);
+            this.spawnAtLocation(stack);
+        }
+    }
+
     /**
      * Form/scale are synched data — clients must refresh hitbox + {@link EntityAttachment#NAME_TAG}
      * when they arrive, or nametag height sticks to the previous form after a swap.
@@ -1687,30 +1679,6 @@ public class CompanionEntity extends PathfinderMob {
         }
     }
 
-    /**
-     * Per-companion AI Mode (“Let the LLM play the game!”).
-     * When ON: pauses autonomous goals; idle/name chat may issue move/mine/craft tools (provider must be on).
-     */
-    public boolean isAiModeEnabled() {
-        return entityData.get(DATA_AI_MODE);
-    }
-
-    public void setAiModeEnabled(boolean enabled) {
-        boolean was = isAiModeEnabled();
-        entityData.set(DATA_AI_MODE, enabled);
-        if (level().isClientSide || was == enabled) {
-            return;
-        }
-        if (enabled) {
-            pauseGoalsForAiMode();
-        } else {
-            restoreGoalsAfterAiMode();
-        }
-    }
-
-    public void toggleAiMode() {
-        setAiModeEnabled(!isAiModeEnabled());
-    }
 
     /** Copy spacing from a parent; Bits get a slightly tighter leash. */
     public void inheritSpacingFrom(CompanionEntity parent) {
@@ -1955,7 +1923,6 @@ public class CompanionEntity extends PathfinderMob {
         tag.putString(com.azscompanions.ai.CompanionPersona.NBT_QUIRKS, getPersona().quirks());
         tag.putBoolean(com.azscompanions.ai.CompanionPersona.NBT_INITIALIZED, getPersona().initialized());
         tag.putBoolean("ChunkLoading", chunkLoadingEnabled);
-        tag.putBoolean("AiPlayMode", isAiModeEnabled());
         tag.putString("CustomNameOverride", entityData.get(DATA_CUSTOM_NAME_OVERRIDE));
         tag.putString("CompanionForm", getForm().serializedName());
         tag.putBoolean("ShowNameTag", isNameTagVisible());
@@ -2064,11 +2031,6 @@ public class CompanionEntity extends PathfinderMob {
         } else {
             chunkLoadingEnabled = true;
         }
-        if (tag.contains("AiPlayMode")) {
-            setAiModeEnabled(tag.getBoolean("AiPlayMode"));
-        } else {
-            setAiModeEnabled(false);
-        }
         if (tag.contains("CustomNameOverride")) {
             String override = tag.getString("CustomNameOverride");
             entityData.set(DATA_CUSTOM_NAME_OVERRIDE, override);
@@ -2127,6 +2089,7 @@ public class CompanionEntity extends PathfinderMob {
             setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
         }
         ejectIncompatibleArmor();
+        ejectForbiddenCharm();
         if (tag.contains("Tasks")) {
             taskQueue.load(tag.getCompound("Tasks"));
         }

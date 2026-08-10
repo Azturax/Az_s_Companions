@@ -84,7 +84,7 @@ public final class CompanionSelectionScreen extends AbstractContainerScreen<Comp
                 ? "A loyal companion who stays close, follows commands, and watches your back."
                 : selected.personality();
 
-        graphics.text(font, Component.translatable("screen.azscompanions.selection"), x + 12, y + 10, 0xFFFFFF, false);
+        graphics.text(font, Component.translatable("screen.azscompanions.selection"), x + 12, y + 10, 0xFFFFFF);
         graphics.text(font, name, x + 172, y + 40, 0xFFFFFF, false);
         graphics.textWithWordWrap(font, Component.literal(personality), x + 172, y + 58, 126, 0xA0A0A0);
         graphics.text(font, Component.literal("Status: Available"), x + 172, y + 130, 0xA0A0A0, false);

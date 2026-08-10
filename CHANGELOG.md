@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.3.10
+
+Release: [v0.3.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.10) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Remove AI Mode completely
+- Shift+RMB menu no longer shows **AI Mode: ON/OFF** (button, tooltip, and cancel-row layout from 0.3.8/0.3.9).
+- Removed per-companion `AiPlayMode` synced data / NBT, `TOGGLE_AI_MODE` menu packet, CCI `aiMode=` / `aiPlayMode=` / `llmPlay=`, and related lang keys.
+- LLM remains **text chat only** via `/ask`, name listen, and idle/call-away when the server provider is enabled — no LLM world puppeting or goal pausing.
+- Use Behavior gather/deposit (and other tasks) for material work instead.
+
+### Companion menu + charm
+- Menu opens only with **charm in hand + Shift + right-click** on the companion (empty hand / other items no longer open the menu).
+- Companions can never hold or store the Companion Charm (inventory/equipment blocked; any charm present is ejected).
+
+### Gather + deposit
+- `/az gather <item> <count> [chest|look|nearest]` + status/cancel; dynamic item + craft recipe catalogs on server start.
+- `/deposit` multi-select chests (RMB toggle, Esc/`done` exit; highlights only while mode on). Gather uses nearest of selected chests.
+- Commands menu scroll list: Gather… / Deposit / status / cancel — **draggable scrollbar** (also persona + customize).
+- Tool swap, off-hand torch, place torch when dark (NeoForge); ask owner + craft missing tools when possible.
+
+Docs: [GATHER.md](docs/GATHER.md).
+
+### LiteLLM / proxy auth
+- MCP HTTP client sends `Authorization: Bearer <key>` on **every** request (including `POST /mcp/`), using the same `apiKey` / `AZS_LLM_API_KEY` resolution as chat. Fixes LiteLLM `401` / “Malformed API Key… Ensure Key has `Bearer ` prefix.”
+- OpenAI-compatible + MCP clients normalize Bearer (no double-prefix if the env/config value already includes `Bearer `).
+- Admin AI profile **LiteLLM** preset: `openai_compatible` @ `http://127.0.0.1:4000/v1` (also seeds `mcp.url` to `http://127.0.0.1:4000/mcp/`). Config alias `litellm`.
+- Hardening: empty baseUrl / missing remote API key → clear `/ask` errors; connection refused / timeouts / malformed JSON caught on the AI worker (no server-tick crash).
+
+Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
+
+### Dynamic lights (soft-compat)
+- Optional soft-compat with LambDynamicLights / RyoamicLights / similar: detect present mods and register companion entity light handlers when APIs allow.
+- NeoForge client config `[dynamicLights]`; Fabric `config/azscompanions-dynamiclights.json`. Bundled LDL entity JSON for companions.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.10+1.21.1.jar` | `azscompanions-fabric-0.3.10+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.10+1.21.1.jar` | `azscompanions-fabric-cci-0.3.10+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.9
 
 Release: [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

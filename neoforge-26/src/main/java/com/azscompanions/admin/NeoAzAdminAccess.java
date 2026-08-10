@@ -2,6 +2,7 @@ package com.azscompanions.admin;
 
 import com.azscompanions.config.ServerConfig;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public final class NeoAzAdminAccess {
         }
         MinecraftServer server = player.level().getServer();
         if (server != null && !server.isDedicatedServer()
-                && server.isSingleplayerOwner(player.getGameProfile())) {
+                && server.isSingleplayerOwner(new NameAndId(player.getGameProfile()))) {
             return true;
         }
         if (player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)) {

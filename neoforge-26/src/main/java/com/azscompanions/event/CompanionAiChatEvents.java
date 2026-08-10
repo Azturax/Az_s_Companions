@@ -19,7 +19,7 @@ import net.neoforged.neoforge.event.ServerChatEvent;
 import java.util.UUID;
 
 /**
- * NeoForge: pure-chat name-mention (primary), optional {@code Name ask …}, and chatListenMode.
+ * NeoForge 26.2: pure-chat name-mention (primary), optional {@code Name ask …}, and chatListenMode.
  * Talk in chat using their name — slash {@code /ask} is not required.
  * Stranger name mentions do not cancel public chat broadcast.
  */

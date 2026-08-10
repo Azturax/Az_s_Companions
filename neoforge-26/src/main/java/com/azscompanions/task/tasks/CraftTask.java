@@ -38,17 +38,7 @@ public final class CraftTask extends CompanionTask {
         if (itemId == null) {
             return this;
         }
-        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
-            ItemStack result = holder.value().getResultItem(level.registryAccess());
-            if (result.isEmpty()) {
-                continue;
-            }
-            Identifier key = BuiltInRegistries.ITEM.getKey(result.getItem());
-            if (itemId.equals(key)) {
-                this.recipeId = holder.id();
-                return this;
-            }
-        }
+        /* Recipe enumeration deferred for NeoForge 26.2. */
         return this;
     }
 
@@ -73,28 +63,9 @@ public final class CraftTask extends CompanionTask {
             fail("no_recipe");
             return TaskTickResult.FAILED;
         }
-        Optional<RecipeHolder<?>> recipe = level.getRecipeManager().byKey(recipeId);
-        if (recipe.isEmpty()) {
-            fail("recipe_missing");
-            return TaskTickResult.FAILED;
-        }
-        ItemStack result = recipe.get().value().getResultItem(level.registryAccess()).copy();
-        if (result.isEmpty()) {
-            fail("empty_result");
-            return TaskTickResult.FAILED;
-        }
-        // MVP: require the player to have staged ingredients in companion inventory; consume one matching tag stack.
-        if (!WorkstationHelper.tryConsumeIngredients(companion, recipe.get().value(), level)) {
-            fail("missing_ingredients");
-            return TaskTickResult.FAILED;
-        }
-        ItemStack leftover = companion.getCompanionInventory().insertItemAuto(result, false);
-        if (!leftover.isEmpty()) {
-            fail("inventory_full");
-            return TaskTickResult.FAILED;
-        }
-        setProgress(100);
-        return TaskTickResult.COMPLETED;
+        // Recipe ResourceKey / assemble APIs moved in NeoForge 26.2 — craft task deferred.
+        fail("recipe_api_deferred");
+        return TaskTickResult.FAILED;
     }
 
     @Override

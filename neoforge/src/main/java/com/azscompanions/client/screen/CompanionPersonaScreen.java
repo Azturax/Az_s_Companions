@@ -1,6 +1,7 @@
 package com.azscompanions.client.screen;
 
 import com.azscompanions.ai.CompanionPersona;
+import com.azscompanions.client.GuiScrollbarState;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.network.packet.CompanionPersonaPacket;
 import net.minecraft.client.gui.GuiGraphics;
@@ -46,8 +47,7 @@ public final class CompanionPersonaScreen extends Screen {
     private int panelH;
     private int viewTop;
     private int viewBottom;
-    private int scroll;
-    private int maxScroll;
+    private final GuiScrollbarState scrollbar = new GuiScrollbarState();
     private final List<ScrollEntry> scrollEntries = new ArrayList<>();
     private final List<ScrollLabel> scrollLabels = new ArrayList<>();
 
@@ -106,8 +106,8 @@ public final class CompanionPersonaScreen extends Screen {
 
         int contentH = y;
         int viewH = Math.max(1, viewBottom - viewTop);
-        maxScroll = Math.max(0, contentH - viewH);
-        scroll = Mth.clamp(scroll, 0, maxScroll);
+        scrollbar.layout(panelX + panelW - 10, viewTop, viewBottom, SCROLLBAR_W,
+                Math.max(0, contentH - viewH));
         applyScroll();
 
         int half = (bw - 8) / 2;
@@ -129,7 +129,7 @@ public final class CompanionPersonaScreen extends Screen {
     }
 
     private void applyScroll() {
-        scroll = Mth.clamp(scroll, 0, maxScroll);
+        int scroll = scrollbar.scroll();
         for (ScrollEntry entry : scrollEntries) {
             int screenY = viewTop + entry.contentY - scroll;
             entry.widget.setY(screenY);
@@ -177,8 +177,8 @@ public final class CompanionPersonaScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (maxScroll > 0 && isOverScrollArea(mouseX, mouseY)) {
-            scroll = Mth.clamp(scroll - (int) (scrollY * 12), 0, maxScroll);
+        if (scrollbar.maxScroll() > 0 && isOverScrollArea(mouseX, mouseY)) {
+            scrollbar.scrollBy(-(int) (scrollY * 12));
             applyScroll();
             return true;
         }
@@ -187,17 +187,28 @@ public final class CompanionPersonaScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && maxScroll > 0) {
-            int trackX = panelX + panelW - 10;
-            if (mouseX >= trackX && mouseX <= trackX + SCROLLBAR_W
-                    && mouseY >= viewTop && mouseY <= viewBottom) {
-                float rel = (float) ((mouseY - viewTop) / Math.max(1.0, viewBottom - viewTop));
-                scroll = Mth.clamp((int) (rel * maxScroll), 0, maxScroll);
-                applyScroll();
-                return true;
-            }
+        if (scrollbar.mouseClicked(mouseX, mouseY, button)) {
+            applyScroll();
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (scrollbar.mouseDragged(mouseY)) {
+            applyScroll();
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (scrollbar.mouseReleased(button)) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -218,14 +229,14 @@ public final class CompanionPersonaScreen extends Screen {
 
         graphics.enableScissor(panelX + 8, viewTop, panelX + panelW - 12, viewBottom);
         for (ScrollLabel label : scrollLabels) {
-            int screenY = viewTop + label.contentY - scroll;
+            int screenY = viewTop + label.contentY - scrollbar.scroll();
             if (screenY + 10 < viewTop || screenY > viewBottom) {
                 continue;
             }
             graphics.drawString(font, label.text, panelX + 16, screenY, label.color, false);
         }
         for (ScrollEntry entry : scrollEntries) {
-            int screenY = viewTop + entry.contentY - scroll;
+            int screenY = viewTop + entry.contentY - scrollbar.scroll();
             boolean visible = screenY + entry.height > viewTop && screenY < viewBottom;
             entry.widget.visible = visible;
             entry.widget.active = visible;
@@ -238,16 +249,16 @@ public final class CompanionPersonaScreen extends Screen {
     }
 
     private void drawScrollbar(GuiGraphics graphics) {
-        if (maxScroll <= 0) {
+        if (scrollbar.maxScroll() <= 0) {
             return;
         }
         int trackX = panelX + panelW - 10;
-        int trackH = Math.max(1, viewBottom - viewTop);
+        int trackH = scrollbar.trackH();
         graphics.fill(trackX, viewTop, trackX + SCROLLBAR_W, viewTop + trackH, 0x66000000);
-        int thumbH = Math.max(16, (int) (trackH * (trackH / (float) (trackH + maxScroll))));
-        int travel = trackH - thumbH;
-        int thumbY = viewTop + (travel <= 0 ? 0 : (int) (travel * (scroll / (float) maxScroll)));
-        graphics.fill(trackX, thumbY, trackX + SCROLLBAR_W, thumbY + thumbH, 0xFFC0C0C0);
+        int thumbY = scrollbar.thumbY();
+        int thumbH = scrollbar.thumbH();
+        int color = scrollbar.isDragging() ? 0xFFFFFFFF : 0xFFC0C0C0;
+        graphics.fill(trackX, thumbY, trackX + SCROLLBAR_W, thumbY + thumbH, color);
         graphics.fill(trackX, thumbY, trackX + SCROLLBAR_W, thumbY + 1, 0xFFFFFFFF);
     }
 

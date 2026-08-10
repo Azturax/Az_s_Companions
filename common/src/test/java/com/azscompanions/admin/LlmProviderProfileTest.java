@@ -25,6 +25,11 @@ class LlmProviderProfileTest {
         assertEquals("openai_compatible", snap.provider());
         assertTrue(snap.baseUrl().contains("openrouter"));
 
+        LlmProviderProfile.LITELLM.applyTo(snap);
+        assertEquals("openai_compatible", snap.provider());
+        assertEquals("http://127.0.0.1:4000/v1", snap.baseUrl());
+        assertEquals("http://127.0.0.1:4000/mcp/", snap.mcpUrl());
+
         LlmProviderProfile.MCP_HTTP.applyTo(snap);
         assertEquals("mcp", snap.provider());
         assertEquals("http://127.0.0.1:3001/mcp", snap.mcpUrl());

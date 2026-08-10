@@ -43,6 +43,7 @@ public final class GatherTask extends CompanionTask {
             fail("missing_tool");
             return TaskTickResult.FAILED;
         }
+        ToolSelectionHelper.preferTorchOffhand(companion, true);
         if (!companion.canBreakBlock(target)) {
             target = null;
             return TaskTickResult.RUNNING;

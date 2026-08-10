@@ -66,7 +66,9 @@ public enum CciCompanionAction {
     /** FTB Chunks unclaim at companion feet. */
     UNCLAIM_CHUNK,
     /** Session AI hints: chatListenMode / enableAiActions (runtime; not persisted to disk). */
-    AI_CONFIG;
+    AI_CONFIG,
+    /** Material gather goal: item= + count= + optional deposit=. */
+    TASK;
 
     @Nullable
     public static CciCompanionAction fromSubject(String subject) {
@@ -116,6 +118,7 @@ public enum CciCompanionAction {
             case "claim_chunk", "companion_claim_chunk", "claimchunk" -> CLAIM_CHUNK;
             case "unclaim_chunk", "companion_unclaim_chunk", "unclaimchunk" -> UNCLAIM_CHUNK;
             case "companion_ai_config", "ai_config", "set_ai_config", "companion_set_ai" -> AI_CONFIG;
+            case "companion_task", "task", "gather_task", "collect_task" -> TASK;
             default -> null;
         };
     }

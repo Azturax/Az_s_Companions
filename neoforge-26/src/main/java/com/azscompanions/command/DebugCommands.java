@@ -15,7 +15,7 @@ public final class DebugCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("kondebug")
-                .requires(s -> s.hasPermission(2))
+                .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("task")
                         .executes(ctx -> inspectTask(ctx.getSource())))
                 .then(Commands.literal("path")
@@ -103,7 +103,7 @@ public final class DebugCommands {
             return null;
         }
         return player.level().getEntitiesOfClass(CompanionEntity.class, player.getBoundingBox().inflate(48),
-                        c -> c.isOwnedBy(player) || source.hasPermission(2))
+                        c -> c.isOwnedBy(player) || source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
                 .stream().findFirst().orElse(null);
     }
 

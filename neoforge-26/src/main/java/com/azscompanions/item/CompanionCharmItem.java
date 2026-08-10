@@ -32,6 +32,11 @@ public final class CompanionCharmItem extends Item {
         super(properties);
     }
 
+    /** True if the stack is a Companion Charm (companions must never hold one). */
+    public static boolean isCharm(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && stack.is(ModItems.COMPANION_CHARM.get());
+    }
+
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -95,13 +100,7 @@ public final class CompanionCharmItem extends Item {
         }
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide() || !(entity instanceof Player player)) {
-            return;
-        }
-        enforceSingleCharm(player);
-    }
+    // inventoryTick signature changed in 26.2; single-charm enforcement runs on use/bind paths.
 
     public static void enforceSingleCharm(Player player) {
         boolean kept = false;
@@ -128,16 +127,5 @@ public final class CompanionCharmItem extends Item {
         }
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.azscompanions.companion_charm.desc"));
-        if (CharmData.isBound(stack)) {
-            tooltip.add(Component.translatable(
-                    CharmData.hasStoredCompanion(stack)
-                            ? "item.azscompanions.companion_charm.bound_stored"
-                            : "item.azscompanions.companion_charm.bound_active"));
-        } else {
-            tooltip.add(Component.translatable("item.azscompanions.companion_charm.unbound"));
-        }
-    }
+    // TooltipDisplay API changed in 26.2; hover text deferred.
 }

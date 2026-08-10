@@ -3,6 +3,7 @@ package com.azscompanions.command;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAskResolve;
 import com.azscompanions.ai.CompanionPersonaOnboarding;
+import com.azscompanions.deposit.DepositCommands;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
@@ -41,6 +42,8 @@ public final class CompanionCommands {
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> askGreedy(ctx.getSource().getPlayerOrException(),
                                 StringArgumentType.getString(ctx, "message")))));
+
+        DepositCommands.register(dispatcher);
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildRoot() {
@@ -125,6 +128,34 @@ public final class CompanionCommands {
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(ctx -> openStats(ctx.getSource().getPlayerOrException(),
                                         StringArgumentType.getString(ctx, "name")))))
+                .then(Commands.literal("gather")
+                        .then(Commands.literal("status")
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    CompanionEntity c = nearestOwned(player);
+                                    if (c == null) {
+                                        ctx.getSource().sendFailure(Component.literal("No owned companion nearby"));
+                                        return 0;
+                                    }
+                                    return com.azscompanions.task.CollectMaterialAssign.status(player, c);
+                                }))
+                        .then(Commands.literal("cancel")
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    CompanionEntity c = nearestOwned(player);
+                                    if (c == null) {
+                                        ctx.getSource().sendFailure(Component.literal("No owned companion nearby"));
+                                        return 0;
+                                    }
+                                    return com.azscompanions.task.CollectMaterialAssign.cancel(player, c);
+                                }))
+                        .then(Commands.argument("item", StringArgumentType.string())
+                                .then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 1_000_000))
+                                        .executes(ctx -> gatherAssign(ctx, "nearest"))
+                                        .then(Commands.argument("deposit", StringArgumentType.word())
+                                                .executes(ctx -> gatherAssign(ctx,
+                                                        StringArgumentType.getString(ctx, "deposit")))))))
+                .then(DepositCommands.buildBranch())
                 .then(buildPersonaBranch())
                 .then(Commands.literal("teamfight")
                         .requires(source -> source.hasPermission(2))
@@ -140,6 +171,19 @@ public final class CompanionCommands {
                             return 1;
                         }))
                 );
+    }
+
+    private static int gatherAssign(com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx,
+                                    String deposit) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        CompanionEntity c = nearestOwned(player);
+        if (c == null) {
+            ctx.getSource().sendFailure(Component.literal("No owned companion nearby"));
+            return 0;
+        }
+        String item = StringArgumentType.getString(ctx, "item");
+        int count = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "count");
+        return com.azscompanions.task.CollectMaterialAssign.assign(player, c, item, count, deposit);
     }
 
     public static int askGreedy(ServerPlayer player, String greedy) {

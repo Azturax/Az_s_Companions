@@ -1,5 +1,6 @@
 package com.azscompanions.entity.inventory;
 
+import com.azscompanions.item.FabricCompanionCharmItem;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -24,6 +25,19 @@ public final class FabricCompanionInventory extends SimpleContainer {
 
     public FabricCompanionInventory() {
         super(TOTAL_SIZE);
+    }
+
+    @Override
+    public boolean canPlaceItem(int slot, ItemStack stack) {
+        return !FabricCompanionCharmItem.isCharm(stack);
+    }
+
+    @Override
+    public ItemStack addItem(ItemStack stack) {
+        if (FabricCompanionCharmItem.isCharm(stack)) {
+            return stack;
+        }
+        return super.addItem(stack);
     }
 
     public ItemStack getMainHand() {

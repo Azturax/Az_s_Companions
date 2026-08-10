@@ -7,6 +7,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
@@ -93,7 +97,7 @@ public final class CompanionRecruitment {
 
     @Nullable
     public static CompanionEntity recruit(ServerPlayer player, String definitionId) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
             player.sendOverlayMessage(Component.literal("You lack permission to spawn companions (FTB Ranks)."));
             return null;
@@ -107,11 +111,11 @@ public final class CompanionRecruitment {
             id = CompanionRegistry.KON_ID;
         }
         CompanionDefinition definition = CompanionRegistry.getOrKon(id);
-        CompanionEntity companion = ModEntities.COMPANION.get().create(level);
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (companion == null) {
             return null;
         }
-        companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
+        companion.snapTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setOwner(player);
         companion.applyDefinition(definition);
         companion.applyOwnerAppearanceDefaults(player);
@@ -130,14 +134,14 @@ public final class CompanionRecruitment {
                 || !com.azscompanions.compat.ftb.FtbCompat.mayTeamfight(player)) {
             return null;
         }
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         CompanionDefinition definition = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
-        CompanionEntity companion = ModEntities.COMPANION.get().create(level);
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (companion == null) {
             return null;
         }
-        double angle = level.random.nextDouble() * Math.PI * 2.0d;
-        companion.moveTo(
+        double angle = level.getRandom().nextDouble() * Math.PI * 2.0d;
+        companion.snapTo(
                 player.getX() + Math.cos(angle) * 2.0d,
                 player.getY(),
                 player.getZ() + Math.sin(angle) * 2.0d,
@@ -171,18 +175,18 @@ public final class CompanionRecruitment {
         if (countChildrenOf(player, root.getUUID()) >= maxChildren) {
             return null;
         }
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         if (root.level() instanceof ServerLevel leaderLevel) {
             level = leaderLevel;
         }
         CompanionDefinition definition = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
-        CompanionEntity child = ModEntities.COMPANION.get().create(level);
+        CompanionEntity child = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (child == null) {
             return null;
         }
-        double angle = level.random.nextDouble() * Math.PI * 2.0d;
-        double dist = 1.2d + level.random.nextDouble() * 1.5d;
-        child.moveTo(root.getX() + Math.cos(angle) * dist, root.getY(),
+        double angle = level.getRandom().nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.getRandom().nextDouble() * 1.5d;
+        child.snapTo(root.getX() + Math.cos(angle) * dist, root.getY(),
                 root.getZ() + Math.sin(angle) * dist, root.getYRot(), 0);
         child.setOwner(player);
         child.applyDefinition(definition);
@@ -205,15 +209,18 @@ public final class CompanionRecruitment {
 
     @Nullable
     public static CompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {
-        ServerLevel level = player.serverLevel();
-        CompanionEntity companion = ModEntities.COMPANION.get().create(level);
+        ServerLevel level = (ServerLevel) player.level();
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (companion == null) {
             return null;
         }
-        companion.load(stored);
+        try (ProblemReporter.ScopedCollector problems = new ProblemReporter.ScopedCollector(companion.problemPath(), com.azscompanions.AzsCompanions.LOGGER)) {
+            ValueInput input = TagValueInput.create(problems, level.registryAccess(), stored);
+            companion.load(input);
+        }
         companion.setUUID(boundUuid);
         companion.setOwner(player);
-        companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
+        companion.snapTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
         companion.setMode(CompanionMode.FOLLOW);
         level.addFreshEntity(companion);
         return companion;

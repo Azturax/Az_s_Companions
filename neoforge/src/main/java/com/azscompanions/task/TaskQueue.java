@@ -40,6 +40,24 @@ public final class TaskQueue {
         }
     }
 
+    /**
+     * Pause the active task (if any), push it back onto the queue, and run {@code task} next.
+     */
+    public void preemptWith(CompanionTask task) {
+        if (task == null) {
+            return;
+        }
+        if (active != null) {
+            active.pause();
+            queue.addFirst(active);
+            active = null;
+        }
+        queue.addFirst(task);
+        if (ServerConfig.LOG_TASK_EVENTS.get()) {
+            AzsCompanions.LOGGER.debug("Companion {} preempted with {}", companion.getUUID(), task.typeId());
+        }
+    }
+
     public void tick(ServerLevel level) {
         if (active == null) {
             promoteNext();

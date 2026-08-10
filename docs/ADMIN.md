@@ -64,6 +64,7 @@ Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Cu
 | OpenRouter | `openai_compatible` | `https://openrouter.ai/api/v1` |
 | OpenAI | `openai_compatible` | `https://api.openai.com/v1` |
 | Groq | `openai_compatible` | `https://api.groq.com/openai/v1` |
+| LiteLLM | `openai_compatible` | `http://127.0.0.1:4000/v1` (also seeds mcp `…:4000/mcp/`) |
 | MCP (HTTP) | `mcp` | mcp url `http://127.0.0.1:3001/mcp` |
 | Custom... | (yours) | (yours) |
 

@@ -30,6 +30,11 @@ public final class CompanionCharmItem extends Item {
         super(properties);
     }
 
+    /** True if the stack is a Companion Charm (companions must never hold one). */
+    public static boolean isCharm(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && stack.is(ModItems.COMPANION_CHARM.get());
+    }
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
