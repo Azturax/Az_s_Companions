@@ -25,7 +25,10 @@ public record RecruitCompanionPacket(String definitionId) implements CustomPacke
     public static void handle(RecruitCompanionPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer player) {
-                CompanionRecruitment.recruit(player, packet.definitionId());
+                var created = CompanionRecruitment.recruit(player, packet.definitionId());
+                if (created != null) {
+                    com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
+                }
             }
         });
     }

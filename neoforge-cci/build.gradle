@@ -90,6 +90,7 @@ configurations {
 
 dependencies {
     implementation project(':common')
+    compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
     // CCI + iChunUtil (NeoForge 1.21 / 1.21.1) via Modrinth Maven version IDs.
     implementation "maven.modrinth:content-creator-integration:${rootProject.cci_modrinth_version_id}"
     implementation "maven.modrinth:ichunutil:${rootProject.ichunutil_modrinth_version_id}"

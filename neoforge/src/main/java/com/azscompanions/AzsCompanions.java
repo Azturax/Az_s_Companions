@@ -6,12 +6,14 @@ import com.azscompanions.command.CompanionCommands;
 import com.azscompanions.command.DebugCommands;
 import com.azscompanions.compat.CompatBootstrap;
 import com.azscompanions.entity.BuiltinCompanions;
+import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.config.AiConfig;
 import com.azscompanions.config.ClientConfig;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.data.CompanionDefinitionReloadListener;
 import com.azscompanions.network.ModNetworking;
+import com.azscompanions.event.CompanionAiChatEvents;
 import com.azscompanions.event.CompanionGameEvents;
 import com.azscompanions.event.TeamFightGameEvents;
 import com.azscompanions.registry.ModBlockEntities;
@@ -26,6 +28,7 @@ import com.azscompanions.registry.ModRecipeTypes;
 import com.azscompanions.registry.ModSounds;
 import com.azscompanions.task.TaskRegistry;
 import com.azscompanions.util.ModVersionCompat;
+import com.azscompanions.world.CompanionChunkTickets;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -37,6 +40,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
 
 /**
@@ -66,11 +70,14 @@ public final class AzsCompanions {
         modBus.addListener(ModNetworking::register);
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(this::onModConfig);
+        modBus.addListener(CompanionChunkTickets::register);
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onServerStarting);
+        NeoForge.EVENT_BUS.addListener(this::onServerStopped);
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
+        NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
@@ -82,6 +89,10 @@ public final class AzsCompanions {
     private void onModConfig(ModConfigEvent event) {
         if (event.getConfig().getSpec() == AiConfig.SPEC) {
             CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
+        }
+        if (event.getConfig().getSpec() == ClientConfig.SPEC) {
+            com.azscompanions.compat.map.MapCompatModule.trySyncClientSettings();
+            com.azscompanions.compat.fancyanim.FancyAnimCompatModule.trySyncClientSettings();
         }
     }
 
@@ -107,8 +118,20 @@ public final class AzsCompanions {
 
     private void onServerStarting(ServerStartingEvent event) {
         CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
+        CompanionAiRuntime.get().markServerContext(event.getServer().isDedicatedServer());
+        CompanionChunkLoading.clearAll();
+        var server = event.getServer();
+        com.azscompanions.compat.hosted.IntegratedMultiplayerCompat.refreshServerState(
+                server.isDedicatedServer(),
+                server.isPublished(),
+                server.getPlayerList().getPlayerCount());
         LOGGER.info("Az's Companions loaded on server — companions per player={} — {}",
                 ServerConfig.MAX_COMPANIONS_PER_PLAYER.get(),
                 CompanionAiRuntime.get().statusLine());
+    }
+
+    private void onServerStopped(ServerStoppedEvent event) {
+        CompanionAiRuntime.get().clearServerContext();
+        CompanionChunkLoading.clearAll();
     }
 }

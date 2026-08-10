@@ -41,6 +41,7 @@ public final class FabricCompanionCharmItem extends Item {
                 FabricCharmData.bind(stack, created.getUUID());
                 created.sayHello();
                 player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
+                com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, created);
             }
             return;
         }
@@ -71,6 +72,7 @@ public final class FabricCompanionCharmItem extends Item {
             FabricCharmData.bind(stack, created.getUUID());
             created.sayHello();
             player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
+            com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, created);
         }
     }
 

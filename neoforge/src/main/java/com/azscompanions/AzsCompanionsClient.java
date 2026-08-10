@@ -33,7 +33,11 @@ public final class AzsCompanionsClient {
     }
 
     private void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(ClientVoiceController::init);
+        event.enqueueWork(() -> {
+            ClientVoiceController.init();
+            com.azscompanions.compat.map.MapCompatClientBridge.syncFromClientConfig();
+            com.azscompanions.compat.fancyanim.FancyAnimClientBridge.syncFromClientConfig();
+        });
         AzsCompanions.LOGGER.info("Az's Companions client ready");
     }
 

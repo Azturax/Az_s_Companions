@@ -149,6 +149,9 @@ public record CompanionSettingsPacket(
             if ((packet.flags() & FLAG_SHOW_ARMOR) != 0) {
                 companion.setArmorVisible(packet.showArmor());
             }
+            if ((packet.flags() & FLAG_FORM) != 0 && (packet.flags() & FLAG_NAME) != 0) {
+                com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, companion);
+            }
         });
     }
 }

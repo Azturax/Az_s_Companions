@@ -1,11 +1,16 @@
 package com.azscompanions.network;
 
 import com.azscompanions.AzsCompanionsFabric;
+import com.azscompanions.ai.CompanionPersona;
+import com.azscompanions.ai.CompanionStatsText;
 import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionGender;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
 import com.azscompanions.entity.FabricCompanionRecruitment;
+import com.azscompanions.item.FabricCharmData;
+import com.azscompanions.item.FabricCompanionCharmItem;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -16,6 +21,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 
 public final class FabricNetworking {
     private FabricNetworking() {
@@ -24,18 +30,32 @@ public final class FabricNetworking {
     public static void register() {
         PayloadTypeRegistry.playC2S().register(RecruitPayload.TYPE, RecruitPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BehaviorPayload.TYPE, BehaviorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(PersonaPayload.TYPE, PersonaPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(AdminAiSavePayload.TYPE, AdminAiSavePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(AdminActionPayload.TYPE, AdminActionPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenMenuPayload.TYPE, OpenMenuPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenPersonaPayload.TYPE, OpenPersonaPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenStatsPayload.TYPE, OpenStatsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenAdminPayload.TYPE, OpenAdminPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(TeamFightHudPayload.TYPE, TeamFightHudPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
-                context.server().execute(() -> FabricCompanionRecruitment.recruit(context.player(), payload.definitionId())));
+                context.server().execute(() -> {
+                    FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(
+                            context.player(), payload.definitionId());
+                    if (created != null) {
+                        com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(context.player(), created);
+                    }
+                }));
 
         ServerPlayNetworking.registerGlobalReceiver(MenuActionPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     Entity entity = player.level().getEntity(payload.entityId());
-                    if (!(entity instanceof FabricCompanionEntity companion) || !companion.isOwnedBy(player)) {
+                    if (!(entity instanceof FabricCompanionEntity companion)
+                            || (!companion.isOwnedBy(player) && !companion.isTrusted(player))) {
                         if (entity instanceof FabricCompanionEntity) {
                             player.displayClientMessage(
                                     Component.translatable("message.azscompanions.not_owner"),
@@ -48,6 +68,7 @@ public final class FabricNetworking {
                     }
                     switch (payload.action()) {
                         case "OPEN_INVENTORY" -> companion.openInventory(player);
+                        case "OPEN_STATS" -> openStats(player, companion);
                         case "FOLLOW" -> {
                             companion.setMode(FabricCompanionMode.FOLLOW);
                             toastMode(player, companion, "message.azscompanions.mode_follow");
@@ -59,6 +80,38 @@ public final class FabricNetworking {
                         case "WANDER" -> {
                             companion.setMode(FabricCompanionMode.WANDER);
                             toastMode(player, companion, "message.azscompanions.mode_wander");
+                        }
+                        case "REMOVE_CHILD" -> {
+                            if (companion.isChildCompanion()) {
+                                FabricCompanionEntity parent =
+                                        FabricCompanionRecruitment.resolveLeader(player, companion);
+                                if (parent != null && parent.storeChild(companion)) {
+                                    player.displayClientMessage(Component.translatable(
+                                            "message.azscompanions.child_stored"), true);
+                                }
+                            } else if (companion.storeNextLivingChild()) {
+                                player.displayClientMessage(Component.translatable(
+                                        "message.azscompanions.child_stored"), true);
+                            } else {
+                                player.displayClientMessage(Component.translatable(
+                                        "message.azscompanions.child_none_to_store"), true);
+                            }
+                        }
+                        case "CALL_STORED_CHILD" -> {
+                            if (!companion.isChildCompanion()) {
+                                FabricCompanionEntity called = companion.callNextStoredChild(player);
+                                if (called != null) {
+                                    player.displayClientMessage(Component.translatable(
+                                            "message.azscompanions.child_called",
+                                            called.getChatDisplayName()), true);
+                                } else if (companion.getStoredChildCount() <= 0) {
+                                    player.displayClientMessage(Component.translatable(
+                                            "message.azscompanions.child_none_stored"), true);
+                                } else {
+                                    player.displayClientMessage(Component.translatable(
+                                            "message.azscompanions.child_limit_reached"), true);
+                                }
+                            }
                         }
                         default -> {
                         }
@@ -113,11 +166,128 @@ public final class FabricNetworking {
                     if ((payload.flags() & SettingsPayload.FLAG_SHOW_ARMOR) != 0) {
                         companion.setArmorVisible(payload.showArmor());
                     }
+                    // Creator Done sends all appearance flags — offer onboarding once if still unset.
+                    if ((payload.flags() & SettingsPayload.FLAG_FORM) != 0
+                            && (payload.flags() & SettingsPayload.FLAG_NAME) != 0) {
+                        com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, companion);
+                    }
                 }));
+
+        ServerPlayNetworking.registerGlobalReceiver(BehaviorPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    Entity entity = player.level().getEntity(payload.entityId());
+                    if (!(entity instanceof FabricCompanionEntity companion) || !companion.isOwnedBy(player)) {
+                        return;
+                    }
+                    if (companion.distanceTo(player) > 16.0d) {
+                        return;
+                    }
+                    companion.setFollowRadius(CompanionFollowDistances.clampFollowRadius(payload.followRadius()));
+                    companion.setPersonalSpace(CompanionFollowDistances.clampPersonalSpace(payload.personalSpace()));
+                    companion.setWanderRadius(CompanionFollowDistances.clampWanderRadius(payload.wanderRadius()));
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(PersonaPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    Entity entity = player.level().getEntity(payload.entityId());
+                    if (!(entity instanceof FabricCompanionEntity companion) || !companion.isOwnedBy(player)) {
+                        return;
+                    }
+                    var current = companion.getPersona();
+                    var next = payload.skip()
+                            ? current.cleared()
+                            : new com.azscompanions.ai.CompanionPersona(
+                                    payload.whoAmI(),
+                                    payload.whatAmIDoing(),
+                                    payload.howWillIBe(),
+                                    current.speechStyle(),
+                                    current.relationshipToOwner(),
+                                    current.quirks(),
+                                    true);
+                    companion.setPersona(next);
+                    player.displayClientMessage(Component.literal(
+                            companion.getChatDisplayName() + " — persona "
+                                    + (payload.skip() ? "skipped (defaults)" : "saved")), true);
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(AdminAiSavePayload.TYPE, (payload, context) ->
+                context.server().execute(() -> com.azscompanions.admin.FabricAzAdminActions.saveAiConfig(
+                        context.player(),
+                        com.azscompanions.admin.AdminAiConfigSnapshot.fromWireJson(payload.json()))));
+
+        ServerPlayNetworking.registerGlobalReceiver(AdminActionPayload.TYPE, (payload, context) ->
+                context.server().execute(() ->
+                        com.azscompanions.admin.FabricAzAdminActions.handleAction(context.player(), payload.action())));
     }
 
     public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
         ServerPlayNetworking.send(player, new OpenMenuPayload(companion.getId()));
+    }
+
+    public static void openPersonaSetup(ServerPlayer player, FabricCompanionEntity companion) {
+        var p = companion.getPersona();
+        ServerPlayNetworking.send(player, new OpenPersonaPayload(
+                companion.getId(), p.whoAmI(), p.whatAmIDoing(), p.howWillIBe()));
+    }
+
+    public static void openStats(ServerPlayer player, FabricCompanionEntity companion) {
+        var p = companion.getPersona();
+        ServerPlayNetworking.send(player, new OpenStatsPayload(
+                companion.getId(),
+                CompanionStatsText.personaSnippet(p.whoAmI()),
+                CompanionStatsText.personaSnippet(p.whatAmIDoing()),
+                CompanionStatsText.personaSnippet(p.howWillIBe()),
+                FabricCompanionRecruitment.countChildrenOf(player, companion.getUUID()),
+                (int) FabricCompanionRecruitment.countOwned(player),
+                resolveCharmStatus(player),
+                CompanionStatsText.aiStatusIfEnabled()));
+    }
+
+    /** unbound | bound_active | bound_stored | none */
+    public static String resolveCharmStatus(ServerPlayer player) {
+        boolean anyCharm = false;
+        boolean bound = false;
+        boolean stored = false;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (!(stack.getItem() instanceof FabricCompanionCharmItem)) {
+                continue;
+            }
+            anyCharm = true;
+            if (FabricCharmData.isBound(stack)) {
+                bound = true;
+                if (FabricCharmData.hasStoredCompanion(stack)) {
+                    stored = true;
+                }
+            }
+        }
+        if (!anyCharm) {
+            return "none";
+        }
+        if (stored) {
+            return "bound_stored";
+        }
+        if (bound) {
+            return "bound_active";
+        }
+        return "unbound";
+    }
+
+    public static void openAdminPanel(ServerPlayer player,
+                                      com.azscompanions.admin.AdminAiConfigSnapshot snap,
+                                      String aiStatus,
+                                      boolean chunkLoading,
+                                      boolean teamfight,
+                                      String companionSummary) {
+        String json = snap == null ? "{}" : snap.toWireJson();
+        ServerPlayNetworking.send(player, new OpenAdminPayload(
+                json,
+                aiStatus == null ? "" : aiStatus,
+                chunkLoading,
+                teamfight,
+                companionSummary == null ? "" : companionSummary));
     }
 
     public static void sendTeamFightHud(ServerPlayer player, String encodedSnapshot) {
@@ -136,6 +306,183 @@ public final class FabricNetworking {
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_menu"));
         public static final StreamCodec<RegistryFriendlyByteBuf, OpenMenuPayload> CODEC =
                 StreamCodec.composite(ByteBufCodecs.VAR_INT, OpenMenuPayload::entityId, OpenMenuPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record OpenPersonaPayload(
+            int entityId,
+            String whoAmI,
+            String whatAmIDoing,
+            String howWillIBe
+    ) implements CustomPacketPayload {
+        public static final Type<OpenPersonaPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_persona"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, OpenPersonaPayload> CODEC =
+                StreamCodec.of(OpenPersonaPayload::write, OpenPersonaPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, OpenPersonaPayload p) {
+            buf.writeVarInt(p.entityId);
+            int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
+            buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, max);
+            buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, max);
+            buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, max);
+        }
+
+        private static OpenPersonaPayload read(RegistryFriendlyByteBuf buf) {
+            int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
+            return new OpenPersonaPayload(buf.readVarInt(), buf.readUtf(max), buf.readUtf(max), buf.readUtf(max));
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record OpenStatsPayload(
+            int entityId,
+            String whoAmI,
+            String whatAmIDoing,
+            String howWillIBe,
+            int childCount,
+            int ownedCount,
+            String charmStatus,
+            String aiStatus
+    ) implements CustomPacketPayload {
+        public static final Type<OpenStatsPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_stats"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, OpenStatsPayload> CODEC =
+                StreamCodec.of(OpenStatsPayload::write, OpenStatsPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, OpenStatsPayload p) {
+            buf.writeVarInt(p.entityId);
+            int max = CompanionPersona.MAX_LEN;
+            buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, max);
+            buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, max);
+            buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, max);
+            buf.writeVarInt(p.childCount);
+            buf.writeVarInt(p.ownedCount);
+            buf.writeUtf(p.charmStatus == null ? "none" : p.charmStatus, 32);
+            buf.writeUtf(p.aiStatus == null ? "" : p.aiStatus, CompanionStatsText.AI_SNIPPET + 8);
+        }
+
+        private static OpenStatsPayload read(RegistryFriendlyByteBuf buf) {
+            int max = CompanionPersona.MAX_LEN;
+            return new OpenStatsPayload(
+                    buf.readVarInt(),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readVarInt(),
+                    buf.readVarInt(),
+                    buf.readUtf(32),
+                    buf.readUtf(CompanionStatsText.AI_SNIPPET + 8));
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record OpenAdminPayload(
+            String aiJson,
+            String aiStatus,
+            boolean chunkLoading,
+            boolean teamfight,
+            String companionSummary
+    ) implements CustomPacketPayload {
+        public static final Type<OpenAdminPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_admin"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, OpenAdminPayload> CODEC =
+                StreamCodec.of(OpenAdminPayload::write, OpenAdminPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, OpenAdminPayload p) {
+            buf.writeUtf(p.aiJson == null ? "{}" : p.aiJson, 4096);
+            buf.writeUtf(p.aiStatus == null ? "" : p.aiStatus, 512);
+            buf.writeBoolean(p.chunkLoading);
+            buf.writeBoolean(p.teamfight);
+            buf.writeUtf(p.companionSummary == null ? "" : p.companionSummary, 1024);
+        }
+
+        private static OpenAdminPayload read(RegistryFriendlyByteBuf buf) {
+            return new OpenAdminPayload(
+                    buf.readUtf(4096),
+                    buf.readUtf(512),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readUtf(1024));
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AdminAiSavePayload(String json) implements CustomPacketPayload {
+        public static final Type<AdminAiSavePayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "admin_ai_save"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AdminAiSavePayload> CODEC =
+                StreamCodec.of(AdminAiSavePayload::write, AdminAiSavePayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, AdminAiSavePayload p) {
+            buf.writeUtf(p.json == null ? "{}" : p.json, 4096);
+        }
+
+        private static AdminAiSavePayload read(RegistryFriendlyByteBuf buf) {
+            return new AdminAiSavePayload(buf.readUtf(4096));
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AdminActionPayload(String action) implements CustomPacketPayload {
+        public static final Type<AdminActionPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "admin_action"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AdminActionPayload> CODEC =
+                StreamCodec.composite(
+                        ByteBufCodecs.STRING_UTF8, AdminActionPayload::action,
+                        AdminActionPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record PersonaPayload(
+            int entityId,
+            String whoAmI,
+            String whatAmIDoing,
+            String howWillIBe,
+            boolean skip
+    ) implements CustomPacketPayload {
+        public static final Type<PersonaPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_persona"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, PersonaPayload> CODEC =
+                StreamCodec.of(PersonaPayload::write, PersonaPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, PersonaPayload p) {
+            buf.writeVarInt(p.entityId);
+            int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
+            buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, max);
+            buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, max);
+            buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, max);
+            buf.writeBoolean(p.skip);
+        }
+
+        private static PersonaPayload read(RegistryFriendlyByteBuf buf) {
+            int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
+            return new PersonaPayload(buf.readVarInt(), buf.readUtf(max), buf.readUtf(max), buf.readUtf(max), buf.readBoolean());
+        }
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -240,6 +587,35 @@ public final class FabricNetworking {
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
                     buf.readUtf(32), buf.readBoolean(), buf.readBoolean(),
                     buf.readVarInt());
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record BehaviorPayload(
+            int entityId,
+            float followRadius,
+            float personalSpace,
+            float wanderRadius
+    ) implements CustomPacketPayload {
+        public static final Type<BehaviorPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_behavior"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, BehaviorPayload> CODEC =
+                StreamCodec.of(BehaviorPayload::write, BehaviorPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, BehaviorPayload p) {
+            buf.writeVarInt(p.entityId);
+            buf.writeFloat(p.followRadius);
+            buf.writeFloat(p.personalSpace);
+            buf.writeFloat(p.wanderRadius);
+        }
+
+        private static BehaviorPayload read(RegistryFriendlyByteBuf buf) {
+            return new BehaviorPayload(buf.readVarInt(), buf.readFloat(), buf.readFloat(), buf.readFloat());
         }
 
         @Override

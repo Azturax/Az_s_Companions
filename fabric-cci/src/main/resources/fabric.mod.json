@@ -23,6 +23,9 @@
     "client": [
       "com.azscompanions.AzsCompanionsFabricClient",
       "com.azscompanions.compat.cci.FabricCciClientBootstrap"
+    ],
+    "journeymap": [
+      "com.azscompanions.compat.map.jm.FabricJourneyMapCompanionPlugin"
     ]
   },
   "mixins": [
@@ -37,7 +40,11 @@
     "ichunutil": ">=${ichunutil_version}"
   },
   "suggests": {
-    "modmenu": "*"
+    "modmenu": "*",
+    "journeymap": "*",
+    "xaerominimap": "*",
+    "xaeroworldmap": "*",
+    "ftbchunks": "*"
   },
   "custom": {
     "azscompanions:support": {

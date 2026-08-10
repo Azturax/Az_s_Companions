@@ -10,6 +10,7 @@ import java.util.EnumSet;
 /**
  * Follow owner when commanded and not home-idle near the bed.
  * Home-bed rule: {@link CompanionFollowDistances#HOME_BED_RADIUS}.
+ * Distances use per-companion follow radius / personal space.
  */
 public final class FabricFollowOwnerGoal extends Goal {
     public static final double TELEPORT_DISTANCE = CompanionFollowDistances.TELEPORT_DISTANCE;
@@ -23,6 +24,18 @@ public final class FabricFollowOwnerGoal extends Goal {
     public FabricFollowOwnerGoal(FabricCompanionEntity companion) {
         this.companion = companion;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+    }
+
+    private double personalSpace() {
+        return companion.getPersonalSpace();
+    }
+
+    private double followRadius() {
+        return companion.getFollowRadius();
+    }
+
+    private double followStop() {
+        return CompanionFollowDistances.followStop(personalSpace());
     }
 
     @Override
@@ -51,12 +64,12 @@ public final class FabricFollowOwnerGoal extends Goal {
             return true;
         }
         double dist = companion.distanceTo(owner);
-        if (CompanionFollowDistances.tooClose(dist)) {
+        if (CompanionFollowDistances.tooClose(dist, personalSpace())) {
             return true;
         }
-        return CompanionFollowDistances.needsFollow(dist)
+        return CompanionFollowDistances.needsFollow(dist, personalSpace(), followRadius())
                 || companion.isOwnerFarFromHomeBed()
-                || dist > FOLLOW_STOP_DISTANCE;
+                || dist > followStop();
     }
 
     @Override
@@ -76,10 +89,10 @@ public final class FabricFollowOwnerGoal extends Goal {
             return true;
         }
         double dist = companion.distanceTo(owner);
-        if (CompanionFollowDistances.tooClose(dist)) {
+        if (CompanionFollowDistances.tooClose(dist, personalSpace())) {
             return true;
         }
-        return dist > FOLLOW_STOP_DISTANCE;
+        return dist > followStop();
     }
 
     @Override
@@ -90,24 +103,25 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return;
         }
-        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, TELEPORT_DISTANCE)) {
+        double teleportLeash = Math.max(TELEPORT_DISTANCE, followRadius());
+        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash)) {
             return;
         }
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
         if (--recalc <= 0) {
             recalc = 10;
             double dist = companion.distanceTo(owner);
-            if (CompanionFollowDistances.tooClose(dist)) {
-                pathAwayFromOwner(CompanionFollowDistances.PREFERRED_DISTANCE);
+            if (CompanionFollowDistances.tooClose(dist, personalSpace())) {
+                pathAwayFromOwner(CompanionFollowDistances.preferredDistance(personalSpace()));
                 return;
             }
             boolean mayTeleport = companion.getMode() == FabricCompanionMode.FOLLOW
-                    && CompanionFollowDistances.shouldGroundTeleport(dist)
-                    && !CompanionFollowDistances.tooCloseToTeleport(dist)
+                    && CompanionFollowDistances.shouldGroundTeleport(dist, followRadius())
+                    && !CompanionFollowDistances.tooCloseToTeleport(dist, followRadius())
                     && companion.isOwnerExploring();
             if (mayTeleport) {
                 companion.safeTeleportNearOwner(owner);
-            } else if (dist > FOLLOW_STOP_DISTANCE) {
+            } else if (dist > followStop()) {
                 pathTowardPreferredRing();
             } else {
                 companion.getNavigation().stop();
@@ -121,7 +135,8 @@ public final class FabricFollowOwnerGoal extends Goal {
             away = new Vec3(1.0d, 0.0d, 0.0d);
         }
         Vec3 target = owner.position().add(
-                new Vec3(away.x, 0.0d, away.z).normalize().scale(CompanionFollowDistances.PREFERRED_DISTANCE));
+                new Vec3(away.x, 0.0d, away.z).normalize()
+                        .scale(CompanionFollowDistances.preferredDistance(personalSpace())));
         companion.getNavigation().moveTo(target.x, target.y, target.z, 1.05d);
     }
 

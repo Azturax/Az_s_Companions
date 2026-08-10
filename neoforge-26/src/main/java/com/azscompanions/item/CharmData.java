@@ -1,0 +1,88 @@
+package com.azscompanions.item;
+
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+
+import javax.annotation.Nullable;
+import java.util.UUID;
+
+/** NBT helpers for Companion Charm bind / stored companion payload (NeoForge 26.2). */
+public final class CharmData {
+    public static final String TAG_BOUND = "BoundCompanion";
+    public static final String TAG_STORED = "StoredCompanion";
+    public static final String TAG_BED_GRANTED = "KonBedGranted";
+
+    private CharmData() {
+    }
+
+    public static CompoundTag getTag(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null ? data.copyTag() : new CompoundTag();
+    }
+
+    public static void setTag(ItemStack stack, CompoundTag tag) {
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
+    public static boolean isBound(ItemStack stack) {
+        return getBoundUuid(stack) != null;
+    }
+
+    public static boolean hasStoredCompanion(ItemStack stack) {
+        return getTag(stack).contains(TAG_STORED);
+    }
+
+    public static boolean hasGrantedBed(ItemStack stack) {
+        return getTag(stack).getBooleanOr(TAG_BED_GRANTED, false);
+    }
+
+    public static void markBedGranted(ItemStack stack) {
+        CompoundTag tag = getTag(stack);
+        tag.putBoolean(TAG_BED_GRANTED, true);
+        setTag(stack, tag);
+    }
+
+    @Nullable
+    public static UUID getBoundUuid(ItemStack stack) {
+        return getTag(stack).read(TAG_BOUND, UUIDUtil.CODEC).orElse(null);
+    }
+
+    public static void bind(ItemStack stack, UUID companionUuid) {
+        CompoundTag tag = getTag(stack);
+        tag.store(TAG_BOUND, UUIDUtil.CODEC, companionUuid);
+        setTag(stack, tag);
+    }
+
+    public static void storeCompanion(ItemStack stack, CompoundTag entityTag, UUID companionUuid) {
+        CompoundTag tag = getTag(stack);
+        tag.store(TAG_BOUND, UUIDUtil.CODEC, companionUuid);
+        tag.put(TAG_STORED, entityTag);
+        setTag(stack, tag);
+    }
+
+    /** Read stored companion NBT without removing it (safe if spawn fails). */
+    @Nullable
+    public static CompoundTag peekStoredCompanion(ItemStack stack) {
+        CompoundTag tag = getTag(stack);
+        return tag.getCompound(TAG_STORED).orElse(null);
+    }
+
+    public static void clearStoredCompanion(ItemStack stack) {
+        CompoundTag tag = getTag(stack);
+        tag.remove(TAG_STORED);
+        setTag(stack, tag);
+    }
+
+    @Nullable
+    public static CompoundTag takeStoredCompanion(ItemStack stack) {
+        CompoundTag stored = peekStoredCompanion(stack);
+        if (stored == null) {
+            return null;
+        }
+        clearStoredCompanion(stack);
+        return stored;
+    }
+}

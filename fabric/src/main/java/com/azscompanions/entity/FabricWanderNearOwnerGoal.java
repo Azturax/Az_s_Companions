@@ -138,7 +138,7 @@ public final class FabricWanderNearOwnerGoal extends Goal {
                 || (companion.getMode() == FabricCompanionMode.WANDER && bed != null && !companion.isOwnerFarFromHomeBed());
         return aroundBed
                 ? CompanionFollowDistances.HOME_IDLE_WANDER_MAX
-                : CompanionFollowDistances.IDLE_WANDER_MAX;
+                : companion.getWanderRadius();
     }
 
     private boolean canWander() {
@@ -178,7 +178,7 @@ public final class FabricWanderNearOwnerGoal extends Goal {
             maxR = CompanionFollowDistances.HOME_IDLE_WANDER_MAX;
         } else {
             minR = CompanionFollowDistances.IDLE_WANDER_MIN;
-            maxR = CompanionFollowDistances.IDLE_WANDER_MAX;
+            maxR = companion.getWanderRadius();
         }
 
         Vec3 soft = DefaultRandomPos.getPos(companion, 8, 4);

@@ -3,6 +3,7 @@ package com.azscompanions.client.renderer;
 import com.azscompanions.client.FabricClientAppearanceDraft;
 import com.azscompanions.client.FabricCompanionSkinTextures;
 import com.azscompanions.client.model.FeminineCompanionModel;
+import com.azscompanions.compat.fancyanim.FancyAnimCompat;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
@@ -26,6 +27,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 public final class FabricCompanionRenderer
         extends MobRenderer<FabricCompanionEntity, FeminineCompanionModel<FabricCompanionEntity>> {
@@ -149,6 +151,27 @@ public final class FabricCompanionRenderer
         return FabricCompanionSkinTextures.resolve(entity);
     }
 
+    /**
+     * Match vanilla players when Fancy Anim / ETF packs need partial alpha (skin features,
+     * emissive overlays, animated frames). Falls back to LivingEntityRenderer when disabled.
+     */
+    @Override
+    @Nullable
+    protected RenderType getRenderType(FabricCompanionEntity entity, boolean bodyVisible, boolean translucent,
+                                       boolean glowing) {
+        if (!FancyAnimCompat.useTranslucentPlayerSkins()) {
+            return super.getRenderType(entity, bodyVisible, translucent, glowing);
+        }
+        ResourceLocation texture = this.getTextureLocation(entity);
+        if (glowing) {
+            return RenderType.outline(texture);
+        }
+        if (translucent || bodyVisible) {
+            return RenderType.entityTranslucent(texture);
+        }
+        return null;
+    }
+
     private static final class CompanionCapeLayer
             extends RenderLayer<FabricCompanionEntity, FeminineCompanionModel<FabricCompanionEntity>> {
         CompanionCapeLayer(FabricCompanionRenderer parent) {
@@ -186,7 +209,10 @@ public final class FabricCompanionRenderer
             poseStack.mulPose(Axis.XP.rotationDegrees(6.0F + flare / 2.0F + bob));
             poseStack.mulPose(Axis.ZP.rotationDegrees(side / 2.0F));
             poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - side / 2.0F));
-            VertexConsumer consumer = buffer.getBuffer(RenderType.entitySolid(cape));
+            RenderType capeType = FancyAnimCompat.useTranslucentPlayerSkins()
+                    ? RenderType.entityTranslucent(cape)
+                    : RenderType.entitySolid(cape);
+            VertexConsumer consumer = buffer.getBuffer(capeType);
             getParentModel().renderCloak(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);
             poseStack.popPose();
         }

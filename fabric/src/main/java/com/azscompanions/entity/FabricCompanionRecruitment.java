@@ -94,6 +94,10 @@ public final class FabricCompanionRecruitment {
 
     public static FabricCompanionEntity recruitEntity(ServerPlayer player, String definitionId) {
         ServerLevel level = player.serverLevel();
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            player.displayClientMessage(Component.literal("You lack permission to spawn companions (FTB Ranks)."), true);
+            return null;
+        }
         if (countOwned(player) >= FabricServerConfig.MAX_COMPANIONS_PER_PLAYER) {
             player.displayClientMessage(Component.translatable("message.azscompanions.limit_reached"), true);
             return null;
@@ -112,12 +116,17 @@ public final class FabricCompanionRecruitment {
         companion.applyDefinition(definition);
         companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
+        companion.setMaxChildren(FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER);
         level.addFreshEntity(companion);
         return companion;
     }
 
     /** Team-fight leader spawn (CCI {@code companion_spawn_leader}). */
     public static FabricCompanionEntity spawnFightLeader(ServerPlayer player) {
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)
+                || !com.azscompanions.compat.ftb.FtbCompat.mayTeamfight(player)) {
+            return null;
+        }
         ServerLevel level = player.serverLevel();
         FabricCompanionDefinition definition = FabricCompanionRegistry.getOrKon(FabricCompanionRegistry.KON_ID);
         FabricCompanionEntity companion = FabricModEntities.COMPANION.create(level);
@@ -136,6 +145,7 @@ public final class FabricCompanionRecruitment {
         companion.setAttitude(CompanionAttitude.HOSTILE);
         companion.setMode(FabricCompanionMode.FOLLOW);
         companion.setHomePos(player.blockPosition());
+        companion.setMaxChildren(FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER);
         level.addFreshEntity(companion);
         return companion;
     }
@@ -145,11 +155,15 @@ public final class FabricCompanionRecruitment {
         if (leader == null || !leader.isAlive()) {
             return null;
         }
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
         FabricCompanionEntity root = resolveLeader(player, leader);
         if (root == null) {
             return null;
         }
-        if (countChildrenOf(player, root.getUUID()) >= FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER) {
+        int maxChildren = root.getMaxChildren();
+        if (countChildrenOf(player, root.getUUID()) + root.getStoredChildCount() >= maxChildren) {
             return null;
         }
         ServerLevel level = player.serverLevel();
@@ -173,10 +187,12 @@ public final class FabricCompanionRecruitment {
         child.setMode(FabricCompanionMode.FOLLOW);
         child.setAttitude(root.getAttitude());
         child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
-        child.setForm(CompanionForm.CHICKEN);
+        child.setForm(root.getForm());
+        child.setSkinPath(root.getSkinPath() == null ? "" : root.getSkinPath());
+        child.setArmorVisible(root.isArmorVisible());
         child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
         child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
-        child.setSkinPath("");
+        child.inheritSpacingFrom(root);
         level.addFreshEntity(child);
         return child;
     }
@@ -194,5 +210,35 @@ public final class FabricCompanionRecruitment {
         companion.setMode(FabricCompanionMode.FOLLOW);
         level.addFreshEntity(companion);
         return companion;
+    }
+
+    public static FabricCompanionEntity spawnStoredChild(
+            ServerPlayer player, FabricCompanionEntity parent, CompoundTag stored, UUID childUuid) {
+        if (parent == null || !parent.isAlive() || stored == null) {
+            return null;
+        }
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        ServerLevel level = parent.level() instanceof ServerLevel leaderLevel
+                ? leaderLevel
+                : player.serverLevel();
+        FabricCompanionEntity child = FabricModEntities.COMPANION.create(level);
+        if (child == null) {
+            return null;
+        }
+        child.load(stored);
+        child.setUUID(childUuid);
+        child.setOwner(player);
+        child.setLeaderUuid(parent.getUUID());
+        child.setFightSpawn(true);
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.random.nextDouble() * 1.5d;
+        child.moveTo(parent.getX() + Math.cos(angle) * dist, parent.getY(),
+                parent.getZ() + Math.sin(angle) * dist, parent.getYRot(), 0);
+        child.setHomePos(parent.blockPosition());
+        child.setMode(FabricCompanionMode.FOLLOW);
+        level.addFreshEntity(child);
+        return child;
     }
 }

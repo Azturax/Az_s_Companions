@@ -1,6 +1,10 @@
 package com.azscompanions.compat.cci;
 
 import com.azscompanions.AzsCompanionsFabric;
+import com.azscompanions.ai.ChatListenMode;
+import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionAiRuntime;
+import com.azscompanions.ai.FabricCompanionAiAsk;
 import com.azscompanions.cci.CciCompanionParams;
 import com.azscompanions.entity.CompanionAttitude;
 import com.azscompanions.entity.CompanionForm;
@@ -52,6 +56,10 @@ public final class FabricCciCompanionActions {
             AzsCompanionsFabric.LOGGER.debug("CCI action {} ignored — no player context", action);
             return;
         }
+        if (!com.azscompanions.compat.ftb.FtbCompat.mayCci(player)) {
+            toast(player, "CCI blocked", "You lack permission for CCI companions (FTB Ranks).");
+            return;
+        }
         CciCompanionParams params = CciCompanionParams.parse(message);
         String safe = message == null ? "" : message.trim();
 
@@ -69,6 +77,15 @@ public final class FabricCciCompanionActions {
             return;
         }
 
+        if (action == FabricCciCompanionAction.AI_STATUS) {
+            toast(player, "Companion AI", FabricCompanionAiAsk.status());
+            return;
+        }
+        if (action == FabricCciCompanionAction.AI_CONFIG) {
+            applyAiConfig(player, params);
+            return;
+        }
+
         FabricCompanionEntity companion = findOwnedCompanion(player);
         if (companion == null) {
             AzsCompanionsFabric.LOGGER.debug("CCI action {} — no owned companion near {}",
@@ -78,13 +95,21 @@ public final class FabricCciCompanionActions {
         }
 
         switch (action) {
-            case SAY -> say(player, companion, safe.isEmpty() ? "Hello!" : safe);
-            case GREET -> say(player, companion, safe.isEmpty()
-                    ? "Thanks for the support!"
-                    : "Thanks for the support, " + safe + "!");
-            case WAVE -> say(player, companion, safe.isEmpty()
-                    ? "Hello there!"
-                    : "Hello, " + safe + "!");
+            case SAY -> sayOrAi(player, companion, params, safe.isEmpty() ? "Hello!" : safe, false);
+            case GREET -> {
+                String canned = safe.isEmpty() ? "Thanks for the support!" : "Thanks for the support, " + safe + "!";
+                String prompt = safe.isEmpty()
+                        ? "[cci greet] Thank a supporter warmly in character (1 short line)."
+                        : "[cci greet] Thank supporter " + safe + " warmly in character (1 short line).";
+                sayOrAi(player, companion, params, canned, true, prompt);
+            }
+            case WAVE -> {
+                String canned = safe.isEmpty() ? "Hello there!" : "Hello, " + safe + "!";
+                String prompt = safe.isEmpty()
+                        ? "[cci wave] Wave hello in character (1 short line)."
+                        : "[cci wave] Wave hello to " + safe + " in character (1 short line).";
+                sayOrAi(player, companion, params, canned, true, prompt);
+            }
             case FOLLOW -> {
                 companion.setMode(FabricCompanionMode.FOLLOW);
                 companion.getTaskQueue().clear();
@@ -115,15 +140,83 @@ public final class FabricCciCompanionActions {
                     params.first("offhand", "off", "item", "raw"));
             case SET_ARMOR, SET_EQUIPMENT -> applyEquipmentParams(player, companion, params, safe);
             case MODIFY -> modify(player, companion, params);
+            case PERSONA -> applyPersona(player, companion, params, true);
+            case PLAY -> play(player, companion, params, null);
+            case RUSH -> play(player, companion, params, "rush");
+            case HIDE_SEEK -> play(player, companion, params, "hide_seek");
+            case CLAIM_CHUNK -> claimOrUnclaim(player, companion, params, true);
+            case UNCLAIM_CHUNK -> claimOrUnclaim(player, companion, params, false);
             case TURN_EVIL -> {
                 int seconds = params.durationSecondsOr(FabricCompanionEntity.PLAYFUL_EVIL_DEFAULT_SECONDS);
                 companion.activatePlayfulEvil(seconds * 20);
                 toast(player, companion.getChatDisplayName(),
                         "Going evil for " + seconds + "s! :D");
             }
+            case ASK -> askAi(player, companion, params, safe);
+            case AI_CHAT -> aiChat(player, companion, params, safe);
             default -> {
             }
         }
+    }
+
+    /** Exact line, or AI rewrite when provider enabled and preferAi. SAY uses AI only if ai=true. */
+    private static void sayOrAi(ServerPlayer player, FabricCompanionEntity companion,
+                                CciCompanionParams params, String canned, boolean preferAi) {
+        sayOrAi(player, companion, params, canned, preferAi, "[cci say] " + canned);
+    }
+
+    private static void sayOrAi(ServerPlayer player, FabricCompanionEntity companion,
+                                CciCompanionParams params, String canned, boolean preferAi, String aiPrompt) {
+        boolean forceAi = params.flag("ai", false) || params.flag("use_ai", false);
+        boolean useAi = CompanionAiRuntime.get().isEnabled() && (preferAi || forceAi);
+        if (useAi) {
+            boolean ok = FabricCompanionAiAsk.askQuiet(player, companion, player.getGameProfile().getName(), aiPrompt);
+            toast(player, companion.getChatDisplayName(), ok ? "…" : canned);
+            if (!ok) {
+                say(player, companion, canned);
+            }
+            return;
+        }
+        say(player, companion, canned);
+    }
+
+    private static void askAi(ServerPlayer player, FabricCompanionEntity companion, CciCompanionParams params, String safe) {
+        if (!CompanionAiRuntime.get().isEnabled()) {
+            toast(player, "Companion AI", "Disabled — set provider in config/azscompanions-ai.json on the server");
+            return;
+        }
+        String msg = params.first("message", "prompt", "text", "ask", "raw");
+        if (msg == null || msg.isBlank()) {
+            msg = safe;
+        }
+        if (msg == null || msg.isBlank()) {
+            toast(player, companion.getChatDisplayName(), "AI ask needs message=…");
+            return;
+        }
+        int ok = FabricCompanionAiAsk.ask(player, companion, msg, false, true);
+        toast(player, companion.getChatDisplayName(), ok > 0 ? "Thinking…" : "AI busy or failed");
+    }
+
+    private static void aiChat(ServerPlayer player, FabricCompanionEntity companion, CciCompanionParams params, String safe) {
+        if (!CompanionAiRuntime.get().isEnabled()) {
+            toast(player, "Companion AI", "Disabled — set provider in config/azscompanions-ai.json on the server");
+            return;
+        }
+        String speaker = params.getOr("speaker", params.getOr("name", player.getGameProfile().getName()));
+        String text = params.first("message", "text", "chat", "raw");
+        if (text == null || text.isBlank()) {
+            text = safe;
+        }
+        if (CompanionAiChatSupport.shouldIgnoreChatMessage(text)
+                || CompanionAiChatSupport.looksLikeCompanionReply(text)) {
+            return;
+        }
+        String prompt = CompanionAiChatSupport.chatReactionPrompt(speaker, text.trim());
+        boolean ok = FabricCompanionAiAsk.askQuiet(player, companion, speaker, prompt);
+        if (ok) {
+            CompanionAiRuntime.get().markChatReact(companion.getUUID());
+        }
+        toast(player, companion.getChatDisplayName(), ok ? "Reacting to chat…" : "AI busy");
     }
 
     private static void summon(ServerPlayer player, CciCompanionParams params, CompanionAttitude attitude) {
@@ -135,16 +228,21 @@ public final class FabricCciCompanionActions {
         }
         applyAppearance(companion, params, attitude, true);
         applyEquipmentParams(player, companion, params, null);
+        boolean personaSet = applyPersona(player, companion, params, false);
         CompanionForm form = companion.getForm();
         String team = companion.getTeamId();
         toast(player, companion.getChatDisplayName(),
                 "Summoned " + form.displayLabel() + " (" + attitude.serializedName().toLowerCase(Locale.ROOT) + ")"
-                        + (team == null || team.isBlank() ? "" : " team=" + team));
+                        + (team == null || team.isBlank() ? "" : " team=" + team)
+                        + (personaSet ? " (persona set)" : ""));
+        if (!personaSet) {
+            com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, companion);
+        }
     }
 
     /**
      * Customize the owner's currently called / summoned companion in place
-     * (form, skin, name, attitude, team, equipment) — does not recruit a new one.
+     * (form, skin, name, attitude, team, equipment, persona) — does not recruit a new one.
      */
     private static void modify(ServerPlayer player, FabricCompanionEntity companion, CciCompanionParams params) {
         CompanionAttitude attitude = params.has("attitude") || params.has("stance") || params.has("mode")
@@ -160,14 +258,160 @@ public final class FabricCciCompanionActions {
         if (hadEquipmentKeys) {
             applyEquipmentParams(player, companion, params, null);
         }
-        if (changedAppearance || hadEquipmentKeys) {
+        boolean personaSet = applyPersona(player, companion, params, false);
+        if (changedAppearance || hadEquipmentKeys || personaSet) {
             toast(player, companion.getChatDisplayName(),
                     "Modified — " + companion.getForm().displayLabel()
-                            + " / " + companion.getAttitude().serializedName().toLowerCase(Locale.ROOT));
+                            + " / " + companion.getAttitude().serializedName().toLowerCase(Locale.ROOT)
+                            + (personaSet ? " / persona" : ""));
         } else {
             toast(player, companion.getChatDisplayName(),
-                    "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/gear keys.");
+                    "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/followRadius="
+                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/gear keys.");
         }
+    }
+
+    /**
+     * Apply CCI whoAmI/whatAmIDoing/howWillIBe (and aliases). Marks {@code personaInitialized}.
+     * Supports {@code op=get|clear} on {@code companion_persona}.
+     * @param toastAlways when true (companion_persona), always toast even if no keys.
+     * @return true when persona keys were applied / cleared
+     */
+    private static boolean applyPersona(ServerPlayer player, FabricCompanionEntity companion,
+                                        CciCompanionParams params, boolean toastAlways) {
+        if (toastAlways && params.wantsPersonaGet() && !com.azscompanions.ai.CompanionPersona.hasPersonaKeys(params)) {
+            String summary = companion.getPersona().formatSummary(companion.getChatDisplayName());
+            player.sendSystemMessage(Component.literal(summary));
+            toast(player, companion.getChatDisplayName(), "Persona status sent to chat.");
+            return false;
+        }
+        if (toastAlways && params.wantsPersonaClear()) {
+            companion.setPersona(com.azscompanions.ai.CompanionPersona.EMPTY.cleared());
+            toast(player, companion.getChatDisplayName(), "Persona cleared (initialized — onboarding skipped).");
+            return true;
+        }
+        if (!com.azscompanions.ai.CompanionPersona.hasPersonaKeys(params)) {
+            if (toastAlways) {
+                toast(player, companion.getChatDisplayName(),
+                        "Persona needs whoAmI=/whatAmIDoing=/howWillIBe= (or who=/what=/how=), or op=get|clear.");
+            }
+            return false;
+        }
+        var merged = companion.getPersona().mergeFromCci(params);
+        companion.setPersona(merged);
+        if (toastAlways) {
+            toast(player, companion.getChatDisplayName(), "Persona updated (initialized — onboarding skipped).");
+        }
+        return true;
+    }
+
+    private static void play(ServerPlayer player, FabricCompanionEntity companion,
+                             CciCompanionParams params, @Nullable String defaultMode) {
+        String mode = params.playModeOr(defaultMode == null ? "" : defaultMode);
+        if (mode.isBlank()) {
+            mode = params.getOr("raw", defaultMode == null ? "rush" : defaultMode);
+        }
+        String key = mode == null ? "rush" : mode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        int seconds = params.playSecondsOr(switch (key) {
+            case "hide", "hider", "hide_seek", "hideandseek", "hide_and_seek" -> 10;
+            case "seek", "seeker" -> 15;
+            case "dance", "spin" -> 4;
+            case "peekaboo", "peek" -> 3;
+            default -> 5;
+        });
+        int ticks = seconds * 20;
+        switch (key) {
+            case "stop", "clear", "none", "off" -> {
+                companion.clearPlayMode();
+                toast(player, companion.getChatDisplayName(), "Play stopped.");
+            }
+            case "rush", "run", "run_at_player", "charge" -> {
+                companion.startPlay(com.azscompanions.entity.CompanionPlayMode.RUN_AT_PLAYER, ticks);
+                companion.setMode(FabricCompanionMode.FOLLOW);
+                toast(player, companion.getChatDisplayName(), "Rush!");
+            }
+            case "hide", "hider" -> {
+                companion.startPlay(com.azscompanions.entity.CompanionPlayMode.HIDE, ticks);
+                toast(player, companion.getChatDisplayName(), "Hiding…");
+            }
+            case "seek", "seeker" -> {
+                companion.startPlay(com.azscompanions.entity.CompanionPlayMode.SEEK, ticks);
+                toast(player, companion.getChatDisplayName(), "Seeking…");
+            }
+            case "hide_seek", "hideandseek", "hide_and_seek" -> {
+                String role = params.playRoleOr("hider");
+                if (role.equalsIgnoreCase("seek") || role.equalsIgnoreCase("seeker")) {
+                    companion.startPlay(com.azscompanions.entity.CompanionPlayMode.SEEK, ticks);
+                    toast(player, companion.getChatDisplayName(), "Hide & seek — seeking!");
+                } else {
+                    companion.startPlay(com.azscompanions.entity.CompanionPlayMode.HIDE, ticks);
+                    toast(player, companion.getChatDisplayName(), "Hide & seek — hiding!");
+                }
+            }
+            case "dance", "spin" -> {
+                companion.startPlay(com.azscompanions.entity.CompanionPlayMode.DANCE, ticks);
+                toast(player, companion.getChatDisplayName(), "Dancing!");
+            }
+            case "peekaboo", "peek" -> {
+                companion.startPlay(com.azscompanions.entity.CompanionPlayMode.PEEKABOO, ticks);
+                toast(player, companion.getChatDisplayName(), "Peekaboo!");
+            }
+            default -> toast(player, companion.getChatDisplayName(),
+                    "Unknown play mode. Use mode=rush|hide|seek|hide_seek|dance|peekaboo|stop");
+        }
+    }
+
+    private static void claimOrUnclaim(ServerPlayer player, FabricCompanionEntity companion,
+                                       CciCompanionParams params, boolean claim) {
+        if (!(companion.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (!com.azscompanions.compat.ftb.FtbCompat.aiClaimEnabled()) {
+            toast(player, "FTB claim", "Unavailable — need FTB Chunks + ftbChunksAiClaim=true.");
+            return;
+        }
+        if (!com.azscompanions.compat.ftb.FtbCompat.mayAiActions(player)) {
+            toast(player, "FTB claim", "Blocked by FTB Ranks (ai actions).");
+            return;
+        }
+        int footX = companion.blockPosition().getX() >> 4;
+        int footZ = companion.blockPosition().getZ() >> 4;
+        int cx = params.chunkXOr(footX);
+        int cz = params.chunkZOr(footZ);
+        String result = claim
+                ? com.azscompanions.compat.ftb.FtbCompat.claimChunkAsOwner(player, level.dimension(), cx, cz)
+                : com.azscompanions.compat.ftb.FtbCompat.unclaimChunkAsOwner(player, level.dimension(), cx, cz);
+        toast(player, companion.getChatDisplayName(),
+                (claim ? "Claim" : "Unclaim") + " " + cx + "," + cz + " → " + result);
+    }
+
+    private static void applyAiConfig(ServerPlayer player, CciCompanionParams params) {
+        var runtime = CompanionAiRuntime.get();
+        var settings = runtime.settings().copy();
+        boolean changed = false;
+        String listenRaw = params.chatListenModeRawOrNull();
+        if (listenRaw != null && !listenRaw.isBlank()) {
+            settings.setChatListenMode(ChatListenMode.fromConfig(listenRaw));
+            changed = true;
+        }
+        Boolean aiActions = params.enableAiActionsOrNull();
+        if (aiActions != null) {
+            settings.setEnableAiActions(aiActions);
+            changed = true;
+        }
+        if (!changed) {
+            toast(player, "Companion AI",
+                    "Status: " + FabricCompanionAiAsk.status()
+                            + " | chatListen=" + settings.chatListenMode().configName()
+                            + " enableAiActions=" + settings.enableAiActions()
+                            + " (set chatListenMode= / enableAiActions=)");
+            return;
+        }
+        runtime.applySettings(settings);
+        toast(player, "Companion AI",
+                "Session updated: chatListen=" + settings.chatListenMode().configName()
+                        + " enableAiActions=" + settings.enableAiActions()
+                        + " (runtime only — not written to disk)");
     }
 
     /**
@@ -220,6 +464,31 @@ public final class FabricCciCompanionActions {
         Boolean showArmor = params.showArmorOrNull();
         if (showArmor != null) {
             companion.setArmorVisible(showArmor);
+            changed = true;
+        }
+        Float followRadius = params.followRadiusOrNull();
+        if (followRadius != null) {
+            companion.setFollowRadius(followRadius);
+            changed = true;
+        }
+        Float personalSpace = params.personalSpaceOrNull();
+        if (personalSpace != null) {
+            companion.setPersonalSpace(personalSpace);
+            changed = true;
+        }
+        Float wanderRadius = params.wanderRadiusOrNull();
+        if (wanderRadius != null) {
+            companion.setWanderRadius(wanderRadius);
+            changed = true;
+        }
+        Integer maxChildren = params.maxChildrenOrNull();
+        if (maxChildren != null) {
+            companion.setMaxChildren(maxChildren);
+            changed = true;
+        }
+        Boolean chunkLoading = params.chunkLoadingOrNull();
+        if (chunkLoading != null) {
+            companion.setChunkLoadingEnabled(chunkLoading);
             changed = true;
         }
         return changed;

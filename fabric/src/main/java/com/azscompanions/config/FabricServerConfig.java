@@ -3,6 +3,7 @@ package com.azscompanions.config;
 import com.azscompanions.ai.CompanionAiConfigIO;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
+import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.entity.CompanionFollowDistances;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -12,20 +13,33 @@ import java.nio.file.Path;
  * Fabric server limits + companion AI settings.
  * Non-AI limits mirror NeoForge {@code ServerConfig} defaults.
  * AI settings live in {@code config/azscompanions-ai.json} (default provider disabled).
+ * Loaded on server start (dedicated / integrated) so all companions share the host LLM.
  */
 public final class FabricServerConfig {
     /** Max owned companions per player (excludes teamfight / child Bits). Default 1. */
     public static final int MAX_COMPANIONS_PER_PLAYER = 1;
-    /** Max CCI/cake child Bits under one leader. */
-    public static final int MAX_CHILD_COMPANIONS_PER_LEADER = 6;
+    /**
+     * Default max children per companion ({@code maxChildrenPerCompanion}). Living + stored.
+     * CCI {@code maxChildren=}/{@code childCap=} overrides per entity (hard max 64).
+     */
+    public static final int MAX_CHILD_COMPANIONS_PER_LEADER = 3;
     /** If true, new team-fight sessions start enabled (normally use /azscompanions teamfight on). */
     public static final boolean TEAMFIGHT_ENABLED_BY_DEFAULT = false;
-    /** Subs required for companion_spawn_leader. */
-    public static final int TEAMFIGHT_SUB_COST_LEADER = 1;
-    /** Hard cap fight spawns (leaders+children) per streamer. */
-    public static final int TEAMFIGHT_MAX_FIGHT_SPAWNS = 24;
+    /**
+     * Interaction amount per child companion (CCI {@code amount=} ÷ this = spawn count).
+     * Mirrors NeoForge {@code supportAmountPerCompanion}.
+     */
+    public static final int SUPPORT_AMOUNT_PER_COMPANION = 100;
     /** When true, companions defend the owner against living attackers. */
     public static final boolean ALLOW_COMBAT = true;
+    /**
+     * Force-load the chunk each summoned companion/Bit occupies (entity tickets, not FTB claims).
+     * Mirrors NeoForge {@code companionChunkLoading}. Default on for reliability; costs server chunks.
+     */
+    public static final boolean COMPANION_CHUNK_LOADING = CompanionChunkLoading.DEFAULT_ENABLED;
+    /** Max companion/Bit chunk tickets per owner (parents + children). */
+    public static final int MAX_FORCED_CHUNKS_PER_PLAYER =
+            CompanionChunkLoading.DEFAULT_MAX_FORCED_CHUNKS_PER_PLAYER;
     /**
      * Home-bed proximity for Follow/Wander auto behavior (blocks).
      * Matches {@link CompanionFollowDistances#HOME_BED_RADIUS}.

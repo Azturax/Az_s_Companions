@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "ai_config",
+  "message": "chatListenMode=player;enableAiActions=true"
+}

@@ -47,7 +47,8 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [ ] Create / Mekanism / AE2 / Refined Storage handlers
 - [ ] Farmer's Delight & other crop mods via tags
 - [ ] Backpack mod slot bridges
-- [ ] FTB Chunks / GriefPrevention / Open Parties claim integrations
+- [x] FTB Chunks / FTB Teams / FTB Ranks soft integrations (config-driven; see [COMPAT.md](COMPAT.md))
+- [ ] GriefPrevention / Open Parties claim integrations
 - [ ] Compatibility report command with per-mod status
 - [ ] JEI/EMI recipe transfer into CraftTask
 

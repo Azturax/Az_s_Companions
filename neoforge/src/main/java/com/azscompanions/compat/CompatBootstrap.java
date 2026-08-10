@@ -3,9 +3,13 @@ package com.azscompanions.compat;
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.api.CompanionApi;
 import com.azscompanions.compat.optional.FarmingCompatModule;
+import com.azscompanions.compat.optional.FtbCompatModule;
 import com.azscompanions.compat.optional.StorageCompatModule;
 import com.azscompanions.compat.optional.TechCompatModule;
 import com.azscompanions.compat.optional.VoiceChatCompatModule;
+import com.azscompanions.compat.fancyanim.FancyAnimCompatModule;
+import com.azscompanions.compat.hosted.HostedWorldCompatModule;
+import com.azscompanions.compat.map.MapCompatModule;
 import net.neoforged.fml.ModList;
 
 /**
@@ -27,6 +31,10 @@ public final class CompatBootstrap {
         maybeLoad("create", TechCompatModule::bootstrap);
         maybeLoad("farmersdelight", FarmingCompatModule::bootstrap);
         maybeLoad("voicechat", VoiceChatCompatModule::bootstrap);
+        FtbCompatModule.bootstrap();
+        MapCompatModule.bootstrap();
+        FancyAnimCompatModule.bootstrap();
+        HostedWorldCompatModule.bootstrap();
 
         // Always register vanilla furnace fuel helper as a machine handler example.
         CompanionApi.registerMachineHandler(new VanillaFurnaceMachineHandler());

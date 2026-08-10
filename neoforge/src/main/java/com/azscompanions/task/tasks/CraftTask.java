@@ -5,6 +5,7 @@ import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.task.CompanionTask;
 import com.azscompanions.task.TaskPriority;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +30,25 @@ public final class CraftTask extends CompanionTask {
 
     public CraftTask recipe(ResourceLocation recipeId) {
         this.recipeId = recipeId;
+        return this;
+    }
+
+    /** Resolve first crafting recipe that outputs {@code itemId} (e.g. minecraft:stick). */
+    public CraftTask forResultItem(ServerLevel level, ResourceLocation itemId) {
+        if (itemId == null) {
+            return this;
+        }
+        for (RecipeHolder<?> holder : level.getRecipeManager().getRecipes()) {
+            ItemStack result = holder.value().getResultItem(level.registryAccess());
+            if (result.isEmpty()) {
+                continue;
+            }
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(result.getItem());
+            if (itemId.equals(key)) {
+                this.recipeId = holder.id();
+                return this;
+            }
+        }
         return this;
     }
 

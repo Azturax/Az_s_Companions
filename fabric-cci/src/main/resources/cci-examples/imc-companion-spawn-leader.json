@@ -2,5 +2,5 @@
   "type": "imc",
   "modId": "azscompanions",
   "subject": "companion_spawn_leader",
-  "message": "name=$username;form=zombie;subs=1;team=red;attitude=hostile"
+  "message": "name=$username;form=zombie;team=red;attitude=hostile"
 }

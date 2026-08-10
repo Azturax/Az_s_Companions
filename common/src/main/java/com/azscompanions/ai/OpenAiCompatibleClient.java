@@ -41,11 +41,23 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
-        system.addProperty("content", settings.formatSystemPrompt(context.companionName(), context.form()));
+        system.addProperty("content", settings.formatSystemPrompt(
+                context.companionName(), context.form(), context.parentName(), context.child(),
+                context.speakerIsOwner(), context.attitude(), context.persona()));
         messages.add(system);
+        for (CompanionChatMemory.Turn turn : context.priorTurns()) {
+            if (turn == null || turn.isBlank()) {
+                continue;
+            }
+            String role = turn.isAssistant() ? "assistant" : "user";
+            JsonObject prior = new JsonObject();
+            prior.addProperty("role", role);
+            prior.addProperty("content", turn.content());
+            messages.add(prior);
+        }
         JsonObject user = new JsonObject();
         user.addProperty("role", "user");
-        user.addProperty("content", context.playerName() + " (" + context.inputLanguage() + "): " + context.playerMessage());
+        user.addProperty("content", context.formattedUserContent());
         messages.add(user);
         body.add("messages", messages);
 
@@ -76,9 +88,29 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         JsonObject first = choices.get(0).getAsJsonObject();
         JsonElement message = first.get("message");
         if (message != null && message.isJsonObject()) {
-            JsonElement content = message.getAsJsonObject().get("content");
-            if (content != null && content.isJsonPrimitive()) {
-                return content.getAsString().trim();
+            CompanionAiActionParser.ParsedReply parsed =
+                    CompanionAiActionParser.parseMessageObject(message.getAsJsonObject());
+            if (parsed.hasActions()) {
+                StringBuilder sb = new StringBuilder(parsed.speakText());
+                sb.append("\n```json\n{\"actions\":[");
+                boolean firstAction = true;
+                for (CompanionAiAction action : parsed.actions()) {
+                    if (!firstAction) {
+                        sb.append(',');
+                    }
+                    firstAction = false;
+                    sb.append("{\"name\":\"").append(action.name()).append('\"');
+                    for (var e : action.args().entrySet()) {
+                        sb.append(",\"").append(e.getKey()).append("\":\"")
+                                .append(e.getValue().replace("\"", "\\\"")).append('\"');
+                    }
+                    sb.append('}');
+                }
+                sb.append("]}\n```");
+                return sb.toString().trim();
+            }
+            if (!parsed.speakText().isBlank()) {
+                return parsed.speakText();
             }
         }
         JsonElement text = first.get("text");

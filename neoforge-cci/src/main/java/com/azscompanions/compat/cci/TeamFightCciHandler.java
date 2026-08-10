@@ -32,7 +32,8 @@ public final class TeamFightCciHandler {
     }
 
     public static boolean handle(ServerPlayer player, CciCompanionAction action, String message) {
-        if (!action.isTeamFightControl() && action != CciCompanionAction.SPAWN_CHILD) {
+        if (!action.isTeamFightControl() && action != CciCompanionAction.SPAWN_CHILD
+                && action != CciCompanionAction.DISMISS_CHILD) {
             return false;
         }
         CciCompanionParams params = TeamFightChatParser.parseChatOrMessage(message);
@@ -48,6 +49,7 @@ public final class TeamFightCciHandler {
             case TEAMFIGHT_TOP -> top(player, session);
             case SPAWN_LEADER -> spawnLeader(player, session, params);
             case SPAWN_CHILD -> spawnChild(player, session, params);
+            case DISMISS_CHILD -> dismissChild(player, params);
             default -> {
                 return false;
             }
@@ -130,19 +132,7 @@ public final class TeamFightCciHandler {
             toast(player, "Spawn leader", Component.translatable("message.azscompanions.teamfight_disabled").getString());
             return;
         }
-        int subs = params.subsOr(0);
-        if (subs == 0) {
-            subs = TeamFightDefaults.SUB_COST_LEADER;
-        }
-        int cost = ServerConfig.TEAMFIGHT_SUB_COST_LEADER.get();
-        if (subs < cost) {
-            toast(player, "Spawn leader", "Need ≥" + cost + " sub(s) (got " + subs + "). Use subs=.");
-            return;
-        }
-        if (!session.canSpawnMore(ServerConfig.TEAMFIGHT_MAX_FIGHT_SPAWNS.get())) {
-            toast(player, "Spawn leader", "Fight spawn cap reached.");
-            return;
-        }
+        // No amount gate — streamer CCI decides when to spawn a leader.
         CompanionEntity leader = CompanionRecruitment.spawnFightLeader(player);
         if (leader == null) {
             toast(player, "Spawn leader", "Spawn failed.");
@@ -152,11 +142,15 @@ public final class TeamFightCciHandler {
         leader.setTeamId(team);
         leader.setAttitude(params.attitudeOr(CompanionAttitude.HOSTILE));
         leader.setForm(params.formOr(CompanionForm.ZOMBIE));
+        Integer maxChildren = params.maxChildrenOrNull();
+        if (maxChildren != null) {
+            leader.setMaxChildren(maxChildren);
+        }
         String name = params.displayName();
         if (name != null && !name.isBlank()) {
             leader.setCustomDisplayName(name);
         }
-        applyGear(leader, params, params.bitsOr(TeamFightDefaults.TIER_IRON_BITS));
+        applyGear(leader, params, params.supportAmountOr(TeamFightDefaults.TIER_IRON_BITS));
         session.addFightSpawn();
         session.recordFighter(leader.getChatDisplayName(), team, 0);
         session.noteFight("Leader " + leader.getChatDisplayName() + " → " + team);
@@ -165,29 +159,30 @@ public final class TeamFightCciHandler {
     }
 
     private static void spawnChild(ServerPlayer player, TeamFightSession session, CciCompanionParams params) {
-        int bits = params.bitsOr(0);
-        // Bits path requires teamfight ON; cake-like CCI (no bits) works either way.
-        if (!session.isEnabled() && bits > 0) {
-            toast(player, "Spawn Bit", Component.translatable("message.azscompanions.teamfight_disabled").getString());
-            return;
-        }
-        if (session.isEnabled() && !session.canSpawnMore(ServerConfig.TEAMFIGHT_MAX_FIGHT_SPAWNS.get())) {
-            toast(player, "Spawn Bit", "Fight spawn cap reached.");
+        int amount = params.supportAmountOr(0);
+        // Amount-based interaction requires teamfight ON; explicit count= works either way.
+        if (!session.isEnabled() && amount > 0) {
+            toast(player, "Interaction spawn", Component.translatable("message.azscompanions.teamfight_disabled").getString());
             return;
         }
         CompanionEntity near = findLeader(player, params);
         if (near == null) {
-            toast(player, "Spawn Bit", "No leader nearby — use companion_spawn_leader first.");
+            toast(player, "Interaction spawn", "No leader nearby — use companion_spawn_leader first.");
             return;
         }
         CompanionEntity leader = CompanionRecruitment.resolveLeader(player, near);
         if (leader == null) {
-            toast(player, "Spawn Bit", "No leader available.");
+            toast(player, "Interaction spawn", "No leader available.");
             return;
         }
-        int requested = params.spawnCountOr(1);
-        int existing = CompanionRecruitment.countChildrenOf(player, leader.getUUID());
-        int remaining = CompanionChildLimits.remainingSlots(existing, ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
+        Integer maxChildren = params.maxChildrenOrNull();
+        if (maxChildren != null) {
+            leader.setMaxChildren(maxChildren);
+        }
+        int price = ServerConfig.SUPPORT_AMOUNT_PER_COMPANION.get();
+        int requested = params.childSpawnRequestOr(0, price);
+        int existing = CompanionRecruitment.countChildrenOf(player, leader.getUUID()) + leader.getStoredChildCount();
+        int remaining = CompanionChildLimits.remainingSlots(existing, leader.getMaxChildren());
         int toSpawn = Math.min(requested, remaining);
         if (toSpawn <= 0) {
             toast(player, leader.getChatDisplayName(), "Child limit reached.");
@@ -195,7 +190,8 @@ public final class TeamFightCciHandler {
         }
         String baseName = params.displayName();
         if (baseName == null || baseName.isBlank()) {
-            baseName = CompanionChildLimits.DEFAULT_NAME;
+            String user = params.first("user", "username");
+            baseName = user != null && !user.isBlank() ? user : CompanionChildLimits.DEFAULT_NAME;
         }
         int spawned = 0;
         for (int i = 0; i < toSpawn; i++) {
@@ -214,22 +210,60 @@ public final class TeamFightCciHandler {
             if (params.has("size") || params.has("scale")) {
                 child.setBodyScale(params.bodyScaleOr(CompanionChildLimits.DEFAULT_BODY_SCALE));
             }
-            applyGear(child, params, bits);
+            applyGear(child, params, amount);
             if (session.isEnabled()) {
                 session.addFightSpawn();
-                int share = bits / Math.max(1, toSpawn);
+                int share = amount / Math.max(1, toSpawn);
                 session.addBits(child.getTeamId(), share);
                 session.recordFighter(child.getChatDisplayName(), child.getTeamId(), share);
             }
             spawned++;
         }
-        if (session.isEnabled() && bits > 0) {
-            session.noteFight(bits + " bits → " + spawned + " Bit(s)");
+        String unit = params.unitOr("amount");
+        if (session.isEnabled() && amount > 0) {
+            session.noteFight(amount + " " + unit + " → " + spawned + " for " + leader.getChatDisplayName());
         }
         syncHud(player);
-        BitGearTiers.GearLoadout gear = BitGearTiers.forBits(bits);
+        BitGearTiers.GearLoadout gear = BitGearTiers.forBits(amount);
         toast(player, leader.getChatDisplayName(),
-                "Spawned " + spawned + " Bit(s)" + (bits > 0 ? " (" + bits + " bits / " + gear.label() + ")" : ""));
+                "Spawned " + spawned + (amount > 0 ? " (" + amount + " " + unit + " / " + gear.label() + ")" : ""));
+    }
+
+    /** Store living Bits onto the parent (world → stored; callable later). */
+    private static void dismissChild(ServerPlayer player, CciCompanionParams params) {
+        CompanionEntity near = findLeader(player, params);
+        if (near == null) {
+            toast(player, "Dismiss Bit", "No companion nearby.");
+            return;
+        }
+        if (near.isChildCompanion()) {
+            CompanionEntity parent = CompanionRecruitment.resolveLeader(player, near);
+            if (parent != null && parent.storeChild(near)) {
+                toast(player, parent.getChatDisplayName(), "Stored 1 Bit (callable: " + parent.getStoredChildCount() + ")");
+            } else {
+                toast(player, "Dismiss Bit", "Could not store Bit.");
+            }
+            return;
+        }
+        CompanionEntity leader = CompanionRecruitment.resolveLeader(player, near);
+        if (leader == null) {
+            toast(player, "Dismiss Bit", "No leader available.");
+            return;
+        }
+        int requested = params.spawnCountOr(1);
+        int stored = 0;
+        for (int i = 0; i < requested; i++) {
+            if (!leader.storeNextLivingChild()) {
+                break;
+            }
+            stored++;
+        }
+        if (stored <= 0) {
+            toast(player, leader.getChatDisplayName(), "No Bits in the world to store.");
+            return;
+        }
+        toast(player, leader.getChatDisplayName(),
+                "Stored " + stored + " Bit(s) (callable: " + leader.getStoredChildCount() + ")");
     }
 
     private static void applyGear(CompanionEntity entity, CciCompanionParams params, int bits) {
@@ -281,9 +315,18 @@ public final class TeamFightCciHandler {
 
     private static CompanionEntity findLeader(ServerPlayer player, CciCompanionParams params) {
         String team = params.teamOr("");
+        String user = params.first("user", "username");
         var list = player.serverLevel().getEntitiesOfClass(CompanionEntity.class,
                 player.getBoundingBox().inflate(96),
                 c -> c.isAlive() && c.isOwnedBy(player) && !c.isChildCompanion());
+        if (user != null && !user.isBlank()) {
+            Optional<CompanionEntity> byName = list.stream()
+                    .filter(c -> user.equalsIgnoreCase(c.getChatDisplayName()))
+                    .min(Comparator.comparingDouble(c -> c.distanceToSqr(player)));
+            if (byName.isPresent()) {
+                return byName.get();
+            }
+        }
         if (!team.isBlank()) {
             Optional<CompanionEntity> match = list.stream()
                     .filter(c -> team.equalsIgnoreCase(c.getTeamId()))

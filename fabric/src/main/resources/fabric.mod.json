@@ -21,6 +21,9 @@
     ],
     "client": [
       "com.azscompanions.AzsCompanionsFabricClient"
+    ],
+    "journeymap": [
+      "com.azscompanions.compat.map.jm.FabricJourneyMapCompanionPlugin"
     ]
   },
   "depends": {
@@ -30,7 +33,14 @@
     "fabric-api": "*"
   },
   "suggests": {
-    "modmenu": "*"
+    "modmenu": "*",
+    "journeymap": "*",
+    "xaerominimap": "*",
+    "xaeroworldmap": "*",
+    "ftbchunks": "*",
+    "essential": "*",
+    "e4mc": "*",
+    "world-host": "*"
   },
   "custom": {
     "azscompanions:support": {

@@ -10,6 +10,13 @@ public final class ClientConfig {
     public static final ModConfigSpec.DoubleValue VOICE_VOLUME;
     public static final ModConfigSpec.BooleanValue SHOW_TASK_PARTICLES;
     public static final ModConfigSpec.BooleanValue SHOW_3D_PREVIEW_IN_SELECTION;
+    public static final ModConfigSpec.BooleanValue SHOW_ON_MINIMAP;
+    public static final ModConfigSpec.BooleanValue SHOW_CHILDREN_ON_MAP;
+    public static final ModConfigSpec.BooleanValue SHOW_NAME_ON_MAP;
+    public static final ModConfigSpec.BooleanValue SHOW_OWNER_ON_MAP;
+    public static final ModConfigSpec.IntValue MAP_ICON_COLOR;
+    public static final ModConfigSpec.BooleanValue TRANSLUCENT_PLAYER_SKINS;
+    public static final ModConfigSpec.BooleanValue SYNC_MOB_FORM_UUID;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -25,6 +32,29 @@ public final class ClientConfig {
         builder.push("ui");
         SHOW_TASK_PARTICLES = builder.define("showTaskParticles", true);
         SHOW_3D_PREVIEW_IN_SELECTION = builder.define("show3dPreviewInSelection", true);
+        builder.pop();
+
+        builder.push("map");
+        SHOW_ON_MINIMAP = builder.comment(
+                        "Show companions on map entity radars (JourneyMap honors this; Xaero shows LivingEntity by default).")
+                .define("showOnMinimap", true);
+        SHOW_CHILDREN_ON_MAP = builder.comment("Show child Bits / fight children on map radars that honor this toggle.")
+                .define("showChildrenOnMap", true);
+        SHOW_NAME_ON_MAP = builder.comment("Prefer companion display name on JourneyMap radar labels.")
+                .define("showNameOnMap", true);
+        SHOW_OWNER_ON_MAP = builder.comment("Add owner hint to JourneyMap companion tooltips.")
+                .define("showOwnerOnMap", true);
+        MAP_ICON_COLOR = builder.comment("ARGB tint for JourneyMap companion dots/labels (e.g. -1495284 = 0xFFE91E8C).")
+                .defineInRange("mapIconColor", 0xFFE91E8C, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        builder.pop();
+
+        builder.push("fancyAnim");
+        TRANSLUCENT_PLAYER_SKINS = builder.comment(
+                        "Player-form companions use translucent skins (like players) so ETF / Fancy Animations skin features and animated frames with alpha look correct. Safe without packs.")
+                .define("translucentPlayerSkins", true);
+        SYNC_MOB_FORM_UUID = builder.comment(
+                        "Mob-form proxies share the companion UUID so Fresh Animations / ETF random & emissive variants stay stable on vanilla CEM paths.")
+                .define("syncMobFormUuid", true);
         builder.pop();
 
         SPEC = builder.build();

@@ -5,7 +5,9 @@ import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.command.FabricCompanionCommands;
 import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.data.FabricCompanionDefinitionLoader;
+import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.entity.FabricBuiltinCompanions;
+import com.azscompanions.event.FabricCompanionAiChatEvents;
 import com.azscompanions.event.FabricTeamFightEvents;
 import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.perk.SpecialPlayerPerks;
@@ -20,6 +22,7 @@ import com.azscompanions.registry.FabricModSounds;
 import com.azscompanions.task.FabricTaskRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -39,13 +42,8 @@ public final class AzsCompanionsFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        try {
-            FabricServerConfig.loadAiConfig();
-        } catch (Exception e) {
-            LOGGER.error("Companion AI config load failed — AI stays disabled", e);
-            CompanionAiRuntime.get().applySettings(new CompanionAiSettings());
-        }
-
+        // AI config is applied on SERVER_STARTING so dedicated + LAN/integrated hosts
+        // own the LLM; pure clients never need local provider setup.
         FabricModBlocks.register();
         FabricModBlockEntities.register();
         FabricModItems.register();
@@ -55,14 +53,42 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricModScreenHandlers.register();
         FabricNetworking.register();
         FabricTeamFightEvents.register();
+        FabricCompanionAiChatEvents.register();
         FabricTaskRegistry.bootstrap();
         FabricBuiltinCompanions.registerDefaults();
+        com.azscompanions.compat.FabricFtbCompat.bootstrap();
+        com.azscompanions.compat.FabricHostedWorldCompat.bootstrap();
 
         ResourceManagerHelper.get(PackType.SERVER_DATA)
                 .registerReloadListener(new FabricCompanionDefinitionLoader());
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 FabricCompanionCommands.register(dispatcher));
+
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            try {
+                com.azscompanions.config.FabricAdminConfig.loadOrCreate();
+            } catch (Exception e) {
+                LOGGER.error("Admin config load failed — using defaults", e);
+            }
+            try {
+                FabricServerConfig.loadAiConfig();
+            } catch (Exception e) {
+                LOGGER.error("Companion AI config load failed — AI stays disabled", e);
+                CompanionAiRuntime.get().applySettings(new CompanionAiSettings());
+            }
+            CompanionAiRuntime.get().markServerContext(server.isDedicatedServer());
+            CompanionChunkLoading.clearAll();
+            com.azscompanions.compat.hosted.IntegratedMultiplayerCompat.refreshServerState(
+                    server.isDedicatedServer(),
+                    server.isPublished(),
+                    server.getPlayerList().getPlayerCount());
+            LOGGER.info("Az's Companions server starting — {}", CompanionAiRuntime.get().statusLine());
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            CompanionAiRuntime.get().clearServerContext();
+            CompanionChunkLoading.clearAll();
+        });
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -80,9 +106,8 @@ public final class AzsCompanionsFabric implements ModInitializer {
             }
         });
 
-        LOGGER.info("Az's Companions (Fabric) initialized — support MC {}–{} — {}",
+        LOGGER.info("Az's Companions (Fabric) initialized — support MC {}–{} — AI loads on server start",
                 AzsCompanionsConstants.MIN_MINECRAFT,
-                AzsCompanionsConstants.MAX_MINECRAFT,
-                CompanionAiRuntime.get().statusLine());
+                AzsCompanionsConstants.MAX_MINECRAFT);
     }
 }

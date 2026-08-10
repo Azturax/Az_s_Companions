@@ -1,5 +1,6 @@
 package com.azscompanions.client.renderer;
 
+import com.azscompanions.compat.fancyanim.FancyAnimCompat;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
@@ -25,6 +26,7 @@ import net.minecraft.world.level.Level;
 import java.lang.reflect.Field;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Renders non-player companion forms by delegating to vanilla mob renderers.
@@ -104,6 +106,12 @@ public final class CompanionMobFormRenderer {
     }
 
     private static void syncVisual(FabricCompanionEntity source, LivingEntity visual) {
+        if (FancyAnimCompat.syncMobFormUuid()) {
+            UUID id = source.getUUID();
+            if (!id.equals(visual.getUUID())) {
+                visual.setUUID(id);
+            }
+        }
         visual.tickCount = source.tickCount;
         visual.setPosRaw(source.getX(), source.getY(), source.getZ());
         visual.xo = source.xo;

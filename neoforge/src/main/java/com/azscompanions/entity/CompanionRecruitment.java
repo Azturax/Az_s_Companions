@@ -94,6 +94,10 @@ public final class CompanionRecruitment {
     @Nullable
     public static CompanionEntity recruit(ServerPlayer player, String definitionId) {
         ServerLevel level = player.serverLevel();
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            player.displayClientMessage(Component.literal("You lack permission to spawn companions (FTB Ranks)."), true);
+            return null;
+        }
         if (countOwned(player) >= ServerConfig.MAX_COMPANIONS_PER_PLAYER.get()) {
             player.displayClientMessage(Component.translatable("message.azscompanions.limit_reached"), true);
             return null;
@@ -112,6 +116,7 @@ public final class CompanionRecruitment {
         companion.applyDefinition(definition);
         companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
+        companion.setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
         level.addFreshEntity(companion);
         return companion;
     }
@@ -122,6 +127,10 @@ public final class CompanionRecruitment {
      */
     @Nullable
     public static CompanionEntity spawnFightLeader(ServerPlayer player) {
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)
+                || !com.azscompanions.compat.ftb.FtbCompat.mayTeamfight(player)) {
+            return null;
+        }
         ServerLevel level = player.serverLevel();
         CompanionDefinition definition = CompanionRegistry.getOrKon(CompanionRegistry.KON_ID);
         CompanionEntity companion = ModEntities.COMPANION.get().create(level);
@@ -140,6 +149,7 @@ public final class CompanionRecruitment {
         companion.setAttitude(CompanionAttitude.HOSTILE);
         companion.setMode(CompanionMode.FOLLOW);
         companion.setHomePos(player.blockPosition());
+        companion.setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
         level.addFreshEntity(companion);
         return companion;
     }
@@ -152,12 +162,15 @@ public final class CompanionRecruitment {
         if (leader == null || !leader.isAlive()) {
             return null;
         }
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
         CompanionEntity root = resolveLeader(player, leader);
         if (root == null) {
             return null;
         }
-        int maxChildren = ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get();
-        if (countChildrenOf(player, root.getUUID()) >= maxChildren) {
+        int maxChildren = root.getMaxChildren();
+        if (countChildrenOf(player, root.getUUID()) + root.getStoredChildCount() >= maxChildren) {
             return null;
         }
         ServerLevel level = player.serverLevel();
@@ -179,12 +192,15 @@ public final class CompanionRecruitment {
         child.setLeaderUuid(root.getUUID());
         child.setHomePos(root.blockPosition());
         child.setMode(CompanionMode.FOLLOW);
+        // Inherit identity hints from parent; keep Bit scale/name defaults (CCI may override).
         child.setAttitude(root.getAttitude());
         child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
-        child.setForm(CompanionForm.CHICKEN);
+        child.setForm(root.getForm());
+        child.setSkinPath(root.getSkinPath() == null ? "" : root.getSkinPath());
+        child.setArmorVisible(root.isArmorVisible());
         child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
         child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
-        child.setSkinPath("");
+        child.inheritSpacingFrom(root);
         level.addFreshEntity(child);
         return child;
     }
@@ -203,5 +219,37 @@ public final class CompanionRecruitment {
         companion.setMode(CompanionMode.FOLLOW);
         level.addFreshEntity(companion);
         return companion;
+    }
+
+    /** Restore a Bit snapshot near its parent leader (FIFO call from StoredChildren). */
+    @Nullable
+    public static CompanionEntity spawnStoredChild(
+            ServerPlayer player, CompanionEntity parent, CompoundTag stored, UUID childUuid) {
+        if (parent == null || !parent.isAlive() || stored == null) {
+            return null;
+        }
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        ServerLevel level = parent.level() instanceof ServerLevel leaderLevel
+                ? leaderLevel
+                : player.serverLevel();
+        CompanionEntity child = ModEntities.COMPANION.get().create(level);
+        if (child == null) {
+            return null;
+        }
+        child.load(stored);
+        child.setUUID(childUuid);
+        child.setOwner(player);
+        child.setLeaderUuid(parent.getUUID());
+        child.setFightSpawn(true);
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.random.nextDouble() * 1.5d;
+        child.moveTo(parent.getX() + Math.cos(angle) * dist, parent.getY(),
+                parent.getZ() + Math.sin(angle) * dist, parent.getYRot(), 0);
+        child.setHomePos(parent.blockPosition());
+        child.setMode(CompanionMode.FOLLOW);
+        level.addFreshEntity(child);
+        return child;
     }
 }

@@ -37,6 +37,8 @@ public final class AzsCompanionsFabricClient implements ClientModInitializer {
         MenuScreens.register(FabricModScreenHandlers.INVENTORY, FabricCompanionInventoryScreen::new);
         FabricNetworkingClient.register();
         HudRenderCallback.EVENT.register((graphics, tickCounter) -> TeamFightHudOverlay.render(graphics, 0f));
+        com.azscompanions.compat.map.FabricMapCompat.bootstrapClient();
+        com.azscompanions.compat.fancyanim.FabricFancyAnimCompat.bootstrapClient();
 
         AzsCompanionsFabric.LOGGER.info("Az's Companions (Fabric) client ready");
     }

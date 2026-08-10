@@ -4,6 +4,7 @@ import com.azscompanions.AzsCompanions;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.network.packet.CompanionCommandPacket;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -13,7 +14,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Shared Shift+RMB companion menu: Customize, Command, Inventory, Donate.
+ * Shared Shift+RMB companion menu: Customize, Command, Behavior, Inventory, Stats,
+ * Remove/Dismiss child (store), stored-Bits badge, Donate.
  */
 public final class CompanionMenuScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
@@ -26,7 +28,7 @@ public final class CompanionMenuScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 220;
-    private final int panelH = 168;
+    private final int panelH = 252;
 
     public CompanionMenuScreen(CompanionEntity companion) {
         super(Component.translatable("screen.azscompanions.menu"));
@@ -39,6 +41,8 @@ public final class CompanionMenuScreen extends Screen {
         panelY = (height - panelH) / 2;
         int bx = panelX + 30;
         int by = panelY + 40;
+        boolean child = companion.isChildCompanion();
+
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.customize"), b -> {
             if (minecraft != null) {
                 minecraft.setScreen(new CompanionCreatorScreen(companion, this));
@@ -49,11 +53,38 @@ public final class CompanionMenuScreen extends Screen {
                 minecraft.setScreen(new CompanionCommandScreen(companion, this));
             }
         }).bounds(bx, by + 28, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.behavior"), b -> {
+            if (minecraft != null) {
+                minecraft.setScreen(new CompanionBehaviorScreen(companion, this));
+            }
+        }).bounds(bx, by + 56, 160, 22).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
             PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_INVENTORY"));
-        }).bounds(bx, by + 56, 160, 22).build());
+        }).bounds(bx, by + 84, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.stats"), b -> {
+            PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_STATS"));
+        }).bounds(bx, by + 112, 160, 22).build());
+
+        String removeKey = child
+                ? "screen.azscompanions.dismiss_child"
+                : "screen.azscompanions.remove_child";
+        addRenderableWidget(Button.builder(Component.translatable(removeKey), b -> {
+            PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "REMOVE_CHILD"));
+            onClose();
+        }).bounds(bx, by + 140, 160, 22).build());
+
         addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
-                .bounds(bx, by + 92, 160, 20).build());
+                .bounds(bx, by + 172, 160, 20).build());
+
+        if (!child) {
+            addRenderableWidget(new StoredChildrenBadge(
+                    panelX + 8, panelY + 8, 48, 20, companion,
+                    b -> {
+                        PacketDistributor.sendToServer(
+                                new CompanionCommandPacket(companion.getId(), "CALL_STORED_CHILD"));
+                        onClose();
+                    }));
+        }
 
         addRenderableWidget(new IconButton(
                 panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
@@ -94,6 +125,44 @@ public final class CompanionMenuScreen extends Screen {
             int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
             graphics.blit(icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);
+        }
+    }
+
+    /** Top-left badge: stored (callable) Bit count. Click calls next stored child. */
+    private static final class StoredChildrenBadge extends Button {
+        private final CompanionEntity companion;
+
+        StoredChildrenBadge(int x, int y, int width, int height, CompanionEntity companion, OnPress onPress) {
+            super(x, y, width, height, Component.empty(), onPress, DEFAULT_NARRATION);
+            this.companion = companion;
+            refreshTooltip();
+        }
+
+        private void refreshTooltip() {
+            setTooltip(Tooltip.create(Component.translatable(
+                    "screen.azscompanions.stored_children_tooltip",
+                    companion.getStoredChildCount(),
+                    companion.getMaxChildren())));
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            refreshTooltip();
+            int count = companion.getStoredChildCount();
+            int max = companion.getMaxChildren();
+            int bg = isHoveredOrFocused() ? 0xFF5A7088 : 0xFF3A4A5A;
+            graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
+            int cx = getX() + 8;
+            int cy = getY() + height / 2;
+            graphics.fill(cx - 3, cy - 6, cx + 3, cy - 1, 0xFFE8C070);
+            graphics.fill(cx - 2, cy - 1, cx + 2, cy + 6, 0xFFE8C070);
+            graphics.drawString(
+                    Minecraft.getInstance().font,
+                    count + "/" + max,
+                    getX() + 16,
+                    getY() + (height - 8) / 2,
+                    count > 0 ? 0xFFFFFF : 0xA0A0A0,
+                    false);
         }
     }
 }

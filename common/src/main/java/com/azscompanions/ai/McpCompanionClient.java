@@ -134,9 +134,32 @@ public final class McpCompanionClient implements CompanionAiClient {
         args.addProperty("message", context.playerMessage());
         args.addProperty("companion_name", context.companionName());
         args.addProperty("form", context.form());
+        args.addProperty("attitude", context.attitude());
         args.addProperty("player_name", context.playerName());
         args.addProperty("language", context.inputLanguage());
-        args.addProperty("system_prompt", settings.formatSystemPrompt(context.companionName(), context.form()));
+        if (context.companionId() != null) {
+            args.addProperty("companion_id", context.companionId().toString());
+        }
+        args.addProperty("system_prompt", settings.formatSystemPrompt(
+                context.companionName(), context.form(), context.parentName(), context.child(),
+                context.speakerIsOwner(), context.attitude(), context.persona()));
+        args.addProperty("who_am_i", context.persona().whoAmI());
+        args.addProperty("what_am_i_doing", context.persona().whatAmIDoing());
+        args.addProperty("how_will_i_be", context.persona().howWillIBe());
+        args.addProperty("speaker_is_owner", context.speakerIsOwner());
+        if (!context.priorTurns().isEmpty()) {
+            JsonArray history = new JsonArray();
+            for (CompanionChatMemory.Turn turn : context.priorTurns()) {
+                if (turn == null || turn.isBlank()) {
+                    continue;
+                }
+                JsonObject row = new JsonObject();
+                row.addProperty("role", turn.isAssistant() ? "assistant" : "user");
+                row.addProperty("content", turn.content());
+                history.add(row);
+            }
+            args.add("history", history);
+        }
         return args;
     }
 

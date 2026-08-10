@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.3.6
+
+Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Stats / info screen
+- **Companion | Owner** read-only panel: Shift+RMB menu → **Stats**, or `/az stats` (nearest) / `/az stats <name>`.
+- Companion: name, form, mode, attitude, team, health, follow/personal/wander radii, children, armor visibility, short persona who/what/how, AI snippet when enabled.
+- Owner: name, health, food, owned companion count, charm bound status.
+- Persona / child count / charm / AI synced via S2C; other fields from entity data. Fabric + NeoForge.
+
+### Az Admin + in-game AI config
+- **`/az admin`** / **`/az ai config`** (ops, singleplayer/LAN host, or `adminWhitelist` / `azAdminUsers`): Overview + **AI Config** tabs.
+- Provider **profiles** (Disabled, LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP HTTP, **Custom…**); Save writes `azscompanions-ai.json` / `.toml` **without** hot-reload — chat: *Companion AI settings saved. Restart the server/game for them to apply.*
+- NeoForge `[admin]` in `azscompanions-server.toml`; Fabric `azscompanions-server.json`. Docs: [ADMIN.md](docs/ADMIN.md).
+
+### FTB suite soft-compat
+- Optional **FTB Teams / Chunks / Ranks** via reflection (no hard dep). Config under AI `[ftb]` / `"ftb"`: `ftbTeamsCompat`, `ftbChunksAllowPresence`, `ftbChunksBlockInteraction`, `ftbChunksAiClaim`, `ftbRanksCompat`, `trustSameTeamAsOwner`, permission nodes.
+- **Walk OK, interact blocked:** companions may enter claims; mine/place/build/containers gated by FTB perms. Owner AI optional `claim_chunk` / `unclaim_chunk` (owner quota; no steal).
+- Same-team → trusted interact; optional owner-level AI tools; ranks gate ask/actions/CCI/teamfight/spawn.
+- Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Map mods soft-compat
+- **Xaero Minimap / World Map:** companions show on entity radar (LivingEntity) + bundled charm icon definition.
+- **JourneyMap:** API v2 soft plugin — name, charm icon, owner tooltip; hide via `showOnMinimap` / `showChildrenOnMap`.
+- Config: NeoForge client `[map]` · Fabric `config/azscompanions-map.json`.
+- **FTB Chunks** stays claim-overlay only (map package does not touch FTB claim code). Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Online from LAN / Essential
+- Soft-compat for **Essential** (`essential`), **e4mc**, **World Host**, **LAN Server Properties**, and vanilla Open-to-LAN: detect hosted integrated multiplayer without hard deps.
+- `integratedMultiplayerSharedLlm` (default true) — host LLM stays authoritative when friends join even if `serverLlmOnly=false`. Dedicated servers unchanged.
+- `ownerNameFallback` (default true, integrated hosted MP only) — persist `OwnerName`, match/heal owner UUID after offline↔online remaps. Never on dedicated.
+- Docs: [COMPAT.md](docs/COMPAT.md) (“Online from LAN / Essential”).
+
+### Fancy Animations / EMF+ETF soft-compat
+- Player-form skins use translucent buffers (player-like) so ETF skin features / emissives / animated frames with alpha render correctly; cape matches.
+- Mob-form proxies sync the companion UUID for stable Fresh Animations CEM + ETF random variants on vanilla entity paths.
+- Bundled ETF `entityRenderLayerOverride=translucent` hints for companion texture paths. Config: NeoForge `[fancyAnim]` · Fabric `azscompanions-fancyanim.json`. Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Behavior / follow spacing
+- **Behavior screen** (Shift+RMB menu → Behavior): **Follow radius** (1–128, default 48), **Personal space** (1–12, default 2), **Wander radius** (3–48, default 16).
+- Persists per companion (`FollowRadius` / `PersonalSpace` / `WanderRadius` NBT + synched data) across reload, dimension change, charm store/summon, form change.
+- Child Bits inherit parent spacing at 75%. CCI `companion_modify`: `followRadius=` / `teleportDistance=`, `personalSpace=`, `wanderRadius=`.
+
+### Child store / call UX
+- Parent keeps a FIFO **`StoredChildren`** list (synced **stored count** + **maxChildren** for UI).
+- Default **max 3** Bits per companion (living + stored); CCI `maxChildren=` / `companion_modify` overrides (up to 64).
+- Menu **Remove child** / child **Dismiss child**: world Bit → store (count up); inventory stays in the snapshot.
+- **Charm RMB or empty-hand RMB** on parent (owner): call next stored Bit in order (count down). Charm air-use still summons/stores the parent; living Bits are parked into that list instead of deleted.
+- Menu badge (top-left) shows **stored/max**; tooltip: *Stored children: N / max M — click charm on companion to call*. Badge click also calls next.
+- CCI: `dismiss_child` / `companion_dismiss_child` / `store_bit` (works without teamfight).
+- **CCI interaction spawn:** `companion_interaction` / `support_spawn` (aliases include `companion_spawn_child`). Message `amount=500;user=Alice` → spawn count = `amount ÷ supportAmountPerCompanion` (default **100** → **5**). Explicit `count=` overrides. No amount/sub/fight-spawn ceilings; only per-companion `maxChildren` (default 3). Gear tiers still scale from amount. CCI-first — no hardcoded cheer/gift chat parser.
+
+### Companion chunk loading
+- Summoned companions **and child Bits** each hold an entity chunk ticket for the chunk they occupy (AI/follow/sleep stay active when the owner walks away).
+- NeoForge: `companionChunkLoading` (default **true**) + `maxForcedChunksPerPlayer` (default **16**) under `[performance]` in `azscompanions-server.toml`. Fabric mirrors the same defaults.
+- Ticket updates on chunk move; released on despawn / death / charm store. Only while the owner is in the same dimension (or offline). Not an FTB claim.
+
+### Companion AI
+- **Server-loaded LLM:** `serverLlmOnly` (default true) — configure provider once on the dedicated/LAN host; all companions share that **endpoint**. Clients need no local LM Studio or API keys. Ask / name-mention / idle / CCI AI run server-side.
+- **Separate minds:** `perCompanionMemory` (default true) + `memoryMaxMessages` (default 16) — each companion UUID keeps its own chat buffer; system prompt uses that companion’s name/form/attitude/child-parent only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md) (“shared server LLM, separate minds”).
+- **Chat listen:** `chatListenMode` = `off` (default) | `player` | `global` — auto LLM replies to chat (ignores `/`, cooldowns, range).
+- **Name mention:** `nameListen` (default true) — `Bit, come here` triggers that companion; owner vs stranger modes. Strangers get helpful social play; grief/inventory actions blocked.
+- **Censor:** `censorChat` (default true) + optional `censorExtraWords` on AI input/`speakLine`.
+- **Idle + call-away:** `idleChat`, `callPlayerWhenAway` (+ interval/distance keys); defaults off.
+- **World actions:** `enableAiActions` (default false) — LLM JSON/tool actions: `mine`, `place`/`build`, `craft`, move/modes, play (`run_at_player`, hide/seek, dance…), inventory (`pickup`, `use_item`, `equip`, `drop`, …). Craft/build/mine run via real task queue ticks.
+- **Child Bits:** inherit parent form/skin/attitude/team/armor visibility; `childAutonomy` cling/balanced/curious + soft parent leash; less frequent idle; AI tools when enabled; **own** AI memory (not the parent’s).
+- Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
+
+### CCI
+- **Full manual:** [docs/CCI.md](docs/CCI.md) (install, all subjects, teamfight, AI, troubleshooting).
+- **AI subjects:** `companion_ask` / `ai_ask`, `ai_status`, `ai_chat` / `stream_chat`, **`ai_config`** (session `chatListenMode=` / `enableAiActions=`).
+- **Persona:** `companion_persona` (+ summon/modify keys `whoAmI`/`whatAmIDoing`/`howWillIBe`/…); `op=get|clear`; marks initialized → skips first-create onboarding.
+- **Play:** `companion_play` / `companion_rush` / `companion_hide_seek` (dance/peekaboo/stop via `mode=`).
+- **FTB claim:** `claim_chunk` / `unclaim_chunk` (owner quota; needs Chunks + `ftbChunksAiClaim`).
+- **Chunk loading:** `companion_modify` `chunkLoading=true|false` per-companion override (server global must allow tickets).
+- **Behavior spacing** (already on modify): `followRadius` / `personalSpace` / `wanderRadius`; **showArmor** unchanged.
+- **CCI summon → chat + AI:** greet/wave use LLM when provider enabled (canned fallback); ask/chat-listen/idle share the charm-companion pipeline; ownership stays on the streamer.
+- Fabric + NeoForge CCI parity. Examples under `cci-examples/`.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.6+1.21.1.jar` | `azscompanions-fabric-0.3.6+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.6+1.21.1.jar` | `azscompanions-fabric-cci-0.3.6+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress (Java 25 / unobfuscated); no jar shipped. See [MULTI_VERSION.md](docs/MULTI_VERSION.md).
+
 ## 0.3.5
 
 Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
@@ -24,7 +110,7 @@ Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5
 - **`companion_spawn_child`:** bits → Bits under leader with tiered gear (100 leather+stick → 1000 netherite); aliases `spawn_child`, `spawn_bit`, …
 - **Auto kills:** rival-team companion deaths score the HUD automatically.
 - Shared helpers: `spawnChild` / `spawnFightLeader`; cake also calls `spawnChild`.
-- Caps: 6 children/leader; 24 fight spawns/player. Docs: [CCI_STREAMING_GUIDE](docs/CCI_STREAMING_GUIDE.md).
+- Caps: default **3** children/leader (`maxChildrenPerCompanion`); CCI `maxChildren=`/`childCap=` per parent (hard max 64). Docs: [CCI_STREAMING_GUIDE](docs/CCI_STREAMING_GUIDE.md).
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |

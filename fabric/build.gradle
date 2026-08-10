@@ -13,6 +13,7 @@ group = rootProject.mod_group_id
 repositories {
     maven { url = "https://maven.fabricmc.net/" }
     mavenCentral()
+    maven { url = "https://maven.blamejared.com/" }
 }
 
 dependencies {
@@ -22,6 +23,8 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 
     implementation project(':common')
+    // Soft-dep API — plain compileOnly avoids Loom remapping the JM API jar (built with newer Loom).
+    compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
 }
 
 loom {

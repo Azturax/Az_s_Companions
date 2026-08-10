@@ -22,9 +22,13 @@ Az's Companions (mod id `azscompanions`). Public repo: [Azturax/Az_s_Companions]
 
 `ProtectionHelper` + `ClaimProtectionApi` + datapack blacklists prevent griefing. Companions never damage owners, trusted players, or `OwnableEntity` pets of those players.
 
+## Companion chunk tickets
+
+While summoned, each companion entity (primary and child Bits) holds a loader chunk ticket for its current chunk so AI/follow/sleep keep ticking when the player is away. NeoForge uses `TicketController`; Fabric uses a non-expiring `TicketType`. Config: `companionChunkLoading` / `maxForcedChunksPerPlayer`. Distinct from FTB chunk claims.
+
 ## Compatibility
 
-Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps.
+Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps. FTB Teams/Chunks/Ranks: reflection soft-deps — [COMPAT.md](COMPAT.md).
 
 ## Pathfinding / home blocks
 

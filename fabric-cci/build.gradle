@@ -18,6 +18,7 @@ def commonResourcesDir = rootProject.file('common/src/main/resources')
 repositories {
     maven { url = "https://maven.fabricmc.net/" }
     mavenCentral()
+    maven { url = "https://maven.blamejared.com/" }
     exclusiveContent {
         forRepository {
             maven {
@@ -38,6 +39,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 
     implementation project(':common')
+    compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
 
     // CCI + iChunUtil (Fabric 1.21 / 1.21.1) via Modrinth Maven version IDs.
     modImplementation "maven.modrinth:content-creator-integration:${rootProject.cci_fabric_modrinth_version_id}"

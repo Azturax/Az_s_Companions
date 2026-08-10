@@ -21,7 +21,7 @@ One companion per player on multiplayer servers.
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-# Accept NeoForge 21.1.x (MC 1.21.1) through 26.2.x (MC 26.2)
+# Production pin: NeoForge 21.1.x (Minecraft 1.21.1). NeoForge 26.2 is a separate port.
 versionRange="${neo_version_range}"
 ordering="NONE"
 side="BOTH"
@@ -29,7 +29,58 @@ side="BOTH"
 [[dependencies.${mod_id}]]
 modId="minecraft"
 type="required"
-# Accept Minecraft 1.21.1 through 26.2
+# Production pin: Minecraft 1.21.1 only (see docs/MULTI_VERSION.md for 26.2 plans)
 versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+# Optional map mods — soft-dep (mod loads without them)
+[[dependencies.${mod_id}]]
+modId="journeymap"
+type="optional"
+versionRange="[1.21.1-6.0.0,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="xaerominimap"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="xaeroworldmap"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="ftbchunks"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+# Optional hosted-world / invite-friends mods (Essential, e4mc, World Host)
+[[dependencies.${mod_id}]]
+modId="essential"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="e4mc"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="world-host"
+type="optional"
+versionRange="*"
 ordering="NONE"
 side="BOTH"

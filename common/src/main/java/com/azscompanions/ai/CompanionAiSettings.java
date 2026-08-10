@@ -29,6 +29,97 @@ public final class CompanionAiSettings {
     private int timeoutSeconds = 30;
     private int maxTokens = 256;
     private boolean enableChatMessages = true;
+    /**
+     * When true (default), all companions share this process's AI config — the dedicated
+     * server or LAN/integrated host. Joining clients do not need local LM Studio / API keys;
+     * their {@code azscompanions-ai.*} is ignored for LLM calls (ask runs server-side).
+     * Endpoint is shared; minds are not — see {@link #perCompanionMemory}.
+     */
+    private boolean serverLlmOnly = true;
+    /**
+     * When true (default), Essential / e4mc / World Host / Open-to-LAN integrated multiplayer
+     * also forces the host LLM to be authoritative even if {@link #serverLlmOnly} is false.
+     * No effect on dedicated servers (always shared there).
+     */
+    private boolean integratedMultiplayerSharedLlm = true;
+    /**
+     * When true (default), on integrated hosted multiplayer only, treat matching player
+     * profile names as the companion owner if UUIDs diverge (offline↔online remap).
+     * Always off on dedicated servers.
+     */
+    private boolean ownerNameFallback = true;
+    /**
+     * When true (default), each companion keeps its own rolling chat history keyed by entity UUID.
+     * Companion A never receives companion B's transcript. Children have separate buffers.
+     */
+    private boolean perCompanionMemory = true;
+    /** Max prior messages (user+assistant) kept per companion when memory is on. Default 16. */
+    private int memoryMaxMessages = 16;
+    /** Censor common profanity in AI input + companion spoken lines. Default on. */
+    private boolean censorChat = true;
+    private List<String> censorExtraWords = new ArrayList<>();
+
+    /** Auto-reply to chat: off (default) | player (owner only) | global (any chat near companions). */
+    private ChatListenMode chatListenMode = ChatListenMode.OFF;
+    /**
+     * When true (default), saying a companion's display name in chat triggers that companion
+     * even if {@link #chatListenMode} is {@code off}. Ownership selects owner vs stranger mode.
+     */
+    private boolean nameListen = true;
+    private double chatReactRange = CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE;
+    private int chatReactCooldownSeconds = CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS;
+
+    /** Occasional ambient LLM lines while owner is online and near the companion. */
+    private boolean idleChat = false;
+    private int idleChatSecondsMin = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN;
+    private int idleChatSecondsMax = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MAX;
+
+    /** Call the owner by name when they stay beyond {@link #callPlayerDistance} too long. */
+    private boolean callPlayerWhenAway = false;
+    private int callPlayerAfterSeconds = CompanionAiChatSupport.DEFAULT_CALL_PLAYER_AFTER_SECONDS;
+    private double callPlayerDistance = CompanionAiChatSupport.DEFAULT_CALL_PLAYER_DISTANCE;
+    private int callPlayerCooldownSeconds = CompanionAiChatSupport.DEFAULT_CALL_PLAYER_COOLDOWN_SECONDS;
+
+    /**
+     * When true, LLM replies may include structured actions (mine/craft/build/move/play/inventory)
+     * that the server executes on the owned companion. Default false (safe).
+     */
+    private boolean enableAiActions = false;
+    private int aiActionReach = 5;
+    private int aiActionCooldownTicks = 10;
+
+    /** Child Bit autonomy when AI is enabled: cling | balanced | curious. */
+    private ChildAutonomyMode childAutonomy = ChildAutonomyMode.BALANCED;
+    /** Soft max distance (blocks) from parent leader before child is pulled back. 0 = use autonomy default. */
+    private double childLeashRadius = 0.0d;
+
+    // --- Optional FTB suite soft-compat (no-op when FTB mods absent) ---
+    /** Treat same FTB team as owner-adjacent for trust / helpful interact. */
+    private boolean ftbTeamsCompat = true;
+    /**
+     * Companions may walk / pathfind into claimed chunks. Does not grant mine/build rights.
+     * Default true; FTB never blocks entity presence — this documents intent.
+     */
+    private boolean ftbChunksAllowPresence = true;
+    /**
+     * Block AI/task mine/place/build/container/use where FTB Chunks would deny the owner.
+     * Does not block walking into claims.
+     */
+    private boolean ftbChunksBlockInteraction = true;
+    /**
+     * When true and FTB Chunks is loaded, owner AI may {@code claim_chunk} / {@code unclaim_chunk}
+     * using the owner's quota (not strangers).
+     */
+    private boolean ftbChunksAiClaim = false;
+    /** Gate ask / AI actions / CCI / teamfight / spawn via FTB Ranks nodes. */
+    private boolean ftbRanksCompat = false;
+    /** When true + same FTB team, grant {@link CompanionAiActionTrust#OWNER} for AI tools. */
+    private boolean trustSameTeamAsOwner = false;
+    private String ftbPermAiAsk = com.azscompanions.compat.ftb.FtbPermissionNodes.AI_ASK;
+    private String ftbPermAiActions = com.azscompanions.compat.ftb.FtbPermissionNodes.AI_ACTIONS;
+    private String ftbPermCci = com.azscompanions.compat.ftb.FtbPermissionNodes.CCI;
+    private String ftbPermTeamfight = com.azscompanions.compat.ftb.FtbPermissionNodes.TEAMFIGHT;
+    private String ftbPermSpawn = com.azscompanions.compat.ftb.FtbPermissionNodes.SPAWN;
 
     private McpTransportMode mcpTransport = McpTransportMode.HTTP;
     private String mcpUrl = "http://127.0.0.1:3001/mcp";
@@ -137,6 +228,330 @@ public final class CompanionAiSettings {
         return this;
     }
 
+    public boolean serverLlmOnly() {
+        return serverLlmOnly;
+    }
+
+    public CompanionAiSettings setServerLlmOnly(boolean serverLlmOnly) {
+        this.serverLlmOnly = serverLlmOnly;
+        return this;
+    }
+
+    public boolean integratedMultiplayerSharedLlm() {
+        return integratedMultiplayerSharedLlm;
+    }
+
+    public CompanionAiSettings setIntegratedMultiplayerSharedLlm(boolean integratedMultiplayerSharedLlm) {
+        this.integratedMultiplayerSharedLlm = integratedMultiplayerSharedLlm;
+        return this;
+    }
+
+    public boolean ownerNameFallback() {
+        return ownerNameFallback;
+    }
+
+    public CompanionAiSettings setOwnerNameFallback(boolean ownerNameFallback) {
+        this.ownerNameFallback = ownerNameFallback;
+        return this;
+    }
+
+    public boolean perCompanionMemory() {
+        return perCompanionMemory;
+    }
+
+    public CompanionAiSettings setPerCompanionMemory(boolean perCompanionMemory) {
+        this.perCompanionMemory = perCompanionMemory;
+        return this;
+    }
+
+    public int memoryMaxMessages() {
+        return memoryMaxMessages;
+    }
+
+    public CompanionAiSettings setMemoryMaxMessages(int memoryMaxMessages) {
+        this.memoryMaxMessages = Math.max(2, Math.min(64, memoryMaxMessages));
+        return this;
+    }
+
+    public ChatListenMode chatListenMode() {
+        return chatListenMode;
+    }
+
+    public CompanionAiSettings setChatListenMode(ChatListenMode chatListenMode) {
+        this.chatListenMode = chatListenMode == null ? ChatListenMode.OFF : chatListenMode;
+        return this;
+    }
+
+    public boolean nameListen() {
+        return nameListen;
+    }
+
+    public CompanionAiSettings setNameListen(boolean nameListen) {
+        this.nameListen = nameListen;
+        return this;
+    }
+
+    public boolean censorChat() {
+        return censorChat;
+    }
+
+    public CompanionAiSettings setCensorChat(boolean censorChat) {
+        this.censorChat = censorChat;
+        return this;
+    }
+
+    public List<String> censorExtraWords() {
+        return List.copyOf(censorExtraWords);
+    }
+
+    public CompanionAiSettings setCensorExtraWords(List<String> censorExtraWords) {
+        this.censorExtraWords = censorExtraWords == null ? new ArrayList<>() : new ArrayList<>(censorExtraWords);
+        return this;
+    }
+
+    public double chatReactRange() {
+        return chatReactRange;
+    }
+
+    public CompanionAiSettings setChatReactRange(double chatReactRange) {
+        this.chatReactRange = CompanionAiChatSupport.clampRange(chatReactRange);
+        return this;
+    }
+
+    public int chatReactCooldownSeconds() {
+        return chatReactCooldownSeconds;
+    }
+
+    public CompanionAiSettings setChatReactCooldownSeconds(int chatReactCooldownSeconds) {
+        this.chatReactCooldownSeconds = CompanionAiChatSupport.clampCooldownSeconds(chatReactCooldownSeconds);
+        return this;
+    }
+
+    public boolean idleChat() {
+        return idleChat;
+    }
+
+    public CompanionAiSettings setIdleChat(boolean idleChat) {
+        this.idleChat = idleChat;
+        return this;
+    }
+
+    public int idleChatSecondsMin() {
+        return idleChatSecondsMin;
+    }
+
+    public CompanionAiSettings setIdleChatSecondsMin(int idleChatSecondsMin) {
+        this.idleChatSecondsMin = CompanionAiChatSupport.clampIdleSeconds(idleChatSecondsMin);
+        return this;
+    }
+
+    public int idleChatSecondsMax() {
+        return idleChatSecondsMax;
+    }
+
+    public CompanionAiSettings setIdleChatSecondsMax(int idleChatSecondsMax) {
+        this.idleChatSecondsMax = CompanionAiChatSupport.clampIdleSeconds(idleChatSecondsMax);
+        return this;
+    }
+
+    public boolean callPlayerWhenAway() {
+        return callPlayerWhenAway;
+    }
+
+    public CompanionAiSettings setCallPlayerWhenAway(boolean callPlayerWhenAway) {
+        this.callPlayerWhenAway = callPlayerWhenAway;
+        return this;
+    }
+
+    public int callPlayerAfterSeconds() {
+        return callPlayerAfterSeconds;
+    }
+
+    public CompanionAiSettings setCallPlayerAfterSeconds(int callPlayerAfterSeconds) {
+        this.callPlayerAfterSeconds = CompanionAiChatSupport.clampIdleSeconds(callPlayerAfterSeconds);
+        return this;
+    }
+
+    public double callPlayerDistance() {
+        return callPlayerDistance;
+    }
+
+    public CompanionAiSettings setCallPlayerDistance(double callPlayerDistance) {
+        this.callPlayerDistance = CompanionAiChatSupport.clampRange(callPlayerDistance);
+        return this;
+    }
+
+    public int callPlayerCooldownSeconds() {
+        return callPlayerCooldownSeconds;
+    }
+
+    public CompanionAiSettings setCallPlayerCooldownSeconds(int callPlayerCooldownSeconds) {
+        this.callPlayerCooldownSeconds = CompanionAiChatSupport.clampCooldownSeconds(callPlayerCooldownSeconds);
+        return this;
+    }
+
+    public boolean enableAiActions() {
+        return enableAiActions;
+    }
+
+    public CompanionAiSettings setEnableAiActions(boolean enableAiActions) {
+        this.enableAiActions = enableAiActions;
+        return this;
+    }
+
+    public int aiActionReach() {
+        return aiActionReach;
+    }
+
+    public CompanionAiSettings setAiActionReach(int aiActionReach) {
+        this.aiActionReach = Math.max(2, Math.min(16, aiActionReach));
+        return this;
+    }
+
+    public int aiActionCooldownTicks() {
+        return aiActionCooldownTicks;
+    }
+
+    public CompanionAiSettings setAiActionCooldownTicks(int aiActionCooldownTicks) {
+        this.aiActionCooldownTicks = Math.max(0, Math.min(100, aiActionCooldownTicks));
+        return this;
+    }
+
+    public ChildAutonomyMode childAutonomy() {
+        return childAutonomy;
+    }
+
+    public CompanionAiSettings setChildAutonomy(ChildAutonomyMode childAutonomy) {
+        this.childAutonomy = childAutonomy == null ? ChildAutonomyMode.BALANCED : childAutonomy;
+        return this;
+    }
+
+    public double childLeashRadius() {
+        return childLeashRadius;
+    }
+
+    public CompanionAiSettings setChildLeashRadius(double childLeashRadius) {
+        this.childLeashRadius = Math.max(0.0d, Math.min(48.0d, childLeashRadius));
+        return this;
+    }
+
+    /** Effective leash for children: explicit config or autonomy default. */
+    public double effectiveChildLeashRadius() {
+        return childLeashRadius > 0.0d ? childLeashRadius : childAutonomy.leashRadius();
+    }
+
+    public boolean ftbTeamsCompat() {
+        return ftbTeamsCompat;
+    }
+
+    public CompanionAiSettings setFtbTeamsCompat(boolean ftbTeamsCompat) {
+        this.ftbTeamsCompat = ftbTeamsCompat;
+        return this;
+    }
+
+    public boolean ftbChunksAllowPresence() {
+        return ftbChunksAllowPresence;
+    }
+
+    public CompanionAiSettings setFtbChunksAllowPresence(boolean ftbChunksAllowPresence) {
+        this.ftbChunksAllowPresence = ftbChunksAllowPresence;
+        return this;
+    }
+
+    public boolean ftbChunksBlockInteraction() {
+        return ftbChunksBlockInteraction;
+    }
+
+    public CompanionAiSettings setFtbChunksBlockInteraction(boolean ftbChunksBlockInteraction) {
+        this.ftbChunksBlockInteraction = ftbChunksBlockInteraction;
+        return this;
+    }
+
+    /** @deprecated use {@link #ftbChunksBlockInteraction()} */
+    @Deprecated
+    public boolean ftbChunksProtect() {
+        return ftbChunksBlockInteraction;
+    }
+
+    /** @deprecated use {@link #setFtbChunksBlockInteraction(boolean)} */
+    @Deprecated
+    public CompanionAiSettings setFtbChunksProtect(boolean ftbChunksProtect) {
+        this.ftbChunksBlockInteraction = ftbChunksProtect;
+        return this;
+    }
+
+    public boolean ftbChunksAiClaim() {
+        return ftbChunksAiClaim;
+    }
+
+    public CompanionAiSettings setFtbChunksAiClaim(boolean ftbChunksAiClaim) {
+        this.ftbChunksAiClaim = ftbChunksAiClaim;
+        return this;
+    }
+
+    public boolean ftbRanksCompat() {
+        return ftbRanksCompat;
+    }
+
+    public CompanionAiSettings setFtbRanksCompat(boolean ftbRanksCompat) {
+        this.ftbRanksCompat = ftbRanksCompat;
+        return this;
+    }
+
+    public boolean trustSameTeamAsOwner() {
+        return trustSameTeamAsOwner;
+    }
+
+    public CompanionAiSettings setTrustSameTeamAsOwner(boolean trustSameTeamAsOwner) {
+        this.trustSameTeamAsOwner = trustSameTeamAsOwner;
+        return this;
+    }
+
+    public String ftbPermAiAsk() {
+        return ftbPermAiAsk;
+    }
+
+    public CompanionAiSettings setFtbPermAiAsk(String ftbPermAiAsk) {
+        this.ftbPermAiAsk = blankTo(ftbPermAiAsk, com.azscompanions.compat.ftb.FtbPermissionNodes.AI_ASK);
+        return this;
+    }
+
+    public String ftbPermAiActions() {
+        return ftbPermAiActions;
+    }
+
+    public CompanionAiSettings setFtbPermAiActions(String ftbPermAiActions) {
+        this.ftbPermAiActions = blankTo(ftbPermAiActions, com.azscompanions.compat.ftb.FtbPermissionNodes.AI_ACTIONS);
+        return this;
+    }
+
+    public String ftbPermCci() {
+        return ftbPermCci;
+    }
+
+    public CompanionAiSettings setFtbPermCci(String ftbPermCci) {
+        this.ftbPermCci = blankTo(ftbPermCci, com.azscompanions.compat.ftb.FtbPermissionNodes.CCI);
+        return this;
+    }
+
+    public String ftbPermTeamfight() {
+        return ftbPermTeamfight;
+    }
+
+    public CompanionAiSettings setFtbPermTeamfight(String ftbPermTeamfight) {
+        this.ftbPermTeamfight = blankTo(ftbPermTeamfight, com.azscompanions.compat.ftb.FtbPermissionNodes.TEAMFIGHT);
+        return this;
+    }
+
+    public String ftbPermSpawn() {
+        return ftbPermSpawn;
+    }
+
+    public CompanionAiSettings setFtbPermSpawn(String ftbPermSpawn) {
+        this.ftbPermSpawn = blankTo(ftbPermSpawn, com.azscompanions.compat.ftb.FtbPermissionNodes.SPAWN);
+        return this;
+    }
+
     public McpTransportMode mcpTransport() {
         return mcpTransport;
     }
@@ -216,10 +631,70 @@ public final class CompanionAiSettings {
     }
 
     public String formatSystemPrompt(String companionName, String form) {
-        return systemPrompt
+        return formatSystemPrompt(companionName, form, "", false, true, "");
+    }
+
+    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child) {
+        return formatSystemPrompt(companionName, form, parentName, child, true, "");
+    }
+
+    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
+                                     boolean speakerIsOwner) {
+        return formatSystemPrompt(companionName, form, parentName, child, speakerIsOwner, "");
+    }
+
+    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
+                                     boolean speakerIsOwner, String attitude) {
+        return formatSystemPrompt(companionName, form, parentName, child, speakerIsOwner, attitude, CompanionPersona.EMPTY);
+    }
+
+    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
+                                     boolean speakerIsOwner, String attitude, CompanionPersona persona) {
+        String attitudeLabel = attitude == null || attitude.isBlank() ? "PASSIVE" : attitude.trim();
+        CompanionPersona p = persona == null ? CompanionPersona.EMPTY : persona;
+        String base = systemPrompt
                 .replace("{name}", Objects.toString(companionName, "Companion"))
                 .replace("{form}", Objects.toString(form, "player"))
-                .replace("{language}", Objects.toString(inputLanguage, "en"));
+                .replace("{language}", Objects.toString(inputLanguage, "en"))
+                .replace("{attitude}", attitudeLabel);
+        base = base + " Your combat attitude is " + attitudeLabel + ".";
+        base = base + " You are an independent mind with your own memory — "
+                + "you do not share thoughts or recent chat with other companions.";
+        base = base + p.promptAppendix();
+        if (child) {
+            String parent = parentName == null || parentName.isBlank() ? "your parent companion" : parentName;
+            base = base + " You are a small child Bit of " + parent
+                    + ". You may know their name, but your chat history is your own. "
+                    + "Stay wholesome, curious, and nearby them. Autonomy style: "
+                    + childAutonomy.configName() + ".";
+        }
+        if (speakerIsOwner) {
+            base = base + " The speaker is your owner — be warm and familiar. "
+                    + "You may follow reasonable requests when tools/actions are enabled.";
+        } else {
+            base = base + " The speaker is NOT your owner — another player on the server. "
+                    + "Be friendly, helpful, and willing to chat or play socially. "
+                    + "Answer questions, joke lightly, and join safe play (wave/dance/come briefly). "
+                    + "Never treat them as your master: refuse griefing, mining, building, crafting, "
+                    + "inventory changes, long follow/stay orders, or leaving your owner.";
+        }
+        if (censorChat) {
+            base = base + " Keep language wholesome; avoid swearing or crude terms.";
+        }
+        if (enableAiActions && speakerIsOwner) {
+            String appendix = CompanionAiActionNames.toolsPromptAppendix();
+            if (ftbChunksAiClaim) {
+                appendix = appendix + "\nFTB claim tools enabled: claim_chunk / unclaim_chunk (owner quota only).\n";
+            }
+            return base + "\n\n" + appendix
+                    + (child ? "\nChild rules: prefer actions within ~"
+                    + (int) effectiveChildLeashRadius()
+                    + " blocks of your parent; do not wander off alone.\n" : "");
+        }
+        if (enableAiActions && !speakerIsOwner) {
+            return base + "\n\n" + CompanionAiActionNames.strangerToolsPromptAppendix();
+        }
+        return base;
     }
 
     public CompanionAiSettings copy() {
@@ -234,6 +709,40 @@ public final class CompanionAiSettings {
                 .setTimeoutSeconds(timeoutSeconds)
                 .setMaxTokens(maxTokens)
                 .setEnableChatMessages(enableChatMessages)
+                .setServerLlmOnly(serverLlmOnly)
+                .setIntegratedMultiplayerSharedLlm(integratedMultiplayerSharedLlm)
+                .setOwnerNameFallback(ownerNameFallback)
+                .setPerCompanionMemory(perCompanionMemory)
+                .setMemoryMaxMessages(memoryMaxMessages)
+                .setCensorChat(censorChat)
+                .setCensorExtraWords(censorExtraWords)
+                .setChatListenMode(chatListenMode)
+                .setNameListen(nameListen)
+                .setChatReactRange(chatReactRange)
+                .setChatReactCooldownSeconds(chatReactCooldownSeconds)
+                .setIdleChat(idleChat)
+                .setIdleChatSecondsMin(idleChatSecondsMin)
+                .setIdleChatSecondsMax(idleChatSecondsMax)
+                .setCallPlayerWhenAway(callPlayerWhenAway)
+                .setCallPlayerAfterSeconds(callPlayerAfterSeconds)
+                .setCallPlayerDistance(callPlayerDistance)
+                .setCallPlayerCooldownSeconds(callPlayerCooldownSeconds)
+                .setEnableAiActions(enableAiActions)
+                .setAiActionReach(aiActionReach)
+                .setAiActionCooldownTicks(aiActionCooldownTicks)
+                .setChildAutonomy(childAutonomy)
+                .setChildLeashRadius(childLeashRadius)
+                .setFtbTeamsCompat(ftbTeamsCompat)
+                .setFtbChunksAllowPresence(ftbChunksAllowPresence)
+                .setFtbChunksBlockInteraction(ftbChunksBlockInteraction)
+                .setFtbChunksAiClaim(ftbChunksAiClaim)
+                .setFtbRanksCompat(ftbRanksCompat)
+                .setTrustSameTeamAsOwner(trustSameTeamAsOwner)
+                .setFtbPermAiAsk(ftbPermAiAsk)
+                .setFtbPermAiActions(ftbPermAiActions)
+                .setFtbPermCci(ftbPermCci)
+                .setFtbPermTeamfight(ftbPermTeamfight)
+                .setFtbPermSpawn(ftbPermSpawn)
                 .setMcpTransport(mcpTransport)
                 .setMcpUrl(mcpUrl)
                 .setMcpCommand(mcpCommand)

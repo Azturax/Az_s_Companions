@@ -20,6 +20,11 @@ public final class MineTask extends CompanionTask {
         super("mine", TaskPriority.NORMAL);
     }
 
+    public MineTask at(BlockPos pos) {
+        this.target = pos.immutable();
+        return this;
+    }
+
     public MineTask withRadius(int radius) {
         this.radius = radius;
         return this;
