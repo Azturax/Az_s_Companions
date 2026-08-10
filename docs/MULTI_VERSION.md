@@ -1,13 +1,13 @@
 # Multi-version targets
 
-Az's Companions **0.2.0** ships production jars for **Minecraft 1.21.1** only (standalone + CCI for both loaders). Additional Minecraft lines are tracked here for follow-up ports.
+Az's Companions **0.2.1** ships production jars for **Minecraft 1.21.1** only (standalone + CCI for both loaders). Additional Minecraft lines are tracked here for follow-up ports.
 
 ## Loader ↔ Minecraft mapping
 
 | User request | Minecraft | NeoForge | Fabric | Notes |
 |--------------|-----------|----------|--------|-------|
 | `1.20.1` | 1.20.1 | **None** in NeoForged releases Maven (Forge `47.x` recommended) | Fabric API `0.92.x+1.20.1` | Port deferred |
-| `1.21.11` → **1.21.1** | **1.21.1** | **21.1.248** | Fabric API `0.116.15+1.21.1` | **Shipped in 0.2.0** |
+| `1.21.11` → **1.21.1** | **1.21.1** | **21.1.248** | Fabric API `0.116.15+1.21.1` | **Shipped in 0.2.1** |
 | NeoForge `26.1.2` | **26.1.2** | **26.1.2.94** | Fabric API `0.155.2+26.1.2`, Java 25, unobfuscated | Port deferred |
 | NeoForge `26.2` | **26.2** | **26.2.0.58** | Fabric API `0.156.0+26.2`, Java 25, unobfuscated | Port deferred |
 
@@ -36,9 +36,9 @@ When a MC line is ported later:
 - **26.1.2 / 26.2:** Unobfuscated Minecraft, Java 25, new Fabric Loom (`net.fabricmc.fabric-loom`), large API migration across ~195 Java sources. No CCI builds on Modrinth yet.
 - **1.20.1:** No NeoForge `20.1.x` releases; Fabric/Forge backports still need 1.20.1 registry/networking changes. CCI exists for Fabric + Forge only.
 
-## Shipped 0.2.0 jars (1.21.1)
+## Shipped 0.2.1 jars (1.21.1)
 
-- `azscompanions-neoforge-0.2.0+1.21.1.jar`
-- `azscompanions-neoforge-cci-0.2.0+1.21.1.jar` (CCI 1.13.0 `AySbAgcO` + iChunUtil 1.0.3 `OvIyyNh4`)
-- `azscompanions-fabric-0.2.0+1.21.1.jar`
-- `azscompanions-fabric-cci-0.2.0+1.21.1.jar` (CCI 1.13.0 `PERd6IT9` + iChunUtil 1.0.3 `gfAOoiwe`)
+- `azscompanions-neoforge-0.2.1+1.21.1.jar`
+- `azscompanions-neoforge-cci-0.2.1+1.21.1.jar` (CCI 1.13.0 `AySbAgcO` + iChunUtil 1.0.3 `OvIyyNh4`)
+- `azscompanions-fabric-0.2.1+1.21.1.jar`
+- `azscompanions-fabric-cci-0.2.1+1.21.1.jar` (CCI 1.13.0 `PERd6IT9` + iChunUtil 1.0.3 `gfAOoiwe`)

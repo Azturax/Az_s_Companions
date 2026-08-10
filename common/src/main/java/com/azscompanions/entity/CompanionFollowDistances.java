@@ -15,20 +15,26 @@ public final class CompanionFollowDistances {
     public static final double FOLLOW_START = 10.0d;
     /** Stop closing the gap once within this distance (≥ personal space). */
     public static final double FOLLOW_STOP = 5.0d;
-    /** Ground teleport leash while exploring (never while idle / fighting). */
+    /** Ground teleport leash while exploring in Follow mode (never while idle / fighting / Wander stroll). */
     public static final double TELEPORT_DISTANCE = 48.0d;
+    /**
+     * Hard floor for any teleport-to-owner. Closer than this → walk/path only (never snap).
+     * Prevents the short-range “bounce” while wandering near the player.
+     */
+    public static final double MIN_TELEPORT_DISTANCE = 24.0d;
     /**
      * Home-bed proximity (blocks). While the companion is within this of her home bed and the
      * owner is also within this of the bed, Follow mode stays home-idle instead of glued follow.
-     * If the owner moves farther than this from the bed, the companion teleports to the owner.
+     * If the owner moves farther than this from the bed, the companion may teleport (only if also
+     * beyond {@link #MIN_TELEPORT_DISTANCE} from the owner).
      */
     public static final double HOME_BED_RADIUS = 35.0d;
-    /** Soft stroll ring around the home bed while home-idle. */
+    /** Soft stroll ring around the home bed while home-idle (Happy Ghast–leisurely). */
     public static final double HOME_IDLE_WANDER_MIN = 2.0d;
-    public static final double HOME_IDLE_WANDER_MAX = 12.0d;
-    /** Explicit WANDER mode free-roam ring (loaded chunks only). */
-    public static final double IDLE_WANDER_MIN = 8.0d;
-    public static final double IDLE_WANDER_MAX = 24.0d;
+    public static final double HOME_IDLE_WANDER_MAX = 10.0d;
+    /** Explicit WANDER mode free-roam ring (loaded chunks only; stroll, never teleport). */
+    public static final double IDLE_WANDER_MIN = 3.0d;
+    public static final double IDLE_WANDER_MAX = 16.0d;
     /** Wake / leave bed when owner is farther than this while companion sleeps. */
     public static final double LEAVE_BED_OWNER_DISTANCE = 35.0d;
 
@@ -53,5 +59,15 @@ public final class CompanionFollowDistances {
 
     public static boolean beyondHomeBedRadius(double distance) {
         return distance > HOME_BED_RADIUS;
+    }
+
+    /** True when a teleport-to-owner would be a short-range snap and must be skipped. */
+    public static boolean tooCloseToTeleport(double distanceToOwner) {
+        return distanceToOwner < MIN_TELEPORT_DISTANCE;
+    }
+
+    /** True when Follow-mode ground leash teleport is allowed. */
+    public static boolean shouldGroundTeleport(double distanceToOwner) {
+        return distanceToOwner >= TELEPORT_DISTANCE;
     }
 }

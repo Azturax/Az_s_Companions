@@ -153,13 +153,18 @@ public class FabricCompanionEntity extends PathfinderMob {
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickSleepPurr();
             tickHomeBedLeash();
-            // Ground leash teleport — only when actively following away from home.
-            if (shouldActivelyFollowOwner()
+            // Follow-only ground leash — never during Wander stroll / home-idle.
+            if (getMode() == FabricCompanionMode.FOLLOW
+                    && shouldActivelyFollowOwner()
                     && isOwnerExploring()
                     && (getTarget() == null || !getTarget().isAlive())) {
                 Player owner = getOwner();
-                if (owner != null && distanceTo(owner) > CompanionFollowDistances.TELEPORT_DISTANCE) {
-                    safeTeleportNearOwner(owner);
+                if (owner != null) {
+                    double dist = distanceTo(owner);
+                    if (!CompanionFollowDistances.tooCloseToTeleport(dist)
+                            && CompanionFollowDistances.shouldGroundTeleport(dist)) {
+                        safeTeleportNearOwner(owner);
+                    }
                 }
             }
         }
@@ -188,9 +193,11 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= radius * radius) {
             return;
         }
-        if (distanceTo(owner) > CompanionFollowDistances.PREFERRED_DISTANCE + 2.0d) {
-            safeTeleportNearOwner(owner);
+        double dist = distanceTo(owner);
+        if (CompanionFollowDistances.tooCloseToTeleport(dist)) {
+            return;
         }
+        safeTeleportNearOwner(owner);
     }
 
     public void safeTeleportNearOwner(Player owner) {
@@ -232,13 +239,19 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (mode == FabricCompanionMode.STAY || mode == FabricCompanionMode.SIT) {
             return false;
         }
+        if (mode == FabricCompanionMode.WANDER) {
+            return getHomeBedPos() != null && isOwnerFarFromHomeBed();
+        }
+        if (mode != FabricCompanionMode.FOLLOW) {
+            return false;
+        }
         if (getHomeBedPos() == null) {
-            return mode == FabricCompanionMode.FOLLOW || mode == FabricCompanionMode.WANDER;
+            return true;
         }
         if (isOwnerFarFromHomeBed()) {
             return true;
         }
-        return !isNearHomeBed() && mode == FabricCompanionMode.FOLLOW;
+        return !isNearHomeBed();
     }
 
     public boolean shouldHomeIdleNearBed() {

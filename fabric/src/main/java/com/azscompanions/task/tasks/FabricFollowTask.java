@@ -29,7 +29,9 @@ public final class FabricFollowTask extends FabricCompanionTask {
             return Result.RUNNING;
         }
         double dist = companion.distanceTo(owner);
-        if (dist > FabricFollowOwnerGoal.TELEPORT_DISTANCE && companion.isOwnerExploring()) {
+        if (CompanionFollowDistances.shouldGroundTeleport(dist)
+                && !CompanionFollowDistances.tooCloseToTeleport(dist)
+                && companion.isOwnerExploring()) {
             Vec3 away = companion.position().subtract(owner.position());
             if (away.horizontalDistanceSqr() < 1.0e-4d) {
                 away = new Vec3(1.0d, 0.0d, 0.0d);

@@ -22,6 +22,8 @@ public final class SpecialPlayerPerks {
     private static final double FLIGHT_KEEP_RADIUS = 5.0d;
     /** Soft hover offset above the owner's feet while flying. */
     private static final double FLIGHT_HOVER_Y = 0.35d;
+    /** Never land-teleport when already this close (matches ground MIN_TELEPORT_DISTANCE). */
+    private static final double MIN_SAFE_LAND_TELEPORT = 24.0d;
 
     private SpecialPlayerPerks() {
     }
@@ -130,7 +132,14 @@ public final class SpecialPlayerPerks {
             companion.setNoGravity(false);
         }
         boolean floatingAbove = !companion.onGround() && companion.getY() > owner.getY() + 1.25d;
-        if (floatingAbove || companion.distanceTo(owner) > FLIGHT_KEEP_RADIUS) {
+        double dist = companion.distanceTo(owner);
+        if (floatingAbove && dist < MIN_SAFE_LAND_TELEPORT) {
+            Vec3 motion = companion.getDeltaMovement();
+            companion.setDeltaMovement(motion.x * 0.5d, Math.min(motion.y, -0.15d), motion.z * 0.5d);
+            companion.hasImpulse = true;
+            return;
+        }
+        if (dist >= MIN_SAFE_LAND_TELEPORT && (floatingAbove || dist > FLIGHT_KEEP_RADIUS * 3.0d)) {
             companion.teleportTo(owner.getX() + 0.5d, owner.getY(), owner.getZ() + 0.5d);
             companion.setDeltaMovement(Vec3.ZERO);
             companion.getNavigation().stop();
@@ -145,6 +154,9 @@ public final class SpecialPlayerPerks {
     }
 
     private static void snapBesideOwner(Mob companion, Player owner, double sideOffset) {
+        if (companion.distanceTo(owner) < 2.0d) {
+            return;
+        }
         Vec3 away = companion.position().subtract(owner.position());
         if (away.horizontalDistanceSqr() < 1.0e-4d) {
             away = new Vec3(0.5d, 0.0d, 0.5d);

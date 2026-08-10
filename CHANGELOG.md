@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.1
+
+Release: [v0.2.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.1) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### UI
+- **Companion inventory layout:** left vertical armor column (helmet→boots) with vanilla empty armor icons; 3×9 storage to the right; companion hotbar/tools on a separated strip still inside the companion panel; player inventory below with normal spacing (no floating equipment row in the gap)
+
+### AI / teleport
+- **Happy Ghast–inspired Wander:** slow leisurely strolls (speed 0.55), rare starts, linger pauses between legs, soft looks; roam radius 3–16 (owner) / 2–10 (home bed); if outside radius **walks back** — never teleports for that
+- **Wander / home-idle no short-range snaps:** removed home-bed leash teleport at ~8 blocks (`PREFERRED+2`); any teleport-to-owner now requires ≥ **24** blocks (`MIN_TELEPORT_DISTANCE`)
+- **Wander mode teleports:** zero FollowGoal / stuck / ground-leash teleports — only the home-bed rule (owner >35 from bed) may teleport, and only if also ≥24 from owner
+- Special perk land-snap no longer teleports when floating while already close (<24)
+
+### Loaders / editions (jar matrix)
+Jar names use `0.2.1+<minecraft>` so the game version is visible in the filename.
+
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.2.1+1.21.1.jar` | `azscompanions-fabric-0.2.1+1.21.1.jar` | `azscompanions-neoforge-cci-0.2.1+1.21.1.jar` | `azscompanions-fabric-cci-0.2.1+1.21.1.jar` |
+
+**Shipped this release:** four jars for Minecraft **1.21.1** (NeoForge + Fabric standalone and CCI). See `docs/MULTI_VERSION.md`.
+
+### Build / metadata
+- Mod version **0.2.1**; published archives tagged `+1.21.1`
+
 ## 0.2.0
 
 Release: [v0.2.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.0) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

@@ -18,6 +18,12 @@ final class CompanionFollowDistancesTest {
         assertTrue(CompanionFollowDistances.FOLLOW_STOP >= CompanionFollowDistances.MIN_PERSONAL_SPACE);
         assertTrue(CompanionFollowDistances.FOLLOW_STOP <= CompanionFollowDistances.COMFORT_MAX);
         assertTrue(CompanionFollowDistances.TELEPORT_DISTANCE > CompanionFollowDistances.FOLLOW_START);
+        assertTrue(CompanionFollowDistances.MIN_TELEPORT_DISTANCE < CompanionFollowDistances.TELEPORT_DISTANCE);
+        assertTrue(CompanionFollowDistances.tooCloseToTeleport(8.0d));
+        assertTrue(CompanionFollowDistances.tooCloseToTeleport(23.9d));
+        assertFalse(CompanionFollowDistances.tooCloseToTeleport(24.0d));
+        assertFalse(CompanionFollowDistances.shouldGroundTeleport(47.0d));
+        assertTrue(CompanionFollowDistances.shouldGroundTeleport(48.0d));
         assertTrue(CompanionFollowDistances.withinHomeBedRadius(35.0d));
         assertFalse(CompanionFollowDistances.withinHomeBedRadius(35.1d));
         assertTrue(CompanionFollowDistances.beyondHomeBedRadius(35.1d));

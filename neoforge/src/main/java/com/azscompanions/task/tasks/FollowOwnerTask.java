@@ -1,6 +1,5 @@
 package com.azscompanions.task.tasks;
 
-import com.azscompanions.config.CommonConfig;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
@@ -30,7 +29,9 @@ public final class FollowOwnerTask extends CompanionTask {
             return TaskTickResult.RUNNING;
         }
         double dist = companion.distanceTo(owner);
-        if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
+        if (CompanionFollowDistances.shouldGroundTeleport(dist)
+                && !CompanionFollowDistances.tooCloseToTeleport(dist)
+                && companion.isOwnerExploring()) {
             companion.safeTeleportNear(owner.blockPosition());
         } else if (CompanionFollowDistances.needsFollow(dist) && companion.isOwnerExploring()) {
             Vec3 away = companion.position().subtract(owner.position());

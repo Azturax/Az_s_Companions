@@ -3,20 +3,33 @@ package com.azscompanions.menu;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.registry.FabricModScreenHandlers;
+import com.mojang.datafixers.util.Pair;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 
-/** Companion inventory: backpack + armor/tool equipment row. */
+/**
+ * Companion inventory layout (mirrors vanilla player armor column):
+ * armor left, 3×9 storage right, companion hotbar under storage, player inv below.
+ */
 public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
-    public static final int IMAGE_HEIGHT = 222;
+    public static final int IMAGE_WIDTH = 194;
+    public static final int IMAGE_HEIGHT = 204;
+
+    public static final int ARMOR_X = 8;
+    public static final int STORAGE_X = 26;
+    public static final int STORAGE_Y = 18;
+    public static final int COMPANION_HOTBAR_Y = 90;
+    public static final int PLAYER_INV_Y = 120;
 
     private final FabricCompanionEntity companion;
 
@@ -32,29 +45,30 @@ public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
         for (int slot = 0; slot < FabricCompanionInventory.BACKPACK_SIZE; slot++) {
             int row = slot / 9;
             int col = slot % 9;
-            addSlot(new Slot(inv, slot, 8 + col * 18, 18 + row * 18));
+            addSlot(new Slot(inv, slot, STORAGE_X + col * 18, STORAGE_Y + row * 18));
         }
 
-        int eqY = 76;
-        addSlot(new ArmorSlot(inv, FabricCompanionInventory.HEAD, 8, eqY, EquipmentSlot.HEAD));
-        addSlot(new ArmorSlot(inv, FabricCompanionInventory.CHEST, 26, eqY, EquipmentSlot.CHEST));
-        addSlot(new ArmorSlot(inv, FabricCompanionInventory.LEGS, 44, eqY, EquipmentSlot.LEGS));
-        addSlot(new ArmorSlot(inv, FabricCompanionInventory.FEET, 62, eqY, EquipmentSlot.FEET));
-        addSlot(new Slot(inv, FabricCompanionInventory.MAIN_HAND, 98, eqY));
-        addSlot(new Slot(inv, FabricCompanionInventory.OFF_HAND, 116, eqY));
-        addSlot(new Slot(inv, FabricCompanionInventory.FOOD, 134, eqY));
+        addSlot(new ArmorSlot(inv, FabricCompanionInventory.HEAD, ARMOR_X, STORAGE_Y, EquipmentSlot.HEAD));
+        addSlot(new ArmorSlot(inv, FabricCompanionInventory.CHEST, ARMOR_X, STORAGE_Y + 18, EquipmentSlot.CHEST));
+        addSlot(new ArmorSlot(inv, FabricCompanionInventory.LEGS, ARMOR_X, STORAGE_Y + 36, EquipmentSlot.LEGS));
+        addSlot(new ArmorSlot(inv, FabricCompanionInventory.FEET, ARMOR_X, STORAGE_Y + 54, EquipmentSlot.FEET));
+
+        int hbY = COMPANION_HOTBAR_Y;
+        addSlot(new Slot(inv, FabricCompanionInventory.MAIN_HAND, STORAGE_X, hbY));
+        addSlot(new OffhandSlot(inv, FabricCompanionInventory.OFF_HAND, STORAGE_X + 18, hbY));
+        addSlot(new Slot(inv, FabricCompanionInventory.FOOD, STORAGE_X + 36, hbY));
         for (int i = 0; i < FabricCompanionInventory.COSMETIC_SLOTS; i++) {
-            addSlot(new Slot(inv, FabricCompanionInventory.COSMETIC_START + i, 152 + i * 18, eqY));
+            addSlot(new Slot(inv, FabricCompanionInventory.COSMETIC_START + i, STORAGE_X + 54 + i * 18, hbY));
         }
 
-        int playerInvY = 140;
+        int playerInvY = PLAYER_INV_Y;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInv, col + row * 9 + 9, 8 + col * 18, playerInvY + row * 18));
+                addSlot(new Slot(playerInv, col + row * 9 + 9, STORAGE_X + col * 18, playerInvY + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInv, col, 8 + col * 18, playerInvY + 58));
+            addSlot(new Slot(playerInv, col, STORAGE_X + col * 18, playerInvY + 58));
         }
     }
 
@@ -108,6 +122,29 @@ public final class FabricCompanionInventoryMenu extends AbstractContainerMenu {
         @Override
         public int getMaxStackSize() {
             return 1;
+        }
+
+        @Override
+        public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+            ResourceLocation icon = switch (type) {
+                case HEAD -> InventoryMenu.EMPTY_ARMOR_SLOT_HELMET;
+                case CHEST -> InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE;
+                case LEGS -> InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS;
+                case FEET -> InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS;
+                default -> null;
+            };
+            return icon == null ? null : Pair.of(InventoryMenu.BLOCK_ATLAS, icon);
+        }
+    }
+
+    private static final class OffhandSlot extends Slot {
+        OffhandSlot(FabricCompanionInventory inv, int index, int x, int y) {
+            super(inv, index, x, y);
+        }
+
+        @Override
+        public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+            return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
         }
     }
 

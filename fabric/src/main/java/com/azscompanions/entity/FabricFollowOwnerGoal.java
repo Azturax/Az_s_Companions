@@ -34,8 +34,7 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (mode != FabricCompanionMode.FOLLOW && mode != FabricCompanionMode.WANDER) {
             return false;
         }
-        if (mode == FabricCompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()
-                && companion.getHomeBedPos() != null) {
+        if (mode == FabricCompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()) {
             return false;
         }
         if (companion.isSleeping() || !companion.shouldActivelyFollowOwner()) {
@@ -102,7 +101,11 @@ public final class FabricFollowOwnerGoal extends Goal {
                 pathAwayFromOwner(CompanionFollowDistances.PREFERRED_DISTANCE);
                 return;
             }
-            if (dist > TELEPORT_DISTANCE && companion.isOwnerExploring()) {
+            boolean mayTeleport = companion.getMode() == FabricCompanionMode.FOLLOW
+                    && CompanionFollowDistances.shouldGroundTeleport(dist)
+                    && !CompanionFollowDistances.tooCloseToTeleport(dist)
+                    && companion.isOwnerExploring();
+            if (mayTeleport) {
                 companion.safeTeleportNearOwner(owner);
             } else if (dist > FOLLOW_STOP_DISTANCE) {
                 pathTowardPreferredRing();

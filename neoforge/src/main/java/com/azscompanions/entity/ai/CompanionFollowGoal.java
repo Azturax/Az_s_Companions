@@ -40,9 +40,8 @@ public final class CompanionFollowGoal extends Goal {
         if (mode != CompanionMode.FOLLOW && mode != CompanionMode.WANDER) {
             return false;
         }
-        // Wander only follows when owner left the bed radius (teleport+follow).
-        if (mode == CompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()
-                && companion.getHomeBedPos() != null) {
+        // Wander never uses this goal for casual stroll — only after home-bed rescue.
+        if (mode == CompanionMode.WANDER && !companion.isOwnerFarFromHomeBed()) {
             return false;
         }
         if (companion.isSitting() || companion.isSleeping()) {
@@ -126,7 +125,13 @@ public final class CompanionFollowGoal extends Goal {
                 pathAwayFromOwner(CompanionFollowDistances.PREFERRED_DISTANCE);
                 return;
             }
-            if (dist > CommonConfig.TELEPORT_DISTANCE.get() && companion.isOwnerExploring()) {
+            // Wander: never teleport here — home-bed leash is the only Wander teleport.
+            // Follow: only beyond the long ground leash, and never under MIN_TELEPORT_DISTANCE.
+            boolean mayTeleport = companion.getMode() == CompanionMode.FOLLOW
+                    && CompanionFollowDistances.shouldGroundTeleport(dist)
+                    && !CompanionFollowDistances.tooCloseToTeleport(dist)
+                    && companion.isOwnerExploring();
+            if (mayTeleport) {
                 companion.safeTeleportNear(owner.blockPosition());
             } else if (dist > FOLLOW_STOP_DISTANCE) {
                 pathTowardPreferredRing();

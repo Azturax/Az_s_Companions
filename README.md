@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.2.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.0)
+- **Release:** [v0.2.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.1)
 - **Multi-version plan:** [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md)
 
 Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
@@ -14,10 +14,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.2.0+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.2.0+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.2.0+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.2.0+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.2.1+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.2.1+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.2.1+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.2.1+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -35,22 +35,23 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
 
-## Gameplay (0.2.0)
+## Gameplay (0.2.1)
 
 - **Companion Charm** — desert pyramid chest loot; **one companion per player** (UUID-based; unloaded companions may not count toward the limit)
 - Charm **summon / store**; appear → `<Name> Hello!` · store → `<Name> Bye!` (owner only)
 - First summon uses **your username + your skin** (Kon is an optional easter egg name)
 - **Shift + right-click** → **Companion Menu**: Customize · **Command** (Follow / Stay / Wander) · Inventory
 - **Follow / Stay / Wander** modes are server-authoritative and obey Command menu choices
-- **Home-bed rule (35 blocks):** with a home bed set, Follow stays home-idle near the bed; if the owner moves farther than 35 from the bed, she teleports to the owner and follows. Stay always holds. Wander strolls near the bed until the owner leaves the radius
+- **Happy Ghast–inspired Wander:** slow strolls, linger pauses, walk-back into radius — never short-range teleports while wandering
+- **Home-bed rule (35 blocks):** with a home bed set, Follow stays home-idle near the bed; if the owner moves farther than 35 from the bed, she teleports to the owner and follows (≥24 from companion). Stay always holds. Wander strolls near the bed until the owner leaves the radius
 - At night: home bed first; **Kon**-named companions also prefer **Kon Bed**; leaves bed if the owner moves far (~35)
-- Follow bands: personal space **2** / preferred **~6** / start **10** / stop **5** / teleport **48**
+- Follow bands: personal space **2** / preferred **~6** / start **10** / stop **5** / teleport **48** (floor **24**)
 - **Scaled companions** step up **1 full block** at any body size (`STEP_HEIGHT` 1.0 + `JUMP_STRENGTH` 0.42)
 - **Defend** living attackers of the owner (not environmental damage)
 - **Hands:** right-click with an item to give (main → offhand → swap); empty hand takes back
 - **Food:** right-click with edible food to feed — consumes 1, heals a little, hearts + cheer (not placed in hands)
 - **Potions:** auto-pickup **beneficial only**; give a harmful splash and they throw it at enemies
-- Inventory: backpack + dedicated **armor / tool** equipment row
+- Inventory: **armor column left**, 3×9 storage, companion **hotbar** under storage; player inv below
 - Only the **owner** can open inventory, settings, or commands (others get a clear message)
 - UUID-gated **special perks** for a few owners (flight follow / glow / Kon ears)
 
@@ -104,10 +105,10 @@ Mob spawning is **CCI-native** (`CommandOutcome` + `/summon`), not our bridge �
 
 Outputs:
 
-- `neoforge/build/libs/azscompanions-neoforge-0.2.0+1.21.1.jar`
-- `neoforge-cci/build/libs/azscompanions-neoforge-cci-0.2.0+1.21.1.jar`
-- `fabric/build/libs/azscompanions-fabric-0.2.0+1.21.1.jar`
-- `fabric-cci/build/libs/azscompanions-fabric-cci-0.2.0+1.21.1.jar`
+- `neoforge/build/libs/azscompanions-neoforge-0.2.1+1.21.1.jar`
+- `neoforge-cci/build/libs/azscompanions-neoforge-cci-0.2.1+1.21.1.jar`
+- `fabric/build/libs/azscompanions-fabric-0.2.1+1.21.1.jar`
+- `fabric-cci/build/libs/azscompanions-fabric-cci-0.2.1+1.21.1.jar`
 
 ### CCI edition Maven coords (Modrinth)
 

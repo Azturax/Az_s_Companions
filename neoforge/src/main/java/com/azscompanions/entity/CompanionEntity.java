@@ -220,8 +220,10 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     /**
-     * Follow/Wander home-bed leash: if the owner is farther than {@link ServerConfig#HOME_BED_RADIUS}
-     * from the home bed, teleport to the owner. Stay ignores this rule.
+     * Home-bed rescue teleport: only when the owner is farther than
+     * {@link ServerConfig#HOME_BED_RADIUS} from the home bed, and only if the companion is also
+     * farther than {@link CompanionFollowDistances#MIN_TELEPORT_DISTANCE} (never short-range snaps).
+     * Stay/Sit ignore this. Wander uses this as its only teleport-to-owner path.
      */
     private void tickHomeBedLeash() {
         CompanionMode mode = getMode();
@@ -246,9 +248,12 @@ public class CompanionEntity extends PathfinderMob {
         if (owner.distanceToSqr(bed.getX() + 0.5d, bed.getY(), bed.getZ() + 0.5d) <= radius * radius) {
             return;
         }
-        if (distanceTo(owner) > CompanionFollowDistances.PREFERRED_DISTANCE + 2.0d) {
-            safeTeleportNear(owner.blockPosition());
+        double dist = distanceTo(owner);
+        // Never snap when already near the owner — walk/follow handles closing the gap.
+        if (CompanionFollowDistances.tooCloseToTeleport(dist)) {
+            return;
         }
+        safeTeleportNear(owner.blockPosition());
     }
 
     /** Soft cat purr every few seconds while asleep — Kon-named companions only. */
@@ -314,22 +319,30 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     /**
-     * Follow/Wander: actively trail the owner (vs home-idle near bed).
-     * Stay/Sit never use this. No home bed → always follow when commanded.
+     * Actively trail the owner (vs home-idle / Wander stroll).
+     * Stay/Sit never. Wander without a far-from-bed rescue never glue-follows (stroll only).
+     * No home bed → Follow only (Wander strolls near owner, no follow leash).
      */
     public boolean shouldActivelyFollowOwner() {
         CompanionMode mode = getMode();
         if (mode == CompanionMode.STAY || mode == CompanionMode.SIT) {
             return false;
         }
+        if (mode == CompanionMode.WANDER) {
+            // Only after the home-bed rescue condition (owner left bed radius).
+            return getHomeBedPos() != null && isOwnerFarFromHomeBed();
+        }
+        if (mode != CompanionMode.FOLLOW) {
+            return false;
+        }
         if (getHomeBedPos() == null) {
-            return mode == CompanionMode.FOLLOW || mode == CompanionMode.WANDER;
+            return true;
         }
         if (isOwnerFarFromHomeBed()) {
             return true;
         }
         // Owner still near home: stay home-idle while companion is near the bed.
-        return !isNearHomeBed() && mode == CompanionMode.FOLLOW;
+        return !isNearHomeBed();
     }
 
     /** Home-idle / Wander near bed when bed exists and owner has not left the home radius. */
@@ -360,7 +373,13 @@ public class CompanionEntity extends PathfinderMob {
             lastPos = position();
         }
         if (stuckTicks > CommonConfig.PATH_STUCK_TIMEOUT_TICKS.get() && CommonConfig.TELEPORT_WHEN_STUCK.get()) {
-            // Do not yank the companion home mid-fight or while the owner is standing around.
+            // Never stuck-teleport during Wander / home-idle / fight / standing-around.
+            CompanionMode mode = getMode();
+            if (mode == CompanionMode.WANDER || mode == CompanionMode.STAY || mode == CompanionMode.SIT
+                    || shouldHomeIdleNearBed()) {
+                stuckTicks = 0;
+                return;
+            }
             if (getTarget() != null && getTarget().isAlive()) {
                 stuckTicks = 0;
                 return;
@@ -370,11 +389,15 @@ public class CompanionEntity extends PathfinderMob {
                 return;
             }
             Player owner = getOwner();
-            // Only snap home when exploring and truly beyond the ground leash.
-            if (owner != null && distanceTo(owner) > CommonConfig.TELEPORT_DISTANCE.get()) {
-                safeTeleportNear(owner.blockPosition());
-                stuckTicks = 0;
-                speak(DialogueCategory.TASK_PROGRESS);
+            if (owner != null) {
+                double dist = distanceTo(owner);
+                if (!CompanionFollowDistances.tooCloseToTeleport(dist)
+                        && CompanionFollowDistances.shouldGroundTeleport(dist)
+                        && isOwnerExploring()) {
+                    safeTeleportNear(owner.blockPosition());
+                    stuckTicks = 0;
+                    speak(DialogueCategory.TASK_PROGRESS);
+                }
             }
         }
     }
