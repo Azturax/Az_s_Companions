@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.13
+
+Release: [v0.3.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.13) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Commands menu
+- Removed **Gather…**, Gather status, Cancel gather, **Deposit chests…**, Deposit done, and Clear deposit from the companion **Commands** screen (Fabric + NeoForge 1.21.1). NeoForge 26.2 already had movement-only.
+- `/az gather`, `/deposit`, and CCI gather/deposit remain available.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.13+1.21.1.jar` | `azscompanions-fabric-0.3.13+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.13+1.21.1.jar` | `azscompanions-fabric-cci-0.3.13+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.12
 
 Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.12) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

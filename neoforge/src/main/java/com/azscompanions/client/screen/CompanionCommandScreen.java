@@ -14,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Scrollable companion commands: Follow/Stay/Wander plus Gather / Deposit actions.
- * Scrollbar thumb is click-draggable.
+ * Scrollable companion commands: Follow / Stay / Wander.
+ * Scrollbar thumb is click-draggable (kept for future rows).
  */
 public final class CompanionCommandScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
@@ -29,7 +29,7 @@ public final class CompanionCommandScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 240;
-    private final int panelH = 220;
+    private final int panelH = 168;
     private int viewTop;
     private int viewBottom;
     private final GuiScrollbarState scrollbar = new GuiScrollbarState();
@@ -58,22 +58,6 @@ public final class CompanionCommandScreen extends Screen {
         addScrollBtn(bx, bw, y, "screen.azscompanions.command.stay", () -> send("STAY", true));
         y += BTN_H + BTN_GAP;
         addScrollBtn(bx, bw, y, "screen.azscompanions.command.wander", () -> send("WANDER", true));
-        y += BTN_H + BTN_GAP + 6;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.gather", () -> {
-            if (minecraft != null) {
-                minecraft.setScreen(new CompanionGatherScreen(companion, this));
-            }
-        });
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.gather_status", () -> send("GATHER_STATUS", false));
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.gather_cancel", () -> send("GATHER_CANCEL", true));
-        y += BTN_H + BTN_GAP + 6;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit", () -> send("DEPOSIT_SELECT", true));
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit_done", () -> send("DEPOSIT_DONE", true));
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit_clear", () -> send("DEPOSIT_CLEAR", true));
         y += BTN_H + BTN_GAP;
 
         int contentH = y;

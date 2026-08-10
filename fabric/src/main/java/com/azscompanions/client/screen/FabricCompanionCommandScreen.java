@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Scrollable Fabric command menu with Gather/Deposit actions and draggable scrollbar. */
+/** Scrollable Fabric command menu: Follow / Stay / Wander (draggable scrollbar kept for future rows). */
 public final class FabricCompanionCommandScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
@@ -25,7 +25,7 @@ public final class FabricCompanionCommandScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 240;
-    private final int panelH = 220;
+    private final int panelH = 168;
     private int viewTop;
     private int viewBottom;
     private final GuiScrollbarState scrollbar = new GuiScrollbarState();
@@ -54,20 +54,6 @@ public final class FabricCompanionCommandScreen extends Screen {
         addScrollBtn(bx, bw, y, "screen.azscompanions.command.stay", () -> send("STAY", true));
         y += BTN_H + BTN_GAP;
         addScrollBtn(bx, bw, y, "screen.azscompanions.command.wander", () -> send("WANDER", true));
-        y += BTN_H + BTN_GAP + 6;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit", () -> send("DEPOSIT_SELECT", true));
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit_done", () -> send("DEPOSIT_DONE", true));
-        y += BTN_H + BTN_GAP;
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.deposit_clear", () -> send("DEPOSIT_CLEAR", true));
-        y += BTN_H + BTN_GAP;
-        // Gather collect_material is NeoForge-first; Fabric shows status note via deposit for now.
-        addScrollBtn(bx, bw, y, "screen.azscompanions.command.gather", () -> {
-            if (minecraft != null && minecraft.player != null) {
-                minecraft.player.displayClientMessage(Component.literal(
-                        "Gather goals: use NeoForge /az gather, or CCI on NeoForge. Deposit select works here."), false);
-            }
-        });
         y += BTN_H + BTN_GAP;
 
         scrollbar.layout(panelX + panelW - 12, viewTop, viewBottom, SCROLLBAR_W,
