@@ -15,6 +15,14 @@ public final class FabricFancyAnimCompat {
     }
 
     public static void bootstrapClient() {
+        boolean emf = FabricLoader.getInstance().isModLoaded("entity_model_features");
+        boolean etf = FabricLoader.getInstance().isModLoaded("entity_texture_features");
+        FancyAnimCompat.setPackSupportPresent(emf || etf);
+        if (emf || etf) {
+            AzsCompanionsFabric.LOGGER.info(
+                    "Fancy Anim soft-compat ready (entity_model_features={}, entity_texture_features={})",
+                    emf, etf);
+        }
         try {
             FancyAnimCompat.applySettings(FancyAnimConfigIO.loadOrCreate(configPath()));
         } catch (Exception e) {

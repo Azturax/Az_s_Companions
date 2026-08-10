@@ -50,7 +50,7 @@ public final class ClientConfig {
 
         builder.push("fancyAnim");
         TRANSLUCENT_PLAYER_SKINS = builder.comment(
-                        "Player-form companions use translucent skins (like players) so ETF / Fancy Animations skin features and animated frames with alpha look correct. Safe without packs.")
+                        "Allow translucent player-form skins when EMF/ETF is installed (ETF emissives / skin alpha / animated frames). Without EMF/ETF, companions always use cutout so skins stay visible.")
                 .define("translucentPlayerSkins", true);
         SYNC_MOB_FORM_UUID = builder.comment(
                         "Mob-form proxies share the companion UUID so Fresh Animations / ETF random & emissive variants stay stable on vanilla CEM paths.")

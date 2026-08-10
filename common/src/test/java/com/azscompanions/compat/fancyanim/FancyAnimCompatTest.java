@@ -11,12 +11,26 @@ class FancyAnimCompatTest {
     @AfterEach
     void reset() {
         FancyAnimCompat.applySettings(new FancyAnimSettings());
+        FancyAnimCompat.setPackSupportPresent(false);
     }
 
     @Test
-    void defaultsPreferPackFriendlyRendering() {
-        assertTrue(FancyAnimCompat.useTranslucentPlayerSkins());
+    void withoutPacksTranslucentStaysOffEvenWhenConfigAllows() {
+        assertTrue(FancyAnimCompat.settings().translucentPlayerSkins());
+        assertFalse(FancyAnimCompat.isPackSupportPresent());
+        assertFalse(FancyAnimCompat.useTranslucentPlayerSkins());
         assertTrue(FancyAnimCompat.syncMobFormUuid());
+    }
+
+    @Test
+    void translucentRequiresConfigAndPack() {
+        FancyAnimCompat.setPackSupportPresent(true);
+        assertTrue(FancyAnimCompat.useTranslucentPlayerSkins());
+
+        FancyAnimSettings off = new FancyAnimSettings();
+        off.setTranslucentPlayerSkins(false);
+        FancyAnimCompat.applySettings(off);
+        assertFalse(FancyAnimCompat.useTranslucentPlayerSkins());
     }
 
     @Test
@@ -25,6 +39,7 @@ class FancyAnimCompatTest {
         off.setTranslucentPlayerSkins(false);
         off.setSyncMobFormUuid(false);
         FancyAnimCompat.applySettings(off);
+        FancyAnimCompat.setPackSupportPresent(true);
         assertFalse(FancyAnimCompat.useTranslucentPlayerSkins());
         assertFalse(FancyAnimCompat.syncMobFormUuid());
     }

@@ -191,7 +191,7 @@ Soft client render compat for CEM / animated entity packs (no hard dep). **Conti
 |-------------|---------------|---------------------------|
 | **Fresh Animations** (mobs) | OptiFine CEM **or** [EMF](https://modrinth.com/mod/entity-model-features) + [ETF](https://modrinth.com/mod/entitytexturefeatures) | **Mob forms** proxy through vanilla chicken/zombie/… renderers, so pack `textures/entity/...` + `optifine/cem/*.jem` apply as on real mobs |
 | **Fancy Player Animations** / **Fresh Moves** (players) | EMF + ETF; player `player.jem` / `player_slim.jem` | Targets the **player** entity path, not `azscompanions:companion`. Player-form companions keep `FeminineCompanionModel` (extra bust part) — they do **not** auto-load `player.jem` |
-| ETF emissives / skin transparency / `.mcmeta` frames | Translucent entity layer | Player-form uses `RenderType.entityTranslucent` (config). Bundled ETF properties set `entityRenderLayerOverride=translucent` for companion texture paths |
+| ETF emissives / skin transparency / `.mcmeta` frames | Translucent entity layer | Player-form uses `RenderType.entityTranslucent` **only when** `translucentPlayerSkins=true` **and** EMF/ETF is installed. Otherwise `entityCutoutNoCull` (visible Kon / Mojang skins). Bundled ETF properties set `entityRenderLayerOverride=translucent` for companion texture paths |
 
 ### Texture paths
 
@@ -221,7 +221,7 @@ EMF looks for modded models roughly at:
 
 | Key | Default | Effect |
 |-----|---------|--------|
-| `translucentPlayerSkins` | `true` | Player-form + cape use translucent buffers (player-like; safe without packs) |
+| `translucentPlayerSkins` | `true` | Allow translucent player-form + cape **when EMF/ETF is present**. Without those mods, companions always use cutout (fixes invisible skins under Iris/Sodium) |
 | `syncMobFormUuid` | `true` | Mob-form proxies share the companion UUID for stable ETF random/emissive picks |
 
 ### Fabric JSON example
@@ -237,7 +237,7 @@ EMF looks for modded models roughly at:
 
 - Install **EMF + ETF** (or OptiFine) before enabling Fancy / Fresh packs.
 - Fresh Moves: ETF → Allow skin transparency → All skins; EMF → Prevent first person hand animation On.
-- Without packs, defaults still look like vanilla translucent player skins (no crash, no missing textures).
+- Without EMF/ETF, companions render with cutout skins (visible by default). Turn `translucentPlayerSkins=false` if you have ETF but prefer cutout.
 
 ### Code entry points
 

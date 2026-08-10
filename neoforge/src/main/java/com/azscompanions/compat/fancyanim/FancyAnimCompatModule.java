@@ -15,6 +15,7 @@ public final class FancyAnimCompatModule {
     public static void bootstrap() {
         boolean emf = ModList.get().isLoaded("entity_model_features");
         boolean etf = ModList.get().isLoaded("entity_texture_features");
+        FancyAnimCompat.setPackSupportPresent(emf || etf);
         if (emf || etf) {
             AzsCompanions.LOGGER.info(
                     "Fancy Anim soft-compat ready (entity_model_features={}, entity_texture_features={})",

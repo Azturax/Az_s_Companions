@@ -8,8 +8,9 @@ public final class FancyAnimSettings {
     public static final String FILE_NAME = "azscompanions-fancyanim.json";
 
     /**
-     * Player-form skins use {@code RenderType.entityTranslucent} like vanilla players so ETF
-     * skin transparency, emissives, and animated frames with partial alpha render correctly.
+     * When true <em>and</em> EMF/ETF is present, player-form skins use
+     * {@code RenderType.entityTranslucent} for ETF skin transparency / emissives / animated frames.
+     * Alone (no packs) this flag does nothing — companions stay on cutout so skins remain visible.
      */
     private boolean translucentPlayerSkins = true;
     /**

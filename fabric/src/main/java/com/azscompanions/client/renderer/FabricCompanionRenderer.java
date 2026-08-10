@@ -152,24 +152,26 @@ public final class FabricCompanionRenderer
     }
 
     /**
-     * Match vanilla players when Fancy Anim / ETF packs need partial alpha (skin features,
-     * emissive overlays, animated frames). Falls back to LivingEntityRenderer when disabled.
+     * Default: {@link RenderType#entityCutoutNoCull} so Kon / Mojang skins stay visible.
+     * Do not call {@code super} here — {@link FeminineCompanionModel} extends {@code PlayerModel},
+     * whose model render-type is translucent and can draw fully invisible on Iris/Sodium without ETF.
+     * Translucent only when Fancy Anim config allows it <em>and</em> EMF/ETF is present.
      */
     @Override
     @Nullable
     protected RenderType getRenderType(FabricCompanionEntity entity, boolean bodyVisible, boolean translucent,
                                        boolean glowing) {
-        if (!FancyAnimCompat.useTranslucentPlayerSkins()) {
-            return super.getRenderType(entity, bodyVisible, translucent, glowing);
-        }
         ResourceLocation texture = this.getTextureLocation(entity);
         if (glowing) {
             return RenderType.outline(texture);
         }
-        if (translucent || bodyVisible) {
+        if (!(translucent || bodyVisible)) {
+            return null;
+        }
+        if (FancyAnimCompat.useTranslucentPlayerSkins()) {
             return RenderType.entityTranslucent(texture);
         }
-        return null;
+        return RenderType.entityCutoutNoCull(texture);
     }
 
     private static final class CompanionCapeLayer

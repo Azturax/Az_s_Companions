@@ -1,6 +1,6 @@
-# Version compatibility
+﻿# Version compatibility
 
-Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6)) currently **ships and supports**:
+Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7)) currently **ships and supports**:
 
 - **Minecraft:** **1.21.1** only (`minecraft_version_range=[1.21.1]`)
 - **NeoForge:** **21.1.x** (`neo_version_range=[21.1,21.2)`, compile pin `21.1.248`)
@@ -12,9 +12,9 @@ Minecraft / NeoForge **26.2** is tracked in [MULTI_VERSION.md](MULTI_VERSION.md)
 
 | Loader | Module | Status |
 |--------|--------|--------|
-| NeoForge | `:neoforge` | Full 0.3.6 set (companions, AI, behavior, etc.) |
+| NeoForge | `:neoforge` | Full 0.3.7 set (companions, AI, behavior, etc.) |
 | NeoForge CCI | `:neoforge-cci` | Same + IMC bridge (needs CCI 1.13.0 + iChunUtil 1.0.3) |
-| Fabric | `:fabric` | Full 0.3.6 set |
+| Fabric | `:fabric` | Full 0.3.7 set |
 | Fabric CCI | `:fabric-cci` | Same + Fabric CCI bridge |
 
 ## Why two version properties?
@@ -24,11 +24,11 @@ Minecraft / NeoForge **26.2** is tracked in [MULTI_VERSION.md](MULTI_VERSION.md)
 | `minecraft_version` / `neo_version` | Exact pair used to **compile and run** the MDK |
 | `minecraft_version_range` / `neo_version_range` | What the built jar **accepts at runtime** |
 
-NeoForge requires the compile `neo_version` to match its Minecraft pair. You cannot compile one jar against both 21.1 and 26.2 toolchains at once — use a **separate module or branch** for 26.2.
+NeoForge requires the compile `neo_version` to match its Minecraft pair. You cannot compile one jar against both 21.1 and 26.2 toolchains at once â€” use a **separate module or branch** for 26.2.
 
 ## Building for 26.2 (when porting)
 
-1. Prefer a new module (e.g. `:neoforge-26`) or branch — do **not** retarget the 1.21.1 production modules in place.
+1. Prefer a new module (e.g. `:neoforge-26`) or branch â€” do **not** retarget the 1.21.1 production modules in place.
 2. Pin (check Maven for newer):
    ```properties
    minecraft_version=26.2
@@ -49,7 +49,7 @@ NeoForge requires the compile `neo_version` to match its Minecraft pair. You can
 
 ## Optional map mods (1.21.1)
 
-Soft-deps only — see [COMPAT.md](COMPAT.md#map-mods-minimap--world-map):
+Soft-deps only â€” see [COMPAT.md](COMPAT.md#map-mods-minimap--world-map):
 
 | Mod | Entity on radar | Extra |
 |-----|-----------------|-------|
@@ -59,4 +59,4 @@ Soft-deps only — see [COMPAT.md](COMPAT.md#map-mods-minimap--world-map):
 
 ## Online from LAN / Essential
 
-Friends joining SP via Essential / e4mc / World Host / Open-to-LAN — soft-compat, no hard deps. See [COMPAT.md](COMPAT.md#online-from-lan--essential).
+Friends joining SP via Essential / e4mc / World Host / Open-to-LAN â€” soft-compat, no hard deps. See [COMPAT.md](COMPAT.md#online-from-lan--essential).

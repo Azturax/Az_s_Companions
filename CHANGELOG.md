@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.7
+
+Release: [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fix: invisible player-form skins
+- **Root cause:** 0.3.6 Fancy Anim compat forced `RenderType.entityTranslucent` for companions. `FeminineCompanionModel` extends `PlayerModel` (translucent by default); falling back to `super.getRenderType` did not restore cutout. On Iris/Sodium (and some GPUs) non-player translucent meshes can draw fully invisible.
+- **Fix:** Player-form + cape use `entityCutoutNoCull` / solid by default. Translucent only when `fancyAnim.translucentPlayerSkins=true` **and** EMF/ETF is loaded. Cape/ears unchanged otherwise.
+- Fabric + NeoForge **1.21.1**. Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.7+1.21.1.jar` | `azscompanions-fabric-0.3.7+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.7+1.21.1.jar` | `azscompanions-fabric-cci-0.3.7+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.6
 
 Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
