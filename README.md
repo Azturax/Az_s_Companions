@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8)
+- **Release:** [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Multi-version plan:** [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md)
@@ -15,10 +15,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.8+1.21.1.jar` | Default â€” no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.8+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.8+1.21.1.jar` | Default â€” no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.8+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.9+1.21.1.jar` | Default â€” no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.9+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.9+1.21.1.jar` | Default â€” no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.9+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader â€” never standalone + CCI together.
 
@@ -31,7 +31,7 @@ Install **one** Az's Companions jar per loader â€” never standalone + CCI t
 
 **Other Minecraft lines** (including NeoForge **26.2** â†’ Minecraft **26.2**): not shipped yet â€” see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (0.3.8)
+## Gameplay (0.3.9)
 
 - Companion Charm, Follow/Stay/Wander, Customize, inventory, night sleep
 - **Chunk tickets:** summoned companions and child Bits force-load their chunk (`companionChunkLoading`, default true) so AI/follow/sleep keep running when you walk away â€” NeoForge `config/azscompanions-server.toml` `[performance]`; Fabric mirrors defaults in code. Cap: `maxForcedChunksPerPlayer` (default 16). Not FTB claims.
@@ -46,7 +46,7 @@ Install **one** Az's Companions jar per loader â€” never standalone + CCI t
 ./gradlew buildAll
 ```
 
-Outputs under `*/build/libs/azscompanions-*-0.3.8+1.21.1.jar`.
+Outputs under `*/build/libs/azscompanions-*-0.3.9+1.21.1.jar`.
 
 ## License
 

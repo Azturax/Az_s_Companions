@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.9
+
+Release: [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### Fix: Glowing companions rendered as outline-only
+- **Symptom:** Player-form companion shows only a bright white silhouette outline + nametag (skin missing). Common for the UUID-gated special perk (forces vanilla Glowing) and any companion with a Glowing potion.
+- **Root cause:** The 0.3.7 cutout fix checked `glowing` before `bodyVisible` in `getRenderType`, so a glowing visible companion used `RenderType.outline` instead of the skin mesh. Vanilla only uses outline when the body is hidden.
+- **Fix:** NeoForge + Fabric player-form renderers draw cutout/translucent body when visible; outline only when the body is invisible but should still glow. Special-perk glow still applies (skin + outline).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.9+1.21.1.jar` | `azscompanions-fabric-0.3.9+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.9+1.21.1.jar` | `azscompanions-fabric-cci-0.3.9+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.8
 
 Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

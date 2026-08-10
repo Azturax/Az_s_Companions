@@ -156,22 +156,23 @@ public final class FabricCompanionRenderer
      * Do not call {@code super} here — {@link FeminineCompanionModel} extends {@code PlayerModel},
      * whose model render-type is translucent and can draw fully invisible on Iris/Sodium without ETF.
      * Translucent only when Fancy Anim config allows it <em>and</em> EMF/ETF is present.
+     * <p>
+     * Match vanilla {@code LivingEntityRenderer} order: draw the body when visible; use
+     * {@link RenderType#outline} only when the body is hidden but the entity should still glow.
+     * Checking {@code glowing} first (0.3.7–0.3.8) made Glowing companions outline-only.
      */
     @Override
     @Nullable
     protected RenderType getRenderType(FabricCompanionEntity entity, boolean bodyVisible, boolean translucent,
                                        boolean glowing) {
         ResourceLocation texture = this.getTextureLocation(entity);
-        if (glowing) {
-            return RenderType.outline(texture);
+        if (bodyVisible || translucent) {
+            if (FancyAnimCompat.useTranslucentPlayerSkins()) {
+                return RenderType.entityTranslucent(texture);
+            }
+            return RenderType.entityCutoutNoCull(texture);
         }
-        if (!(translucent || bodyVisible)) {
-            return null;
-        }
-        if (FancyAnimCompat.useTranslucentPlayerSkins()) {
-            return RenderType.entityTranslucent(texture);
-        }
-        return RenderType.entityCutoutNoCull(texture);
+        return glowing ? RenderType.outline(texture) : null;
     }
 
     private static final class CompanionCapeLayer
