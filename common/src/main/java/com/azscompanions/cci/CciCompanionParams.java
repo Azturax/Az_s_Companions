@@ -26,6 +26,7 @@ import java.util.Map;
  *   <li>{@code followRadius=64;personalSpace=3;wanderRadius=12} ({@code companion_modify})</li>
  *   <li>{@code whoAmI=brave wolf;whatAmIDoing=guard;howWillIBe=loyal} (persona on summon/modify)</li>
  *   <li>{@code chunkLoading=false} ({@code companion_modify} — per-companion ticket opt-out)</li>
+ *   <li>{@code aiMode=true} ({@code companion_modify} — per-companion AI Mode / LLM play)</li>
  *   <li>{@code mode=rush;seconds=8} ({@code companion_play})</li>
  *   <li>{@code seconds=10} ({@code companion_turn_evil})</li>
  *   <li>{@code amount=500;user=Alice;form=chicken;team=red} ({@code companion_interaction} — 500÷price children)</li>
@@ -320,6 +321,18 @@ public final class CciCompanionParams {
      */
     public Boolean enableAiActionsOrNull() {
         String v = first("enableaiactions", "enable_ai_actions", "aiactions", "ai_actions");
+        if (v == null || v.isBlank()) {
+            return null;
+        }
+        return parseBoolean(v);
+    }
+
+    /**
+     * Per-companion AI Mode ({@code aiMode=}/{@code aiPlayMode=}/{@code llmPlay=}).
+     * Returns null when absent. When true, pauses normal goals and lets the LLM drive actions.
+     */
+    public Boolean aiModeOrNull() {
+        String v = first("aimode", "ai_mode", "aiplaymode", "ai_play_mode", "llmplay", "llm_play");
         if (v == null || v.isBlank()) {
             return null;
         }

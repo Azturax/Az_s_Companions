@@ -3,6 +3,7 @@ package com.azscompanions.event;
 import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionAiInput;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionAskResolve;
@@ -17,7 +18,8 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.UUID;
 
 /**
- * Fabric: named ask, name-mention (owner vs stranger), and chatListenMode reactions.
+ * Fabric: pure-chat name-mention (primary), optional {@code Name ask …}, and chatListenMode.
+ * Talk in chat using their name — slash {@code /ask} is not required.
  * Stranger name mentions do not cancel public chat broadcast.
  */
 public final class FabricCompanionAiChatEvents {
@@ -53,14 +55,14 @@ public final class FabricCompanionAiChatEvents {
 
     static void onPlayerChat(ServerPlayer speaker, String rawText) {
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
-        if (!runtime.isEnabled() || runtime.isBusy()) {
+        if (!runtime.isEnabled()) {
             return;
         }
         if (CompanionAiChatSupport.looksLikeCompanionReply(rawText)) {
             return;
         }
         CompanionAiSettings settings = runtime.settings();
-        // Name mention works even when chatListenMode=off (before listen-mode gate).
+        // Name mention is the primary path — works with chatListenMode=off; queues when busy.
         if (tryNameMention(speaker, rawText, settings)) {
             return;
         }
@@ -89,9 +91,10 @@ public final class FabricCompanionAiChatEvents {
         CompanionAiActionTrust trust = FtbCompat.resolveTrust(
                 speakerIsOwner, companion.getOwnerUuid(), speaker.getUUID());
         boolean ownerLike = trust.isOwner();
+        String full = CompanionAiInput.normalize(rawText, settings);
         String prompt = ownerLike
-                ? CompanionAiChatSupport.chatReactionPrompt(speaker.getGameProfile().getName(), rawText.trim())
-                : CompanionAiChatSupport.strangerAddressPrompt(speaker.getGameProfile().getName(), rawText.trim());
+                ? CompanionAiChatSupport.chatReactionPrompt(speaker.getGameProfile().getName(), full)
+                : CompanionAiChatSupport.strangerAddressPrompt(speaker.getGameProfile().getName(), full);
         if (FabricCompanionAiAsk.askQuiet(owner, companion, speaker.getGameProfile().getName(), prompt,
                 trust, ownerLike ? null : speaker)) {
             runtime.markChatReact(companion.getUUID(), ownerId);
@@ -99,8 +102,9 @@ public final class FabricCompanionAiChatEvents {
     }
 
     /**
-     * {@code Bit, come here} — when {@code nameListen} (default true), independent of chatListenMode.
-     * Does not cancel public chat.
+     * Pure chat: {@code Bit, come here} / {@code Kon how are you?} when {@code nameListen}
+     * (default true). Independent of chatListenMode. Does not cancel public chat.
+     * Owner name-mentions skip the auto-react cooldown so rapid multi-sentence talk works.
      */
     static boolean tryNameMention(ServerPlayer speaker, String rawText, CompanionAiSettings settings) {
         if (!settings.nameListen() || rawText == null || rawText.startsWith("/")) {
@@ -119,22 +123,23 @@ public final class FabricCompanionAiChatEvents {
             return false;
         }
         UUID ownerId = companion.getOwnerUuid();
-        if (!runtime.canChatReact(companion.getUUID(), ownerId)) {
+        boolean speakerIsOwner = companion.isOwnedBy(speaker);
+        if (!speakerIsOwner && !runtime.canChatReact(companion.getUUID(), ownerId)) {
             return false;
         }
         ServerPlayer owner = companion.getOwner() instanceof ServerPlayer sp ? sp : null;
         if (owner == null) {
             return false;
         }
-        boolean speakerIsOwner = companion.isOwnedBy(speaker);
         CompanionAiActionTrust trust = FtbCompat.resolveTrust(
                 speakerIsOwner, companion.getOwnerUuid(), speaker.getUUID());
         boolean ownerLike = trust.isOwner();
+        String full = CompanionAiInput.normalize(rawText, settings);
         String prompt = CompanionNameMention.mentionPrompt(
-                speaker.getGameProfile().getName(), rawText.trim(), ownerLike);
+                speaker.getGameProfile().getName(), full, ownerLike);
         boolean ok = FabricCompanionAiAsk.askQuiet(owner, companion, speaker.getGameProfile().getName(), prompt,
                 trust, ownerLike ? null : speaker);
-        if (ok) {
+        if (ok && !speakerIsOwner) {
             runtime.markChatReact(companion.getUUID(), ownerId);
         }
         return ok;

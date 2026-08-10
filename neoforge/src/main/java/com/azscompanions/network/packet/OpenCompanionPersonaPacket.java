@@ -8,12 +8,15 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/** Server → client: open Persona setup (who / what / how). Owner only. */
+/** Server → client: open Persona setup (all persona fields). Owner only. */
 public record OpenCompanionPersonaPacket(
         int entityId,
         String whoAmI,
         String whatAmIDoing,
-        String howWillIBe
+        String howWillIBe,
+        String speechStyle,
+        String relationshipToOwner,
+        String quirks
 ) implements CustomPacketPayload {
     public static final Type<OpenCompanionPersonaPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "open_persona"));
@@ -24,22 +27,42 @@ public record OpenCompanionPersonaPacket(
     public static OpenCompanionPersonaPacket fromCompanion(CompanionEntity companion) {
         CompanionPersona p = companion.getPersona();
         return new OpenCompanionPersonaPacket(
-                companion.getId(), p.whoAmI(), p.whatAmIDoing(), p.howWillIBe());
+                companion.getId(),
+                p.whoAmI(),
+                p.whatAmIDoing(),
+                p.howWillIBe(),
+                p.speechStyle(),
+                p.relationshipToOwner(),
+                p.quirks());
     }
 
     private static void write(RegistryFriendlyByteBuf buf, OpenCompanionPersonaPacket p) {
         buf.writeVarInt(p.entityId);
-        buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, CompanionPersona.MAX_LEN);
-        buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, CompanionPersona.MAX_LEN);
-        buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, CompanionPersona.MAX_LEN);
+        writeField(buf, p.whoAmI);
+        writeField(buf, p.whatAmIDoing);
+        writeField(buf, p.howWillIBe);
+        writeField(buf, p.speechStyle);
+        writeField(buf, p.relationshipToOwner);
+        writeField(buf, p.quirks);
     }
 
     private static OpenCompanionPersonaPacket read(RegistryFriendlyByteBuf buf) {
         return new OpenCompanionPersonaPacket(
                 buf.readVarInt(),
-                buf.readUtf(CompanionPersona.MAX_LEN),
-                buf.readUtf(CompanionPersona.MAX_LEN),
-                buf.readUtf(CompanionPersona.MAX_LEN));
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf));
+    }
+
+    private static void writeField(RegistryFriendlyByteBuf buf, String value) {
+        buf.writeUtf(value == null ? "" : value, CompanionPersona.MAX_LEN);
+    }
+
+    private static String readField(RegistryFriendlyByteBuf buf) {
+        return buf.readUtf(CompanionPersona.MAX_LEN);
     }
 
     @Override

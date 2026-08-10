@@ -15,10 +15,22 @@ class CompanionNameMentionTest {
         assertTrue(CompanionNameMention.messageMentionsName("hey Bit please", "Bit"));
         assertTrue(CompanionNameMention.messageMentionsName("BIT dance!", "Bit"));
         assertTrue(CompanionNameMention.messageMentionsName("Kon: hello", "Kon"));
+        assertTrue(CompanionNameMention.messageMentionsName("Kon, how are you?", "Kon"));
+        assertTrue(CompanionNameMention.messageMentionsName("Bit come here please", "Bit"));
+        assertTrue(CompanionNameMention.messageMentionsName(
+                "Kon, how are you? Please come here. Then help mine.", "Kon"));
         assertFalse(CompanionNameMention.messageMentionsName("Bitcoin is cool", "Bit"));
         assertFalse(CompanionNameMention.messageMentionsName("hello world", "Bit"));
         assertFalse(CompanionNameMention.messageMentionsName("", "Bit"));
         assertFalse(CompanionNameMention.messageMentionsName("Bit, come here", ""));
+    }
+
+    @Test
+    void mentionPromptKeepsFullMultiSentenceMessage() {
+        String multi = "Kon, how are you? Please come here. Then mine stone.";
+        String owner = CompanionNameMention.mentionPrompt("Alex", multi, true);
+        assertTrue(owner.contains(multi));
+        assertTrue(owner.contains("[owner address]"));
     }
 
     @Test
@@ -28,6 +40,21 @@ class CompanionNameMentionTest {
         assertTrue(owner.contains("[owner address]"));
         assertTrue(stranger.contains("[stranger address]"));
         assertTrue(stranger.contains("NOT your owner"));
+    }
+}
+
+class CompanionAiInputTest {
+    @Test
+    void preservesMultiSentenceAndClamps() {
+        String multi = "Hello. Second sentence! Third?";
+        assertEquals(multi, CompanionAiInput.normalize(multi, 2000));
+        String longMsg = "A".repeat(100) + ". More text here.";
+        String clipped = CompanionAiInput.normalize(longMsg, 64);
+        assertEquals(64, clipped.length());
+        assertTrue(clipped.startsWith("AAAA"));
+        assertFalse(clipped.contains("More text"));
+        assertTrue(CompanionAiInput.softProgress(System.currentTimeMillis() - 15_000L, 30, System.currentTimeMillis()) > 0.4f);
+        assertTrue(CompanionAiInput.softProgress(System.currentTimeMillis(), 30, System.currentTimeMillis()) < 0.1f);
     }
 }
 

@@ -19,7 +19,7 @@ public final class CompanionRecruitment {
 
     /** Primary companions only (excludes fight spawns / children). */
     public static long countOwned(ServerPlayer player) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return 0;
         }
@@ -41,7 +41,7 @@ public final class CompanionRecruitment {
         if (leaderUuid == null) {
             return 0;
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return 0;
         }
@@ -62,7 +62,7 @@ public final class CompanionRecruitment {
 
     @Nullable
     public static CompanionEntity findOwned(ServerPlayer player, UUID companionUuid) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null || companionUuid == null) {
             return null;
         }
@@ -95,11 +95,11 @@ public final class CompanionRecruitment {
     public static CompanionEntity recruit(ServerPlayer player, String definitionId) {
         ServerLevel level = player.serverLevel();
         if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
-            player.displayClientMessage(Component.literal("You lack permission to spawn companions (FTB Ranks)."), true);
+            player.sendOverlayMessage(Component.literal("You lack permission to spawn companions (FTB Ranks)."));
             return null;
         }
         if (countOwned(player) >= ServerConfig.MAX_COMPANIONS_PER_PLAYER.get()) {
-            player.displayClientMessage(Component.translatable("message.azscompanions.limit_reached"), true);
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.limit_reached"));
             return null;
         }
         Identifier id = Identifier.tryParse(definitionId);

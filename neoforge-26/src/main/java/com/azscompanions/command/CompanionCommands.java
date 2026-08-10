@@ -146,21 +146,21 @@ public final class CompanionCommands {
         CompanionAskResolve.AskTarget target = CompanionAskResolve.resolveGreedyAsk(greedy,
                 name -> CompanionAiAsk.ownsCompanionNamed(player, name, ASK_RANGE));
         if (!target.isValid()) {
-            player.displayClientMessage(Component.literal("Usage: /ask <message> or /az ask [Name] <message>"), false);
+            player.sendOverlayMessage(Component.literal("Usage: /ask <message> or /az ask [Name] <message>"), false);
             return 0;
         }
         CompanionEntity companion;
         if (target.kind() == CompanionAskResolve.AskTarget.Kind.NAMED) {
             companion = CompanionAiAsk.findOwnedByName(player, target.companionName(), ASK_RANGE);
             if (companion == null) {
-                player.displayClientMessage(Component.literal(
-                        "No owned companion named \"" + target.companionName() + "\" nearby"), false);
+                player.sendSystemMessage(Component.literal(
+                        "No owned companion named \"" + target.companionName() + "\" nearby"));
                 return 0;
             }
         } else {
             companion = nearestOwned(player);
             if (companion == null) {
-                player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+                player.sendSystemMessage(Component.literal("No owned companion nearby"));
                 return 0;
             }
         }
@@ -172,8 +172,8 @@ public final class CompanionCommands {
         TeamFightSession session = TeamFightSession.of(player.getUUID());
         session.setEnabled(enabled);
         PacketDistributor.sendToPlayer(player, new TeamFightHudPacket(session.snapshot().encode()));
-        player.displayClientMessage(Component.translatable(
-                enabled ? "message.azscompanions.teamfight_on" : "message.azscompanions.teamfight_off"), true);
+        player.sendSystemMessage(Component.translatable(
+                enabled ? "message.azscompanions.teamfight_on" : "message.azscompanions.teamfight_off"));
         source.sendSuccess(() -> Component.literal("Team fight " + (enabled ? "ON" : "OFF")), true);
         return 1;
     }
@@ -236,28 +236,28 @@ public final class CompanionCommands {
     private static int personaShow(ServerPlayer player, String nameOrNull) {
         CompanionEntity companion = resolvePersonaTarget(player, nameOrNull);
         if (companion == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return 0;
         }
-        player.displayClientMessage(Component.literal(companion.getPersona().formatSummary(companion.getChatDisplayName())), false);
+        player.sendSystemMessage(Component.literal(companion.getPersona().formatSummary(companion.getChatDisplayName())));
         return 1;
     }
 
     private static int personaClear(ServerPlayer player, String nameOrNull) {
         CompanionEntity companion = resolvePersonaTarget(player, nameOrNull);
         if (companion == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return 0;
         }
         companion.setPersona(companion.getPersona().cleared());
-        player.displayClientMessage(Component.literal(companion.getChatDisplayName() + " — persona cleared (still initialized)"), false);
+        player.sendSystemMessage(Component.literal(companion.getChatDisplayName() + " — persona cleared (still initialized)"));
         return 1;
     }
 
     private static int personaEdit(ServerPlayer player, String nameOrNull) {
         CompanionEntity companion = resolvePersonaTarget(player, nameOrNull);
         if (companion == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return 0;
         }
         PacketDistributor.sendToPlayer(player, OpenCompanionPersonaPacket.fromCompanion(companion));
@@ -267,7 +267,7 @@ public final class CompanionCommands {
     private static int personaSet(ServerPlayer player, String nameOrNull, String field, String text) {
         CompanionEntity companion = resolvePersonaTarget(player, nameOrNull);
         if (companion == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return 0;
         }
         var before = companion.getPersona();
@@ -276,19 +276,19 @@ public final class CompanionCommands {
                 && !java.util.Set.of("who", "whoami", "what", "whatamidoing", "how", "howwillibe",
                 "speech", "speechstyle", "relationship", "relationshiptoowner", "quirks", "quirk")
                 .contains(field.trim().toLowerCase(java.util.Locale.ROOT))) {
-            player.displayClientMessage(Component.literal(
-                    "Unknown field. Use who|what|how|speech|relationship|quirks"), false);
+            player.sendSystemMessage(Component.literal(
+                    "Unknown field. Use who|what|how|speech|relationship|quirks"));
             return 0;
         }
         companion.setPersona(after);
-        player.displayClientMessage(Component.literal(companion.getChatDisplayName() + " — persona " + field + " set"), false);
+        player.sendSystemMessage(Component.literal(companion.getChatDisplayName() + " — persona " + field + " set"));
         return 1;
     }
 
     private static int openStats(ServerPlayer player, String nameOrNull) {
         CompanionEntity companion = resolvePersonaTarget(player, nameOrNull);
         if (companion == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return 0;
         }
         PacketDistributor.sendToPlayer(player, OpenCompanionStatsPacket.from(player, companion));

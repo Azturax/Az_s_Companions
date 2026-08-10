@@ -28,6 +28,10 @@ public final class CompanionAiSettings {
     private String inputLanguage = "en";
     private int timeoutSeconds = 30;
     private int maxTokens = 256;
+    /** Max characters of a single player message kept for the LLM (multi-sentence OK). */
+    private int maxInputChars = CompanionAiInput.DEFAULT_MAX_INPUT_CHARS;
+    /** When AI is busy, queue up to this many extra requests (0 = reject while busy). */
+    private int queueMaxDepth = CompanionAiInput.DEFAULT_QUEUE_MAX_DEPTH;
     private boolean enableChatMessages = true;
     /**
      * When true (default), all companions share this process's AI config — the dedicated
@@ -216,6 +220,24 @@ public final class CompanionAiSettings {
 
     public CompanionAiSettings setMaxTokens(int maxTokens) {
         this.maxTokens = Math.max(32, Math.min(2048, maxTokens));
+        return this;
+    }
+
+    public int maxInputChars() {
+        return maxInputChars;
+    }
+
+    public CompanionAiSettings setMaxInputChars(int maxInputChars) {
+        this.maxInputChars = CompanionAiInput.clampMaxChars(maxInputChars);
+        return this;
+    }
+
+    public int queueMaxDepth() {
+        return queueMaxDepth;
+    }
+
+    public CompanionAiSettings setQueueMaxDepth(int queueMaxDepth) {
+        this.queueMaxDepth = CompanionAiInput.clampQueueDepth(queueMaxDepth);
         return this;
     }
 
@@ -650,6 +672,16 @@ public final class CompanionAiSettings {
 
     public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
                                      boolean speakerIsOwner, String attitude, CompanionPersona persona) {
+        return formatSystemPrompt(companionName, form, parentName, child, speakerIsOwner, attitude, persona,
+                enableAiActions);
+    }
+
+    /**
+     * @param includeActionTools when true (typically companion AI Mode ON), append JSON tool instructions
+     */
+    public String formatSystemPrompt(String companionName, String form, String parentName, boolean child,
+                                     boolean speakerIsOwner, String attitude, CompanionPersona persona,
+                                     boolean includeActionTools) {
         String attitudeLabel = attitude == null || attitude.isBlank() ? "PASSIVE" : attitude.trim();
         CompanionPersona p = persona == null ? CompanionPersona.EMPTY : persona;
         String base = systemPrompt
@@ -681,17 +713,19 @@ public final class CompanionAiSettings {
         if (censorChat) {
             base = base + " Keep language wholesome; avoid swearing or crude terms.";
         }
-        if (enableAiActions && speakerIsOwner) {
+        if (includeActionTools && speakerIsOwner) {
             String appendix = CompanionAiActionNames.toolsPromptAppendix();
             if (ftbChunksAiClaim) {
                 appendix = appendix + "\nFTB claim tools enabled: claim_chunk / unclaim_chunk (owner quota only).\n";
             }
+            appendix = appendix + "\nAI Mode is ON: you fully drive this companion. Normal follow/wander/combat goals are paused — "
+                    + "use tools (goto, follow, mine, craft, build, play, …) to act in the world.\n";
             return base + "\n\n" + appendix
                     + (child ? "\nChild rules: prefer actions within ~"
                     + (int) effectiveChildLeashRadius()
                     + " blocks of your parent; do not wander off alone.\n" : "");
         }
-        if (enableAiActions && !speakerIsOwner) {
+        if (includeActionTools && !speakerIsOwner) {
             return base + "\n\n" + CompanionAiActionNames.strangerToolsPromptAppendix();
         }
         return base;
@@ -708,6 +742,8 @@ public final class CompanionAiSettings {
                 .setInputLanguage(inputLanguage)
                 .setTimeoutSeconds(timeoutSeconds)
                 .setMaxTokens(maxTokens)
+                .setMaxInputChars(maxInputChars)
+                .setQueueMaxDepth(queueMaxDepth)
                 .setEnableChatMessages(enableChatMessages)
                 .setServerLlmOnly(serverLlmOnly)
                 .setIntegratedMultiplayerSharedLlm(integratedMultiplayerSharedLlm)

@@ -1,6 +1,6 @@
 ﻿# Version compatibility
 
-Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7)) currently **ships and supports**:
+Az's Companions ([repo](https://github.com/Azturax/Az_s_Companions), [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8)) currently **ships and supports**:
 
 - **Minecraft:** **1.21.1** only (`minecraft_version_range=[1.21.1]`)
 - **NeoForge:** **21.1.x** (`neo_version_range=[21.1,21.2)`, compile pin `21.1.248`)
@@ -12,9 +12,9 @@ Minecraft / NeoForge **26.2** is tracked in [MULTI_VERSION.md](MULTI_VERSION.md)
 
 | Loader | Module | Status |
 |--------|--------|--------|
-| NeoForge | `:neoforge` | Full 0.3.7 set (companions, AI, behavior, etc.) |
+| NeoForge | `:neoforge` | Full 0.3.8 set (companions, AI, behavior, etc.) |
 | NeoForge CCI | `:neoforge-cci` | Same + IMC bridge (needs CCI 1.13.0 + iChunUtil 1.0.3) |
-| Fabric | `:fabric` | Full 0.3.7 set |
+| Fabric | `:fabric` | Full 0.3.8 set |
 | Fabric CCI | `:fabric-cci` | Same + Fabric CCI bridge |
 
 ## Why two version properties?

@@ -4,7 +4,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownSplashPotion;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
@@ -83,10 +83,10 @@ public final class CompanionPotionHelper {
     /** Throw splash/lingering potion projectile from thrower toward target position. */
     public static void throwPotionAt(LivingEntity thrower, ItemStack potionStack, LivingEntity target) {
         Level level = thrower.level();
-        if (level.isClientSide || target == null || potionStack.isEmpty()) {
+        if (level.isClientSide() || target == null || potionStack.isEmpty()) {
             return;
         }
-        ThrownPotion thrown = new ThrownPotion(level, thrower);
+        ThrownSplashPotion thrown = new ThrownSplashPotion(level, thrower);
         thrown.setItem(potionStack.copyWithCount(1));
         Vec3 from = thrower.getEyePosition();
         Vec3 to = target.getEyePosition().add(0.0, target.getBbHeight() * 0.15, 0.0);

@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
@@ -40,16 +41,16 @@ public final class CompanionCommandScreen extends Screen {
         addRenderableWidget(modeButton("screen.azscompanions.command.wander", "WANDER", bx, by + 56));
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> {
             if (minecraft != null) {
-                minecraft.setScreen(parent);
+                minecraft.gui.setScreen(parent);
             }
         }).bounds(bx, by + 92, 160, 20).build());
     }
 
     private Button modeButton(String langKey, String command, int x, int y) {
         return Button.builder(Component.translatable(langKey), b -> {
-            PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), command));
+            ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), command));
             if (minecraft != null) {
-                minecraft.setScreen(null);
+                minecraft.gui.setScreen(null);
             }
         }).bounds(x, y, 160, 22).build();
     }

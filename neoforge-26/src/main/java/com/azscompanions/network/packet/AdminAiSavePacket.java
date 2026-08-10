@@ -6,14 +6,14 @@ import com.azscompanions.admin.NeoAzAdminActions;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** C2S: save AI config snapshot to disk (restart required). */
 public record AdminAiSavePacket(String json) implements CustomPacketPayload {
     public static final Type<AdminAiSavePacket> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "admin_ai_save"));
+            Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, "admin_ai_save"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, AdminAiSavePacket> STREAM_CODEC =
             StreamCodec.of(AdminAiSavePacket::write, AdminAiSavePacket::read);

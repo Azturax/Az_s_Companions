@@ -26,6 +26,15 @@ class CompanionAskResolveTest {
     }
 
     @Test
+    void parseNamedAskChatKeepsMultiSentence() {
+        var ok = CompanionAskResolve.parseNamedAskChat(
+                "Kon ask Hello there. Please come here. Then mine stone.");
+        assertTrue(ok.isPresent());
+        assertEquals("Kon", ok.get().companionName());
+        assertEquals("Hello there. Please come here. Then mine stone.", ok.get().message());
+    }
+
+    @Test
     void parseNamedAskChat() {
         var ok = CompanionAskResolve.parseNamedAskChat("Kon ask hello there");
         assertTrue(ok.isPresent());

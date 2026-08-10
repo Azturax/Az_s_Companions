@@ -2,6 +2,7 @@ package com.azscompanions.network;
 
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.client.network.ClientNetworkHandlers;
+import com.azscompanions.network.packet.CompanionAiThinkingPacket;
 import com.azscompanions.network.packet.CompanionBehaviorPacket;
 import com.azscompanions.network.packet.CompanionCommandPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
@@ -47,6 +48,7 @@ public final class ModNetworking {
             registrar.playToClient(OpenCompanionStatsPacket.TYPE, OpenCompanionStatsPacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(OpenAzAdminPacket.TYPE, OpenAzAdminPacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, (packet, context) -> {});
+            registrar.playToClient(CompanionAiThinkingPacket.TYPE, CompanionAiThinkingPacket.STREAM_CODEC, (packet, context) -> {});
         }
     }
 }

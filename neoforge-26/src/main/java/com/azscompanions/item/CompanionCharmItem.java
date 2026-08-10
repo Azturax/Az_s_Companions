@@ -5,10 +5,13 @@ import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.perk.MisterWigglySidekick;
 import com.azscompanions.registry.ModItems;
+import com.mojang.logging.LogUtils;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -16,40 +19,37 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.TagValueOutput;
+import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Loot-only Companion Charm. Unbound: first use recruits Kon and binds.
- * Bound: toggles appear (summon from stored NBT) / disappear (store + despawn).
- * Players may hold only one charm; extras are dropped.
- */
 public final class CompanionCharmItem extends Item {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     public CompanionCharmItem(Properties properties) {
         super(properties);
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             toggleOrRecruit(serverPlayer, stack);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        return InteractionResult.SUCCESS;
     }
 
     private static void toggleOrRecruit(ServerPlayer player, ItemStack stack) {
         UUID bound = CharmData.getBoundUuid(stack);
-
         if (bound == null) {
             CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
             if (created != null) {
                 CharmData.bind(stack, created.getUUID());
                 MisterWigglySidekick.ensureFor(created);
                 created.sayHello();
-                player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
-                com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
+                player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_bound"));
             }
             return;
         }
@@ -59,48 +59,50 @@ public final class CompanionCharmItem extends Item {
             living.sayBye();
             MisterWigglySidekick.despawnFor(living);
             living.despawnChildCompanions();
-            var entityTag = new net.minecraft.nbt.CompoundTag();
-            living.saveWithoutId(entityTag);
+            CompoundTag entityTag;
+            try (ProblemReporter.ScopedCollector reporter =
+                         new ProblemReporter.ScopedCollector(living.problemPath(), LOGGER)) {
+                TagValueOutput output = TagValueOutput.createWithContext(reporter, living.registryAccess());
+                living.saveWithoutId(output);
+                entityTag = output.buildResult();
+            }
             CharmData.storeCompanion(stack, entityTag, bound);
             living.discard();
-            player.displayClientMessage(Component.translatable("message.azscompanions.charm_despawned"), true);
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_despawned"));
             return;
         }
 
         if (CharmData.hasStoredCompanion(stack)) {
-            var stored = CharmData.peekStoredCompanion(stack);
+            CompoundTag stored = CharmData.peekStoredCompanion(stack);
             if (stored != null) {
                 CompanionEntity spawned = CompanionRecruitment.spawnFromStored(player, stored.copy(), bound);
                 if (spawned != null) {
                     CharmData.clearStoredCompanion(stack);
                     MisterWigglySidekick.ensureFor(spawned);
                     spawned.sayHello();
-                    player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+                    player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_summoned"));
                 }
             }
             return;
         }
 
-        // Bound but missing (lost entity / no payload): recruit replacement and rebind.
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
             MisterWigglySidekick.ensureFor(created);
             created.sayHello();
-            player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
-            com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_bound"));
         }
     }
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) {
+        if (level.isClientSide() || !(entity instanceof Player player)) {
             return;
         }
         enforceSingleCharm(player);
     }
 
-    /** Drop every charm after the first found in the player inventory. */
     public static void enforceSingleCharm(Player player) {
         boolean kept = false;
         boolean dropped = false;
@@ -122,7 +124,7 @@ public final class CompanionCharmItem extends Item {
             dropped = true;
         }
         if (dropped) {
-            player.displayClientMessage(Component.translatable("message.azscompanions.charm_only_one"), true);
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_only_one"));
         }
     }
 

@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Locale;
@@ -59,12 +60,12 @@ public final class CompanionBehaviorScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> {
             push();
             if (minecraft != null) {
-                minecraft.setScreen(parent);
+                minecraft.gui.setScreen(parent);
             }
         }).bounds(bx, panelY + panelH - 48, bw, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> {
             if (minecraft != null) {
-                minecraft.setScreen(parent);
+                minecraft.gui.setScreen(parent);
             }
         }).bounds(bx, panelY + panelH - 24, bw, 18).build());
     }
@@ -96,7 +97,7 @@ public final class CompanionBehaviorScreen extends Screen {
     }
 
     private void push() {
-        PacketDistributor.sendToServer(new CompanionBehaviorPacket(
+        ClientPacketDistributor.sendToServer(new CompanionBehaviorPacket(
                 companion.getId(), followRadius, personalSpace, wanderRadius));
     }
 

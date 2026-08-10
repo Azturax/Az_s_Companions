@@ -10,14 +10,17 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 /**
  * Process-wide companion AI facade. Safe when provider is {@link LlmProviderMode#DISABLED}.
+ * Requests are serialized on one worker thread; overflow is queued (multi-input) instead of dropped.
  */
 public final class CompanionAiRuntime {
     private static final Logger LOGGER = LoggerFactory.getLogger("azscompanions/ai");
@@ -27,6 +30,8 @@ public final class CompanionAiRuntime {
     private final OpenAiCompatibleClient openAi = new OpenAiCompatibleClient();
     private final McpCompanionClient mcp = new McpCompanionClient();
     private final AtomicBoolean busy = new AtomicBoolean(false);
+    private final ConcurrentLinkedQueue<QueuedChat> pending = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger pendingCount = new AtomicInteger(0);
     /** True while a Minecraft server (dedicated or integrated) is running in this process. */
     private final AtomicBoolean serverHostActive = new AtomicBoolean(false);
     private volatile boolean dedicatedServerHost = false;
@@ -76,6 +81,9 @@ public final class CompanionAiRuntime {
         serverHostActive.set(false);
         dedicatedServerHost = false;
         chatMemory.clearAll();
+        pending.clear();
+        pendingCount.set(0);
+        busy.set(false);
         IntegratedMultiplayerCompat.clear();
     }
 
@@ -113,9 +121,10 @@ public final class CompanionAiRuntime {
 
     public void applySettings(CompanionAiSettings next) {
         this.settings = next == null ? new CompanionAiSettings() : next.copy();
-        LOGGER.info("Companion AI provider={} serverLlmOnly={} perCompanionMemory={} memoryMaxMessages={}",
+        LOGGER.info("Companion AI provider={} serverLlmOnly={} perCompanionMemory={} memoryMaxMessages={} maxInputChars={} queueMaxDepth={}",
                 this.settings.provider(), this.settings.serverLlmOnly(),
-                this.settings.perCompanionMemory(), this.settings.memoryMaxMessages());
+                this.settings.perCompanionMemory(), this.settings.memoryMaxMessages(),
+                this.settings.maxInputChars(), this.settings.queueMaxDepth());
         if (this.settings.provider().usesOpenAiCompatibleHttp()
                 && this.settings.provider() == LlmProviderMode.OPENAI_COMPATIBLE
                 && this.settings.resolveApiKey().isBlank()) {
@@ -136,8 +145,20 @@ public final class CompanionAiRuntime {
         return settings.provider().isEnabled();
     }
 
+    /** True while an LLM call is in flight (queued messages may still be accepted). */
     public boolean isBusy() {
         return busy.get();
+    }
+
+    public int pendingQueueSize() {
+        return pendingCount.get();
+    }
+
+    public boolean canAcceptMoreRequests() {
+        if (!busy.get()) {
+            return true;
+        }
+        return pendingCount.get() < settings.queueMaxDepth();
     }
 
     /**
@@ -188,20 +209,58 @@ public final class CompanionAiRuntime {
     /**
      * Async chat. {@code onComplete} receives (replyOrNull, errorOrNull) on the AI thread —
      * callers must marshal back to the server thread before touching the world.
+     * Full multi-sentence messages are kept; when busy, requests queue up to {@code queueMaxDepth}.
      */
     public boolean requestChatAsync(CompanionChatContext context, BiConsumer<String, Throwable> onComplete) {
         if (!isEnabled()) {
             onComplete.accept(null, new IllegalStateException("Companion AI is disabled"));
             return false;
         }
-        if (context.playerMessage().isBlank()) {
+        CompanionChatContext normalized = normalizeContext(context);
+        if (normalized.playerMessage().isBlank()) {
             onComplete.accept(null, new IllegalArgumentException("Empty message"));
             return false;
         }
-        if (!busy.compareAndSet(false, true)) {
+        if (busy.compareAndSet(false, true)) {
+            dispatch(normalized, onComplete);
+            return true;
+        }
+        int maxDepth = settings.queueMaxDepth();
+        if (maxDepth <= 0 || pendingCount.get() >= maxDepth) {
             onComplete.accept(null, new IllegalStateException("Companion AI is busy — try again in a moment"));
             return false;
         }
+        pending.offer(new QueuedChat(normalized, onComplete));
+        pendingCount.incrementAndGet();
+        LOGGER.debug("Companion AI queued message (depth={})", pendingCount.get());
+        return true;
+    }
+
+    private CompanionChatContext normalizeContext(CompanionChatContext context) {
+        if (context == null) {
+            return new CompanionChatContext("Companion", "player", "Player", "", settings.inputLanguage());
+        }
+        String msg = CompanionAiInput.normalize(context.playerMessage(), settings);
+        if (msg.equals(context.playerMessage())) {
+            return context;
+        }
+        return new CompanionChatContext(
+                context.companionId(),
+                context.companionName(),
+                context.form(),
+                context.attitude(),
+                context.playerName(),
+                msg,
+                context.inputLanguage(),
+                context.parentName(),
+                context.child(),
+                context.speakerIsOwner(),
+                context.priorTurns(),
+                context.persona(),
+                context.aiPlayMode());
+    }
+
+    private void dispatch(CompanionChatContext context, BiConsumer<String, Throwable> onComplete) {
         CompanionAiSettings snap = settings.copy();
         CompletableFuture.supplyAsync(() -> {
             try {
@@ -210,7 +269,6 @@ public final class CompanionAiRuntime {
                 throw new RuntimeException(e);
             }
         }, executor).whenComplete((reply, err) -> {
-            busy.set(false);
             Throwable cause = err;
             if (err instanceof RuntimeException re && re.getCause() != null) {
                 cause = re.getCause();
@@ -221,8 +279,18 @@ public final class CompanionAiRuntime {
             } else {
                 onComplete.accept(reply, null);
             }
+            drainQueue();
         });
-        return true;
+    }
+
+    private void drainQueue() {
+        QueuedChat next = pending.poll();
+        if (next == null) {
+            busy.set(false);
+            return;
+        }
+        pendingCount.updateAndGet(v -> Math.max(0, v - 1));
+        dispatch(next.context(), next.onComplete());
     }
 
     public Optional<String> chatBlocking(CompanionAiSettings snap, CompanionChatContext context) throws Exception {
@@ -261,27 +329,32 @@ public final class CompanionAiRuntime {
 
     public String statusLine() {
         CompanionAiSettings s = settings;
-        String listen = " chatListen=" + s.chatListenMode().configName();
+        String listen = " chatListen=" + s.chatListenMode().configName()
+                + " nameListen=" + (s.nameListen() ? "on" : "off");
         String idle = s.idleChat() ? " idleChat=on" : "";
         String call = s.callPlayerWhenAway() ? " callAway=on" : "";
         String shared = usesSharedServerLlm() ? " [server LLM shared]" : "";
         String hosted = IntegratedMultiplayerCompat.isIntegratedMultiplayerActive() ? " [hosted MP]" : "";
         String minds = settings.perCompanionMemory() ? " [separate minds]" : "";
+        String q = busy.get() ? " [thinking" + (pendingCount.get() > 0 ? "+" + pendingCount.get() : "") + "]" : "";
         return switch (s.provider()) {
             case DISABLED -> "AI: disabled (scripted dialogue only)" + shared + hosted + minds;
             case LOCAL -> "AI: local OpenAI-compatible @ " + s.baseUrl() + " model=" + s.model()
-                    + " lang=" + s.inputLanguage() + listen + idle + call + shared + hosted + minds;
+                    + " lang=" + s.inputLanguage() + listen + idle + call + shared + hosted + minds + q;
             case OPENAI_COMPATIBLE -> "AI: openai_compatible @ " + s.baseUrl() + " model=" + s.model()
                     + " lang=" + s.inputLanguage()
                     + (s.resolveApiKey().isBlank() ? " (no API key)" : " (key set)")
-                    + listen + idle + call + shared + hosted + minds;
+                    + listen + idle + call + shared + hosted + minds + q;
             case MCP -> "AI: mcp " + s.mcpTransport().name().toLowerCase()
                     + (s.mcpTransport() == McpTransportMode.HTTP
                     ? " url=" + s.mcpUrl()
                     : " cmd=" + s.mcpCommand())
                     + " tool=" + s.mcpToolName()
                     + " lang=" + s.inputLanguage()
-                    + listen + idle + call + shared + hosted + minds;
+                    + listen + idle + call + shared + hosted + minds + q;
         };
+    }
+
+    private record QueuedChat(CompanionChatContext context, BiConsumer<String, Throwable> onComplete) {
     }
 }

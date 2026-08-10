@@ -18,7 +18,7 @@ public final class TeamFightHudOverlay {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.options.hideGui || mc.screen != null) {
+        if (mc.gui.screen() != null) {
             return;
         }
         TeamFightHudSnapshot s = ClientTeamFightHud.get();

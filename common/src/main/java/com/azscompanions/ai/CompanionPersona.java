@@ -10,7 +10,8 @@ import java.util.Objects;
  * Empty fields fall back to the generic system prompt — each companion mind stays independent.
  */
 public final class CompanionPersona {
-    public static final int MAX_LEN = 512;
+    /** Per-field persona text limit (multi-sentence answers allowed). */
+    public static final int MAX_LEN = 2048;
     public static final CompanionPersona EMPTY = new CompanionPersona("", "", "", "", "", "", false);
 
     public static final String NBT_WHO = "WhoAmI";
@@ -239,7 +240,8 @@ public final class CompanionPersona {
     public static String onboardingIntro(String companionName) {
         String name = companionName == null || companionName.isBlank() ? "I" : companionName.trim();
         return "Hi! Before we adventure, help define me. Who am I? What am I doing? How will I be?"
-                + " Open the Persona setup, or use /az persona set who|what|how <text>.";
+                + " Optional: speech style, relationship, quirks."
+                + " Open the Persona setup, or use /az persona set who|what|how|speech|relationship|quirks <text>.";
     }
 
     public static String onboardingLineWho() {
@@ -252,6 +254,18 @@ public final class CompanionPersona {
 
     public static String onboardingLineHow() {
         return "How will I be? Personality, tone, mannerisms, values.";
+    }
+
+    public static String onboardingLineSpeech() {
+        return "Speech style? (optional) How I talk — slang, formality, catchphrases.";
+    }
+
+    public static String onboardingLineRelationship() {
+        return "Relationship to you? (optional) Friend, partner, rival, guardian…";
+    }
+
+    public static String onboardingLineQuirks() {
+        return "Quirks? (optional) Habits, likes, oddities.";
     }
 
     @Override

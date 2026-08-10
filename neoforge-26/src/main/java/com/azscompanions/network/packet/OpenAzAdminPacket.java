@@ -4,7 +4,7 @@ import com.azscompanions.AzsCompanions;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** S2C: open Az admin panel with current AI snapshot + status. */
 public record OpenAzAdminPacket(
@@ -15,7 +15,7 @@ public record OpenAzAdminPacket(
         String companionSummary
 ) implements CustomPacketPayload {
     public static final Type<OpenAzAdminPacket> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "open_admin"));
+            Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, "open_admin"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, OpenAzAdminPacket> STREAM_CODEC =
             StreamCodec.of(OpenAzAdminPacket::write, OpenAzAdminPacket::read);

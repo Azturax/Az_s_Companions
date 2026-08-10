@@ -7,11 +7,12 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * Teamfight HUD — RenderGuiEvent graphics API moved in 26.2; draw hook deferred.
+ * AI thinking HUD — RenderGuiEvent graphics API moved in 26.2; tick-driven redraw deferred.
+ * Overlay remains callable once a stable GuiGraphicsExtractor hook is wired.
  */
 @EventBusSubscriber(modid = AzsCompanions.MOD_ID, value = Dist.CLIENT)
-public final class TeamFightHudEvents {
-    private TeamFightHudEvents() {
+public final class CompanionAiThinkingHudEvents {
+    private CompanionAiThinkingHudEvents() {
     }
 
     @SubscribeEvent

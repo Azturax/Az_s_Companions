@@ -73,6 +73,12 @@ public final class CompanionAiConfigIO {
         if (root.has("maxTokens")) {
             s.setMaxTokens(root.get("maxTokens").getAsInt());
         }
+        if (root.has("maxInputChars")) {
+            s.setMaxInputChars(root.get("maxInputChars").getAsInt());
+        }
+        if (root.has("queueMaxDepth")) {
+            s.setQueueMaxDepth(root.get("queueMaxDepth").getAsInt());
+        }
         if (root.has("enableChatMessages")) {
             s.setEnableChatMessages(root.get("enableChatMessages").getAsBoolean());
         }
@@ -249,6 +255,8 @@ public final class CompanionAiConfigIO {
         root.addProperty("inputLanguage", s.inputLanguage());
         root.addProperty("timeoutSeconds", s.timeoutSeconds());
         root.addProperty("maxTokens", s.maxTokens());
+        root.addProperty("maxInputChars", s.maxInputChars());
+        root.addProperty("queueMaxDepth", s.queueMaxDepth());
         root.addProperty("enableChatMessages", s.enableChatMessages());
         root.addProperty("serverLlmOnly", s.serverLlmOnly());
         root.addProperty("integratedMultiplayerSharedLlm", s.integratedMultiplayerSharedLlm());

@@ -1,5 +1,6 @@
 package com.azscompanions.client.network;
 
+import com.azscompanions.ai.ClientCompanionAiHud;
 import com.azscompanions.client.screen.AzAdminScreen;
 import com.azscompanions.client.screen.CompanionCreatorScreen;
 import com.azscompanions.client.screen.CompanionMenuScreen;
@@ -7,6 +8,7 @@ import com.azscompanions.client.screen.CompanionPersonaScreen;
 import com.azscompanions.client.screen.CompanionStatsScreen;
 import com.azscompanions.client.voice.ClientVoiceController;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.network.packet.CompanionAiThinkingPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
 import com.azscompanions.network.packet.OpenAzAdminPacket;
 import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
@@ -39,6 +41,7 @@ public final class ClientNetworkHandlers {
         registrar.playToClient(OpenCompanionStatsPacket.TYPE, OpenCompanionStatsPacket.STREAM_CODEC, ClientNetworkHandlers::handleOpenStats);
         registrar.playToClient(OpenAzAdminPacket.TYPE, OpenAzAdminPacket.STREAM_CODEC, ClientNetworkHandlers::handleOpenAdmin);
         registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, ClientNetworkHandlers::handleTeamFightHud);
+        registrar.playToClient(CompanionAiThinkingPacket.TYPE, CompanionAiThinkingPacket.STREAM_CODEC, ClientNetworkHandlers::handleAiThinking);
     }
 
     private static void handleDialogue(CompanionDialoguePacket packet, IPayloadContext context) {
@@ -80,7 +83,14 @@ public final class ClientNetworkHandlers {
             }
             Entity entity = mc.level.getEntity(packet.entityId());
             if (entity instanceof CompanionEntity companion) {
-                mc.setScreen(new CompanionPersonaScreen(companion, packet.whoAmI(), packet.whatAmIDoing(), packet.howWillIBe()));
+                mc.setScreen(new CompanionPersonaScreen(
+                        companion,
+                        packet.whoAmI(),
+                        packet.whatAmIDoing(),
+                        packet.howWillIBe(),
+                        packet.speechStyle(),
+                        packet.relationshipToOwner(),
+                        packet.quirks()));
             }
         });
     }
@@ -121,5 +131,10 @@ public final class ClientNetworkHandlers {
 
     private static void handleTeamFightHud(TeamFightHudPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> ClientTeamFightHud.apply(packet.payload()));
+    }
+
+    private static void handleAiThinking(CompanionAiThinkingPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> ClientCompanionAiHud.apply(
+                packet.active(), packet.companionName(), packet.timeoutSeconds(), packet.progress()));
     }
 }

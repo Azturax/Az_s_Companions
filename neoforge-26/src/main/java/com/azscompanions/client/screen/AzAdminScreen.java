@@ -5,11 +5,12 @@ import com.azscompanions.admin.LlmProviderProfile;
 import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.network.packet.AdminActionPacket;
 import com.azscompanions.network.packet.AdminAiSavePacket;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Server-gated Az admin panel (NeoForge). */
@@ -86,32 +87,32 @@ public final class AzAdminScreen extends Screen {
         int y = py + 34;
         addRenderableWidget(Button.builder(Component.literal("Teamfight: " + (teamfight ? "ON → OFF" : "OFF → ON")),
                 b -> {
-                    PacketDistributor.sendToServer(new AdminActionPacket(teamfight ? "TEAMFIGHT_OFF" : "TEAMFIGHT_ON"));
+                    ClientPacketDistributor.sendToServer(new AdminActionPacket(teamfight ? "TEAMFIGHT_OFF" : "TEAMFIGHT_ON"));
                     onClose();
                 }).bounds(bx, y, bw, 18).build());
         y += 22;
         addRenderableWidget(Button.builder(Component.literal("AI status (chat)"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("AI_STATUS"))).bounds(bx, y, bw, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("AI_STATUS"))).bounds(bx, y, bw, 18).build());
         y += 22;
         addRenderableWidget(Button.builder(Component.literal("List companions by player"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("LIST_COMPANIONS"))).bounds(bx, y, bw, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("LIST_COMPANIONS"))).bounds(bx, y, bw, 18).build());
         y += 22;
         addRenderableWidget(Button.builder(Component.literal("Dismiss my companions"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("DISMISS_OWNED"))).bounds(bx, y, bw, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("DISMISS_OWNED"))).bounds(bx, y, bw, 18).build());
         y += 22;
         addRenderableWidget(Button.builder(Component.literal("Chunk loading note"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("CHUNK_NOTE"))).bounds(bx, y, bw, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("CHUNK_NOTE"))).bounds(bx, y, bw, 18).build());
         y += 22;
         int half = (bw - 6) / 2;
         addRenderableWidget(Button.builder(Component.literal("Clear persona"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("PERSONA_CLEAR_NEAREST"))).bounds(bx, y, half, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("PERSONA_CLEAR_NEAREST"))).bounds(bx, y, half, 18).build());
         addRenderableWidget(Button.builder(Component.literal("Show armor"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("SHOW_ARMOR_NEAREST"))).bounds(bx + half + 6, y, half, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("SHOW_ARMOR_NEAREST"))).bounds(bx + half + 6, y, half, 18).build());
         y += 22;
         addRenderableWidget(Button.builder(Component.literal("Hide armor"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("HIDE_ARMOR_NEAREST"))).bounds(bx, y, half, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("HIDE_ARMOR_NEAREST"))).bounds(bx, y, half, 18).build());
         addRenderableWidget(Button.builder(Component.literal("Reset behavior"),
-                b -> PacketDistributor.sendToServer(new AdminActionPacket("BEHAVIOR_RESET_NEAREST"))).bounds(bx + half + 6, y, half, 18).build());
+                b -> ClientPacketDistributor.sendToServer(new AdminActionPacket("BEHAVIOR_RESET_NEAREST"))).bounds(bx + half + 6, y, half, 18).build());
         addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
     }
@@ -242,7 +243,7 @@ public final class AzAdminScreen extends Screen {
             snap.setMcpUrl(mcpUrlBox.getValue());
         }
         snap.setProfileId(profile.name().toLowerCase());
-        PacketDistributor.sendToServer(new AdminAiSavePacket(snap.toWireJson()));
+        ClientPacketDistributor.sendToServer(new AdminAiSavePacket(snap.toWireJson()));
         onClose();
     }
 
@@ -251,26 +252,26 @@ public final class AzAdminScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         int panelW = Math.min(360, width - 20);
         int panelH = Math.min(240, height - 20);
         int px = (width - panelW) / 2;
         int py = (height - panelH) / 2;
         graphics.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, PANEL_EDGE);
         graphics.fill(px, py, px + panelW, py + panelH, PANEL_BG);
-        graphics.drawString(font, tab == Tab.OVERVIEW ? "Az Admin" : "AI config → disk (restart)",
+        graphics.text(font, tab == Tab.OVERVIEW ? "Az Admin" : "AI config → disk (restart)",
                 px + 12, py - 12, 0xFFFFFF, false);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         if (tab == Tab.OVERVIEW) {
             int panelW = Math.min(360, width - 20);
             int px = (width - panelW) / 2;
             int py = (height - Math.min(240, height - 20)) / 2;
-            graphics.drawString(font, truncate(aiStatus, 48), px + 12, py + panelHSafe() - 48, 0xA0A0A0, false);
-            graphics.drawString(font, "chunks=" + chunkLoading + "  " + truncate(companionSummary, 40),
+            graphics.text(font, truncate(aiStatus, 48), px + 12, py + panelHSafe() - 48, 0xA0A0A0, false);
+            graphics.text(font, "chunks=" + chunkLoading + "  " + truncate(companionSummary, 40),
                     px + 12, py + panelHSafe() - 36, 0xA0A0A0, false);
         }
     }

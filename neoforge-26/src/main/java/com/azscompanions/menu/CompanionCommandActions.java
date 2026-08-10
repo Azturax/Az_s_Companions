@@ -15,7 +15,9 @@ public final class CompanionCommandActions {
         CUSTOMIZE,
         FOLLOW,
         STAY,
-        WANDER
+        WANDER,
+        /** Toggle per-companion AI Mode (LLM play; pauses normal goals). */
+        TOGGLE_AI_MODE
     }
 
     private CompanionCommandActions() {
@@ -26,7 +28,7 @@ public final class CompanionCommandActions {
             return;
         }
         if (!companion.isOwnedBy(player) && !companion.isTrusted(player)) {
-            player.displayClientMessage(Component.translatable("message.azscompanions.not_owner"), true);
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.not_owner"));
             return;
         }
         if (companion.distanceTo(player) > 64.0d) {
@@ -50,13 +52,18 @@ public final class CompanionCommandActions {
                 companion.setMode(CompanionMode.WANDER);
                 toast(serverPlayer, companion, "message.azscompanions.mode_wander");
             }
+            case TOGGLE_AI_MODE -> {
+                companion.toggleAiMode();
+                toast(serverPlayer, companion, companion.isAiModeEnabled()
+                        ? "message.azscompanions.ai_mode_on"
+                        : "message.azscompanions.ai_mode_off");
+            }
         }
     }
 
     private static void toast(ServerPlayer player, CompanionEntity companion, String key) {
-        player.displayClientMessage(
+        player.sendOverlayMessage(
                 Component.literal(companion.getChatDisplayName() + " — ")
-                        .append(Component.translatable(key)),
-                true);
+                        .append(Component.translatable(key)));
     }
 }

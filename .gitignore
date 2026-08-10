@@ -40,6 +40,7 @@ local_skins/
 # scratch / temp
 .tmp_bed/
 *.log
+**/_apipeek/
 
 # local tooling (portable CLI downloads)
 .tools/

@@ -40,6 +40,7 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playS2C().register(OpenStatsPayload.TYPE, OpenStatsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenAdminPayload.TYPE, OpenAdminPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(TeamFightHudPayload.TYPE, TeamFightHudPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(AiThinkingPayload.TYPE, AiThinkingPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -112,6 +113,12 @@ public final class FabricNetworking {
                                             "message.azscompanions.child_limit_reached"), true);
                                 }
                             }
+                        }
+                        case "TOGGLE_AI_MODE" -> {
+                            companion.toggleAiMode();
+                            toastMode(player, companion, companion.isAiModeEnabled()
+                                    ? "message.azscompanions.ai_mode_on"
+                                    : "message.azscompanions.ai_mode_off");
                         }
                         default -> {
                         }
@@ -202,9 +209,9 @@ public final class FabricNetworking {
                                     payload.whoAmI(),
                                     payload.whatAmIDoing(),
                                     payload.howWillIBe(),
-                                    current.speechStyle(),
-                                    current.relationshipToOwner(),
-                                    current.quirks(),
+                                    payload.speechStyle(),
+                                    payload.relationshipToOwner(),
+                                    payload.quirks(),
                                     true);
                     companion.setPersona(next);
                     player.displayClientMessage(Component.literal(
@@ -229,7 +236,13 @@ public final class FabricNetworking {
     public static void openPersonaSetup(ServerPlayer player, FabricCompanionEntity companion) {
         var p = companion.getPersona();
         ServerPlayNetworking.send(player, new OpenPersonaPayload(
-                companion.getId(), p.whoAmI(), p.whatAmIDoing(), p.howWillIBe()));
+                companion.getId(),
+                p.whoAmI(),
+                p.whatAmIDoing(),
+                p.howWillIBe(),
+                p.speechStyle(),
+                p.relationshipToOwner(),
+                p.quirks()));
     }
 
     public static void openStats(ServerPlayer player, FabricCompanionEntity companion) {
@@ -294,6 +307,15 @@ public final class FabricNetworking {
         ServerPlayNetworking.send(player, new TeamFightHudPayload(encodedSnapshot == null ? "" : encodedSnapshot));
     }
 
+    public static void sendAiThinking(ServerPlayer player, boolean active, String companionName,
+                                      int timeoutSeconds, float progress) {
+        ServerPlayNetworking.send(player, new AiThinkingPayload(
+                active,
+                companionName == null ? "" : companionName,
+                timeoutSeconds,
+                progress));
+    }
+
     private static void toastMode(ServerPlayer player, FabricCompanionEntity companion, String key) {
         player.displayClientMessage(
                 Component.literal(companion.getChatDisplayName() + " — ")
@@ -317,7 +339,10 @@ public final class FabricNetworking {
             int entityId,
             String whoAmI,
             String whatAmIDoing,
-            String howWillIBe
+            String howWillIBe,
+            String speechStyle,
+            String relationshipToOwner,
+            String quirks
     ) implements CustomPacketPayload {
         public static final Type<OpenPersonaPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_persona"));
@@ -330,11 +355,21 @@ public final class FabricNetworking {
             buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, max);
             buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, max);
             buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, max);
+            buf.writeUtf(p.speechStyle == null ? "" : p.speechStyle, max);
+            buf.writeUtf(p.relationshipToOwner == null ? "" : p.relationshipToOwner, max);
+            buf.writeUtf(p.quirks == null ? "" : p.quirks, max);
         }
 
         private static OpenPersonaPayload read(RegistryFriendlyByteBuf buf) {
             int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
-            return new OpenPersonaPayload(buf.readVarInt(), buf.readUtf(max), buf.readUtf(max), buf.readUtf(max));
+            return new OpenPersonaPayload(
+                    buf.readVarInt(),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max));
         }
 
         @Override
@@ -463,6 +498,9 @@ public final class FabricNetworking {
             String whoAmI,
             String whatAmIDoing,
             String howWillIBe,
+            String speechStyle,
+            String relationshipToOwner,
+            String quirks,
             boolean skip
     ) implements CustomPacketPayload {
         public static final Type<PersonaPayload> TYPE = new Type<>(
@@ -476,12 +514,23 @@ public final class FabricNetworking {
             buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, max);
             buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, max);
             buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, max);
+            buf.writeUtf(p.speechStyle == null ? "" : p.speechStyle, max);
+            buf.writeUtf(p.relationshipToOwner == null ? "" : p.relationshipToOwner, max);
+            buf.writeUtf(p.quirks == null ? "" : p.quirks, max);
             buf.writeBoolean(p.skip);
         }
 
         private static PersonaPayload read(RegistryFriendlyByteBuf buf) {
             int max = com.azscompanions.ai.CompanionPersona.MAX_LEN;
-            return new PersonaPayload(buf.readVarInt(), buf.readUtf(max), buf.readUtf(max), buf.readUtf(max), buf.readBoolean());
+            return new PersonaPayload(
+                    buf.readVarInt(),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readUtf(max),
+                    buf.readBoolean());
         }
 
         @Override
@@ -495,6 +544,28 @@ public final class FabricNetworking {
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "teamfight_hud"));
         public static final StreamCodec<RegistryFriendlyByteBuf, TeamFightHudPayload> CODEC =
                 StreamCodec.composite(ByteBufCodecs.STRING_UTF8, TeamFightHudPayload::payload, TeamFightHudPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AiThinkingPayload(
+            boolean active,
+            String companionName,
+            int timeoutSeconds,
+            float progress
+    ) implements CustomPacketPayload {
+        public static final Type<AiThinkingPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_ai_thinking"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AiThinkingPayload> CODEC =
+                StreamCodec.composite(
+                        ByteBufCodecs.BOOL, AiThinkingPayload::active,
+                        ByteBufCodecs.STRING_UTF8, AiThinkingPayload::companionName,
+                        ByteBufCodecs.VAR_INT, AiThinkingPayload::timeoutSeconds,
+                        ByteBufCodecs.FLOAT, AiThinkingPayload::progress,
+                        AiThinkingPayload::new);
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

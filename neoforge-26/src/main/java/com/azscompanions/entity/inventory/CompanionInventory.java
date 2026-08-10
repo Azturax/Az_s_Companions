@@ -134,12 +134,20 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
     public CompoundTag save(HolderLookup.Provider provider) {
         CompoundTag tag = new CompoundTag();
         ListTag list = new ListTag();
+        var ops = provider.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
         for (int i = 0; i < getSlots(); i++) {
             ItemStack stack = getStackInSlot(i);
             if (!stack.isEmpty()) {
                 CompoundTag slotTag = new CompoundTag();
                 slotTag.putInt("Slot", i);
-                list.add(stack.save(provider, slotTag));
+                ItemStack.CODEC.encodeStart(ops, stack).result().ifPresent(encoded -> {
+                    if (encoded instanceof CompoundTag compound) {
+                        for (String key : compound.keySet()) {
+                            slotTag.put(key, compound.get(key));
+                        }
+                    }
+                });
+                list.add(slotTag);
             }
         }
         tag.put("Items", list);
@@ -149,11 +157,13 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
     public void load(CompoundTag tag, HolderLookup.Provider provider) {
         clearContent();
         ListTag list = tag.getListOrEmpty("Items");
+        var ops = provider.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag slotTag = list.getCompoundOrEmpty(i);
             int slot = slotTag.getIntOr("Slot", 0);
             if (slot >= 0 && slot < getSlots()) {
-                setStackInSlot(slot, ItemStack.parse(provider, slotTag).orElse(ItemStack.EMPTY));
+                ItemStack.CODEC.parse(ops, slotTag).result()
+                        .ifPresentOrElse(s -> setStackInSlot(slot, s), () -> setStackInSlot(slot, ItemStack.EMPTY));
             }
         }
     }

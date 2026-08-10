@@ -43,7 +43,7 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         system.addProperty("role", "system");
         system.addProperty("content", settings.formatSystemPrompt(
                 context.companionName(), context.form(), context.parentName(), context.child(),
-                context.speakerIsOwner(), context.attitude(), context.persona()));
+                context.speakerIsOwner(), context.attitude(), context.persona(), context.aiPlayMode()));
         messages.add(system);
         for (CompanionChatMemory.Turn turn : context.priorTurns()) {
             if (turn == null || turn.isBlank()) {

@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.phys.AABB;
 
@@ -44,7 +44,7 @@ public final class MisterWigglySidekick {
 
     /** Ensure exactly one sidekick dog exists for this companion while summoned. */
     public static void ensureFor(CompanionEntity companion) {
-        if (companion.level().isClientSide || !(companion.level() instanceof ServerLevel level)) {
+        if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
         UUID owner = companion.getOwnerUuid();
@@ -62,7 +62,7 @@ public final class MisterWigglySidekick {
 
     /** Keep dog {@link Attributes#SCALE} proportional to the companion size slider. */
     public static void syncScaleFromCompanion(CompanionEntity companion) {
-        if (companion.level().isClientSide || !(companion.level() instanceof ServerLevel level)) {
+        if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
         if (!isWigglyOwner(companion.getOwnerUuid())) {
@@ -89,7 +89,7 @@ public final class MisterWigglySidekick {
 
     /** Remove the dog when the companion is stored or removed. */
     public static void despawnFor(CompanionEntity companion) {
-        if (companion.level().isClientSide || !(companion.level() instanceof ServerLevel level)) {
+        if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
         AABB box = companion.getBoundingBox().inflate(96.0d);

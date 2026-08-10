@@ -142,7 +142,8 @@ public final class McpCompanionClient implements CompanionAiClient {
         }
         args.addProperty("system_prompt", settings.formatSystemPrompt(
                 context.companionName(), context.form(), context.parentName(), context.child(),
-                context.speakerIsOwner(), context.attitude(), context.persona()));
+                context.speakerIsOwner(), context.attitude(), context.persona(), context.aiPlayMode()));
+        args.addProperty("ai_play_mode", context.aiPlayMode());
         args.addProperty("who_am_i", context.persona().whoAmI());
         args.addProperty("what_am_i_doing", context.persona().whatAmIDoing());
         args.addProperty("how_will_i_be", context.persona().howWillIBe());

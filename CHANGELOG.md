@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.3.8
+
+Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+
+### AI Mode (per companion)
+- Shift+RMB menu → **AI Mode: ON/OFF** (“Let the LLM play the game!”).
+- When ON: normal follow/wander/combat goals pause; LLM tools drive play (requires provider ≠ disabled).
+- When OFF: text/chat only for that companion even if server `enableAiActions` is true.
+- Persists as `AiPlayMode` NBT / synced data. CCI: `companion_modify` `aiMode=` / `aiPlayMode=` / `llmPlay=`.
+
+### Name chat without slash
+- **`nameListen`** (default true): say the companion’s name in normal chat (`Kon, how are you?`) — no `/ask` or `/az ask` required.
+- Works even when `chatListenMode` is `off`. Full multi-sentence messages preserved (up to `maxInputChars`, default 2000).
+- While busy, requests queue (`queueMaxDepth`, default 4) instead of dropping. Owner vs stranger modes; strangers stay social-safe.
+
+### Thinking HUD
+- Top-right client HUD while a companion AI request is in flight (name + progress/timeout).
+- S2C thinking packet; Fabric + NeoForge overlays. Action-bar “thinking” on explicit ask still works.
+
+### Persona setup (scrollable)
+- Persona GUI shows **all** fields in a scrollable panel: Who / What / How / speech / relationship / quirks.
+- Mouse wheel / scrollbar when content exceeds the panel. Re-open anytime with `/az persona edit`.
+
+### Child store badge
+- Menu badge (stored/max) + tooltip; badge click / charm RMB / empty-hand RMB on parent calls the next stored Bit.
+- Remains available with AI Mode and other menu actions.
+
+### CCI
+- `aiMode` on `companion_modify` for remote AI Mode toggle.
+- Interaction / support spawn and persona keys unchanged; AI subjects share the same name-listen + queue pipeline.
+
+### Admin AI profiles
+- `/az admin` / `/az ai config` profiles (LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP, Custom…) remain the in-game way to write `azscompanions-ai.json` / `.toml` (restart to apply).
+
+### Docs
+- [COMPANION_AI.md](docs/COMPANION_AI.md) updated for AI Mode, name chat, input limits, thinking HUD, and persona scroll UI.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.8+1.21.1.jar` | `azscompanions-fabric-0.3.8+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.8+1.21.1.jar` | `azscompanions-fabric-cci-0.3.8+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.7
 
 Release: [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

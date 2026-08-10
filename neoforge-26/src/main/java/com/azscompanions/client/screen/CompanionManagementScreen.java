@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Locale;
@@ -75,7 +76,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
         // Always available — not gated on wardrobe or first-time recruit.
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.customize"), b -> {
             Minecraft mc = Minecraft.getInstance();
-            mc.setScreen(new CompanionCreatorScreen(c, this));
+            mc.gui.setScreen(new CompanionCreatorScreen(c, this));
         }).bounds(leftPos + imageWidth - 100, topPos + 58, 90, 18).build());
 
         int cx = leftPos + 12;
@@ -114,7 +115,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
             }).bounds(cx, cy + 72, 90, 18).build();
             addRenderableWidget(slimBtn);
             addRenderableWidget(Button.builder(Component.literal("Open Inventory"), b ->
-                    PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
+                    ClientPacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx + 96, cy + 72, 100, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.BODY) {
             addPropControls("Bust", cy, () -> editBust, v -> editBust = v,
@@ -140,7 +141,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
             }).bounds(cx + 128, cy + 112, 110, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.INVENTORY) {
             addRenderableWidget(Button.builder(Component.literal("Open Inventory GUI"), b ->
-                    PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
+                    ClientPacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx, cy, 140, 20).build());
         }
     }
@@ -224,7 +225,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
         }
         String name = nameBox != null ? nameBox.getValue() : "";
         String skin = skinBox != null ? skinBox.getValue() : c.getSkinPath();
-        PacketDistributor.sendToServer(new CompanionSettingsPacket(
+        ClientPacketDistributor.sendToServer(new CompanionSettingsPacket(
                 c.getId(),
                 name,
                 editScale,

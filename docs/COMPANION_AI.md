@@ -365,8 +365,10 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 | `apiKeyEnv` | string | `AZS_LLM_API_KEY` | Env var name when `apiKey` is empty |
 | `systemPrompt` | string | (wholesome companion template) | Placeholders: `{name}`, `{form}`, `{language}`, `{attitude}` |
 | `inputLanguage` | string | `en` | Preferred player / reply language (`en`, `de`, `ja`, …) |
-| `timeoutSeconds` | int | `30` | HTTP/MCP timeout; clamped **5–120** |
+| `timeoutSeconds` | int | `30` | HTTP/MCP timeout; clamped **5–120**. Also drives the soft Thinking HUD progress bar |
 | `maxTokens` | int | `256` | Completion cap; clamped **32–2048** |
+| `maxInputChars` | int | `2000` | Max characters of **one** player chat/ask message kept for the LLM. **Full multi-sentence text is preserved** (no first-sentence trim). Clamped **64–8000** |
+| `queueMaxDepth` | int | `4` | While AI is busy, queue up to this many extra requests instead of dropping them (`0` = reject while busy) |
 | `enableChatMessages` | bool | `true` | Show LLM/MCP replies as owner chat lines (all forms) |
 | `serverLlmOnly` | bool | `true` | Server-authoritative LLM **endpoint**: all companions use this host’s provider/baseUrl/model/MCP. Joining clients’ AI configs are ignored for LLM calls (default **true**; always effectively on for dedicated servers). Singleplayer uses the same local file via the integrated server. Does **not** merge companion minds. |
 | `perCompanionMemory` | bool | `true` | Separate rolling chat/history buffers keyed by companion **entity UUID**. Idle / name-mention / ask for companion A never inject companion B’s transcript. Children have their own buffers (may know parent name in the system prompt only). |
@@ -377,7 +379,7 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
 | `chatListenMode` | string | `off` | `off` — no auto-react · `player` (alias `owner`) — only owner chat · `global` (aliases `all`, `everyone`) — any nearby chat may trigger nearest companion (owner online) |
-| `nameListen` | bool | `true` | Saying a companion's display name (`Bit, come here`) triggers that companion even when `chatListenMode` is `off` |
+| `nameListen` | bool | `true` | **Primary chat path.** Saying a companion's display name in normal chat (`Kon, how are you?`, `Bit come here please`) triggers that companion — **no slash command required**. Works even when `chatListenMode` is `off` |
 | `chatReaction` | string | — | **Fabric JSON only (legacy alias):** same as `chatListenMode` if `chatListenMode` is absent |
 | `chatReactRange` | double | `48` | Max blocks from speaker/owner; clamped **8–128** |
 | `chatReactCooldownSeconds` | int | `20` | Per-companion cooldown; clamped **5–600** |
@@ -386,24 +388,35 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 
 Slash commands and companion-looking chat lines (`<Name> …`) are ignored for auto-react and name mention.
 
-### Name mention — owner vs stranger
+### Name mention — talk in chat (primary; no slash needed)
 
-Examples (`nameListen=true`, works even if `chatListenMode=off`):
+With AI enabled and `nameListen=true` (default), type normal chat using their name. **You do not need** `/ask`, `/az ask`, or `/Name ask`.
+
+Examples (`chatListenMode` can stay `off`):
 
 ```text
-Bit, come here
+Kon, how are you?
+Bit come here please. Then mine some stone.
 hey Kon please follow me
 Bit dance!
 ```
 
-When `nameListen` is on (default) and AI is enabled:
+Multi-sentence messages after the name are sent to the LLM in full (up to `maxInputChars`). Rapid follow-up chats queue (`queueMaxDepth`) instead of being dropped while Thinking…
+
+Optional extras (still work): `/ask …`, `/az ask …`, chat form `Kon ask hello`.
+
+When `nameListen` is on and AI is enabled:
 
 | Speaker | Mode | Behavior |
 |---------|------|----------|
-| **Owner** | Owner address | Obey/help tone; full AI actions if `enableAiActions` |
-| **Other player** | Stranger | Friendly, helpful social chat (not mute deflect) + **safe** play only: `come_here`, `run_at_player`, `dance`, `peekaboo`, `say`, `play_stop`. **Blocked:** mine/place/build/craft, follow/stay/goto, pickup/drop/equip/inventory, hide/seek |
+| **Owner** | Owner address | Obey/help tone; full AI actions if companion **AI Mode** ON; **no** auto-react cooldown |
+| **Other player** | Stranger | Friendly, helpful social chat + **safe** play only: `come_here`, `run_at_player`, `dance`, `peekaboo`, `say`, `play_stop`. **Blocked:** mine/place/build/craft, follow/stay/goto, pickup/drop/equip/inventory, hide/seek |
 
 Stranger `come_here` / `run_at_player` approaches the **speaker** briefly without permanent FOLLOW, and looks at them. Speak lines notify **speaker and owner**. Public chat is **not** canceled for name mentions.
+
+### Thinking HUD
+
+While an AI request is in flight, the owner (and stranger speaker when relevant) sees a **top-right** overlay: spinning gear + companion name + `Thinking...` + a soft progress bar (elapsed / `timeoutSeconds`, capped below 100%). The bar clears when the request completes or fails.
 
 ### Idle ambient chat
 
@@ -422,17 +435,35 @@ Stranger `come_here` / `run_at_player` approaches the **speaker** briefly withou
 | `callPlayerDistance` | double | `48` | Owner farther than this (blocks) counts as away; clamped **8–128** |
 | `callPlayerCooldownSeconds` | int | `60` | Cooldown between call lines; clamped **5–600** |
 
-### AI actions (optional)
+### AI Mode + AI actions
 
-When `enableAiActions` is true, the system prompt gains a JSON action appendix; the server may execute owned-companion actions (reach + ownership limits always apply). **Owners** get the full tool set. **Strangers** (name mention / global listen) only get stranger-safe social actions — brief approach without permanent FOLLOW, dance/peekaboo/say — never mine/build/inventory/follow/stay.
+**AI Mode** (per companion) is the player-facing opt-in for autonomous LLM play:
+
+| How | Detail |
+|-----|--------|
+| Shift+RMB menu | **AI Mode: ON/OFF** — tooltip “Let the LLM play the game!” |
+| CCI | `companion_modify` with `aiMode=true` / `aiMode=false` (aliases `aiPlayMode=`, `llmPlay=`) |
+| NBT | `AiPlayMode` (synced entity data) |
+
+When **AI Mode is ON** for a companion:
+
+- Provider must be ≠ `disabled` (otherwise chat/actions do not run).
+- Idle + name chat may issue move/mine/craft/build/play tools.
+- **Normal goals pause:** sit, sleep-in-bed, potion self-care, follow, wander, look-at, owner-defend, hostile target, hurt-by-target. Kept: float (water), open doors (NeoForge), melee (only if something sets a target).
+- Tick leashes (home-bed rescue, child soft leash, stuck recovery, force-FOLLOW) are skipped so they do not fight the LLM.
+- Turning **OFF** clears and re-registers the full goal set.
+
+When **AI Mode is OFF**: text/chat only — tools are not executed for that companion even if server `enableAiActions` is true.
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `enableAiActions` | bool | `false` | Allow structured actions in LLM replies |
+| `enableAiActions` | bool | `false` | Legacy / admin global hint (CCI session, admin UI). **Does not** alone enable tools — companion **AI Mode** is required |
 | `aiActionReach` | int | `5` | Max Manhattan reach for mine/place; clamped **2–16** |
 | `aiActionCooldownTicks` | int | `10` | Ticks between accepting action batches; clamped **0–100** |
 
 Action names include: `goto`, `follow`, `stop`, `stay`, `sit`, `wander`, `come_here`, `mine`, `place`, `build`, `craft`, `pickup`, `take`, `use_item`, `equip`, `move_item`, `drop`, `select_hotbar`, `run_at_player`, `hide`, `seek`, `hide_and_seek`, `dance`, `peekaboo`, `play_stop`, `say`, and when FTB Chunks + `ftbChunksAiClaim`: `claim_chunk`, `unclaim_chunk` (owner-only).
+
+Owners get the full tool set when AI Mode is on. Strangers (name mention / global listen) only get stranger-safe social actions — brief approach without permanent FOLLOW, dance/peekaboo/say — never mine/build/inventory/follow/stay.
 
 ### Child Bit autonomy
 
@@ -568,18 +599,18 @@ Mod root is **`/az`**. Legacy **`/azscompanions`** redirects to the same tree.
 | `/az ask <Name> <message>` | Ask your owned companion whose display name matches `<Name>` (sanitized, case-insensitive) |
 | `Kon ask <message>` | Chat (no slash): same as named `/az ask`, **only if you own** that companion; message is not broadcast when accepted |
 | `/az ai status` | Provider / key status |
-| `/az persona [nearest\|Name]` | Show Who / What / How (+ optional extras) for nearest or named owned companion |
-| `/az persona set who\|what\|how <text…>` | Set a persona field on nearest owned companion (marks initialized) |
-| `/az persona <Name> set who\|what\|how <text…>` | Same, named target |
+| `/az persona [nearest\|Name]` | Show Who / What / How / speech / relationship / quirks for nearest or named owned companion |
+| `/az persona set who\|what\|how\|speech\|relationship\|quirks <text…>` | Set a persona field on nearest owned companion (marks initialized) |
+| `/az persona <Name> set who\|what\|how\|speech\|relationship\|quirks <text…>` | Same, named target |
 | `/az persona clear` | Clear persona text (keeps `personaInitialized` — no re-onboarding) |
-| `/az persona edit` | Re-open Persona setup GUI anytime |
+| `/az persona edit` | Re-open full Persona setup GUI (scrollable; all fields) anytime |
 | `/az teamfight on\|off\|status` | Ops team-fight toggle (alias under `/azscompanions`) |
 
 **Not used:** global dynamic `/kon` Brigadier roots (they clash between players and other mods). Name targeting is always **resolved against the commanding player’s owned companions**.
 
 ---
 
-## Per-companion persona (Who / What / How)
+## Per-companion persona (Who / What / How + optional extras)
 
 Each companion has an independent mind. Persona fields persist in entity NBT (survives charm store/summon, dimension change) and are injected into that companion’s LLM system prompt.
 
@@ -587,13 +618,13 @@ Each companion has an independent mind. Persona fields persist in entity NBT (su
 |----------|---------|---------|
 | `whoAmI` | Who am I — identity, role, backstory | `WhoAmI` |
 | `whatAmIDoing` | What am I doing — goals, duties, current focus | `WhatAmIDoing` |
-| `howWillIBe` | How will I be — personality, speech, temperament | `HowWillIBe` |
+| `howWillIBe` | How will I be — personality, tone, temperament | `HowWillIBe` |
 | `speechStyle` | Optional speech flavor | `SpeechStyle` |
 | `relationshipToOwner` | Optional bond to owner | `RelationshipToOwner` |
 | `quirks` | Optional mannerisms | `Quirks` |
 | `personaInitialized` | First-create onboarding done (or CCI/command set) | `PersonaInitialized` |
 
-Empty fields → generic friendly companion prompt. Max length 512 per text field.
+Empty fields → generic friendly companion prompt. Max length 2048 per text field.
 
 ### First-create onboarding (once only)
 
@@ -603,21 +634,30 @@ Triggers when a **new** primary companion is created and `personaInitialized` is
 - Creator **Done** (if still unset)
 - CCI `companion_summon` without persona keys
 
-Does **not** re-open on charm recall/store, CCI recall of an existing companion, or dimension change. Skip/Save/close marks `personaInitialized`. Revisit anytime with `/az persona` / `edit` / `set`.
+The Persona setup GUI shows **all** fields in a scrollable panel:
+
+1. Who am I
+2. What am I doing
+3. How will I be
+4. Speech style (optional)
+5. Relationship to owner (optional)
+6. Quirks (optional)
+
+Mouse wheel / scrollbar when content exceeds the panel. Save, Skip, or close marks `personaInitialized`. Does **not** re-open on charm recall/store, CCI recall of an existing companion, or dimension change. Revisit anytime with `/az persona edit` (same full scrollable form) or `/az persona set …`.
 
 Owner-only: speak lines + Persona setup GUI go to the owner.
 
 ### CCI
 
 ```text
-companion_persona whoAmI=A knight;whatAmIDoing=Guard the gate;howWillIBe=Stoic and warm
-companion_modify who=Scout;what=Mining;how=Cheerful
+companion_persona whoAmI=A knight;whatAmIDoing=Guard the gate;howWillIBe=Stoic and warm;speechStyle=Formal;relationshipToOwner=Sworn protector;quirks=Hums when idle
+companion_modify who=Scout;what=Mining;how=Cheerful;quirks=Collects shiny rocks
 companion_summon form=wolf;name=Bit;whoAmI=A pup;whatAmIDoing=Following;howWillIBe=Playful
 ```
 
 Setting any persona key via CCI marks `personaInitialized` and **skips** first-create onboarding.
 
-Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speechStyle`, `relationshipToOwner`, `quirks`.
+Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speech`/`speechStyle`, `relationship`/`relationshipToOwner`, `quirks`/`quirk`.
 
 ---
 
@@ -637,7 +677,7 @@ Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speech
   - `nameListen` (default true) — `Bit, come here` listens by name even when `chatListenMode=off`; prefers speaker’s owned companion, else nearest with online owner; strangers socialize safely; does **not** cancel public chat.
   - `censorChat` / `censorExtraWords` — filter prompts and speak lines.
   - Per-companion **and** per-owner cooldowns (`chatReactCooldownSeconds`) rate-limit listen spam on dedicated servers.
-- **AI actions:** Owners get the full tool set when `enableAiActions`. Strangers are filtered to dance/play/come_here/say only. Mine/place/build respect the owner’s `mayBuild`.
+- **AI Mode / actions:** Owners get the full tool set when companion **AI Mode** is ON (provider ≠ disabled). Strangers are filtered to dance/play/come_here/say only. Mine/place/build respect the owner’s `mayBuild`. Normal follow/wander/combat goals pause while AI Mode is ON.
 - **FTB suite (optional):** Same FTB team / claim walk-vs-interact / AI claim tools / rank gates — see [COMPAT.md](COMPAT.md) (`ftbTeamsCompat`, `ftbChunksAllowPresence`, `ftbChunksBlockInteraction`, `ftbChunksAiClaim`, `ftbRanksCompat`, `trustSameTeamAsOwner`).
 - **Children / Bits:** Same owner UUID as the parent/streamer; ask and AI actions use the same ownership checks. Each Bit still has an **independent** AI memory buffer.
 - **CCI:** Streamer client packet binds summons and AI to that player on dedicated servers (see [CCI.md](CCI.md)); LLM still uses the **server** AI config.

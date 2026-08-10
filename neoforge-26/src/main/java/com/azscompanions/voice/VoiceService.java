@@ -21,13 +21,13 @@ public final class VoiceService {
     }
 
     public void speak(CompanionEntity companion, DialogueCategory category, String line) {
-        if (companion.level().isClientSide) {
+        if (companion.level().isClientSide()) {
             return;
         }
         String name = companion.getChatDisplayName();
         companion.setCustomName(companion.hasCustomName() ? companion.getCustomName() : Component.literal(name));
         if (companion.getOwner() instanceof ServerPlayer owner) {
-            owner.displayClientMessage(Component.literal("<" + name + "> " + line), false);
+            owner.sendSystemMessage(Component.literal("<" + name + "> " + line));
             PacketDistributor.sendToPlayer(owner, new CompanionDialoguePacket(
                     companion.getId(),
                     category.name(),

@@ -69,9 +69,8 @@ public final class CompanionWakeLoot {
         }
 
         if (owner instanceof ServerPlayer serverPlayer) {
-            serverPlayer.displayClientMessage(
-                    Component.translatable("message.azscompanions.wake_loot", companion.getChatDisplayName()),
-                    true);
+            serverPlayer.sendOverlayMessage(
+                    Component.translatable("message.azscompanions.wake_loot", companion.getChatDisplayName()));
         }
     }
 

@@ -268,7 +268,7 @@ public final class CciCompanionActions {
         } else {
             toast(player, companion.getChatDisplayName(),
                     "Nothing to modify. Use form=/skin=/name=/attitude=/team=/showArmor=/followRadius="
-                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/gear keys.");
+                            + "/maxChildren=/whoAmI=/whatAmIDoing=/howWillIBe=/chunkLoading=/aiMode=/gear keys.");
         }
     }
 
@@ -486,6 +486,11 @@ public final class CciCompanionActions {
         Boolean chunkLoading = params.chunkLoadingOrNull();
         if (chunkLoading != null) {
             companion.setChunkLoadingEnabled(chunkLoading);
+            changed = true;
+        }
+        Boolean aiMode = params.aiModeOrNull();
+        if (aiMode != null) {
+            companion.setAiModeEnabled(aiMode);
             changed = true;
         }
         return changed;

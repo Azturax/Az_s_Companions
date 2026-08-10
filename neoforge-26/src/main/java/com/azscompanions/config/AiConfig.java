@@ -3,6 +3,7 @@ package com.azscompanions.config;
 import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.ChildAutonomyMode;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionAiInput;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.LlmProviderMode;
 import com.azscompanions.ai.McpTransportMode;
@@ -27,6 +28,8 @@ public final class AiConfig {
     public static final ModConfigSpec.ConfigValue<String> INPUT_LANGUAGE;
     public static final ModConfigSpec.IntValue TIMEOUT_SECONDS;
     public static final ModConfigSpec.IntValue MAX_TOKENS;
+    public static final ModConfigSpec.IntValue MAX_INPUT_CHARS;
+    public static final ModConfigSpec.IntValue QUEUE_MAX_DEPTH;
     public static final ModConfigSpec.BooleanValue ENABLE_CHAT_MESSAGES;
     public static final ModConfigSpec.BooleanValue SERVER_LLM_ONLY;
     public static final ModConfigSpec.BooleanValue INTEGRATED_MULTIPLAYER_SHARED_LLM;
@@ -95,6 +98,14 @@ public final class AiConfig {
         INPUT_LANGUAGE = builder.define("inputLanguage", "en");
         TIMEOUT_SECONDS = builder.defineInRange("timeoutSeconds", 30, 5, 120);
         MAX_TOKENS = builder.defineInRange("maxTokens", 256, 32, 2048);
+        MAX_INPUT_CHARS = builder.comment(
+                        "Max characters of one player chat/ask message kept for the LLM.",
+                        "Full multi-sentence messages are preserved (no first-sentence trim).")
+                .defineInRange("maxInputChars", CompanionAiInput.DEFAULT_MAX_INPUT_CHARS, 64, 8000);
+        QUEUE_MAX_DEPTH = builder.comment(
+                        "When AI is busy, queue up to this many extra requests instead of dropping them.",
+                        "0 = reject while busy. Name-mention / ask can stack briefly.")
+                .defineInRange("queueMaxDepth", CompanionAiInput.DEFAULT_QUEUE_MAX_DEPTH, 0, 16);
         ENABLE_CHAT_MESSAGES = builder.comment("Show LLM replies as owner chat lines.")
                 .define("enableChatMessages", true);
         SERVER_LLM_ONLY = builder.comment(
@@ -134,8 +145,9 @@ public final class AiConfig {
                         "Name mentions are controlled by nameListen (default true).")
                 .define("chatListenMode", "off");
         NAME_LISTEN = builder.comment(
-                        "When true (default), saying a companion's name in chat triggers that companion",
-                        "even if chatListenMode is off. Owner vs stranger mode follows ownership.")
+                        "PRIMARY chat path (default true): say the companion's display name in normal chat",
+                        "(Kon, how are you? / Bit come here please) — no /ask slash required.",
+                        "Works even if chatListenMode is off. Owner vs stranger mode follows ownership.")
                 .define("nameListen", true);
         CHAT_REACT_RANGE = builder.comment("Max blocks for chat auto-react / name mentions.")
                 .defineInRange("chatReactRange", CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE, 8.0d, 128.0d);
@@ -228,6 +240,8 @@ public final class AiConfig {
                 .setInputLanguage(INPUT_LANGUAGE.get())
                 .setTimeoutSeconds(TIMEOUT_SECONDS.get())
                 .setMaxTokens(MAX_TOKENS.get())
+                .setMaxInputChars(MAX_INPUT_CHARS.get())
+                .setQueueMaxDepth(QUEUE_MAX_DEPTH.get())
                 .setEnableChatMessages(ENABLE_CHAT_MESSAGES.get())
                 .setServerLlmOnly(SERVER_LLM_ONLY.get())
                 .setIntegratedMultiplayerSharedLlm(INTEGRATED_MULTIPLAYER_SHARED_LLM.get())
@@ -293,6 +307,8 @@ public final class AiConfig {
         toml.append("inputLanguage = \"").append(esc(s.inputLanguage())).append("\"\n");
         toml.append("timeoutSeconds = ").append(s.timeoutSeconds()).append("\n");
         toml.append("maxTokens = ").append(s.maxTokens()).append("\n");
+        toml.append("maxInputChars = ").append(s.maxInputChars()).append("\n");
+        toml.append("queueMaxDepth = ").append(s.queueMaxDepth()).append("\n");
         toml.append("enableChatMessages = ").append(s.enableChatMessages()).append("\n");
         toml.append("serverLlmOnly = ").append(s.serverLlmOnly()).append("\n");
         toml.append("integratedMultiplayerSharedLlm = ").append(s.integratedMultiplayerSharedLlm()).append("\n");

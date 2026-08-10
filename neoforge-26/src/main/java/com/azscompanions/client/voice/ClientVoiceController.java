@@ -33,7 +33,7 @@ public final class ClientVoiceController {
         }
 
         if (ClientConfig.ENABLE_SUBTITLES.get() && mc.player != null) {
-            mc.player.displayClientMessage(Component.literal(line), true);
+            mc.player.sendOverlayMessage(Component.literal(line));
         }
 
         if (ClientConfig.ENABLE_VOICE.get()) {

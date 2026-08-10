@@ -2,10 +2,12 @@ package com.azscompanions.ai;
 
 import com.azscompanions.compat.ftb.FtbCompat;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.network.packet.CompanionAiThinkingPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.UUID;
 /**
  * NeoForge helper: ask nearby owned companion via configured LLM / MCP provider.
  * Replies are text dialogue for every {@link com.azscompanions.entity.CompanionForm}.
+ * Primary chat path is name-mention ({@code Kon, how are you?}) — slash ask is optional.
  */
 public final class CompanionAiAsk {
     private CompanionAiAsk() {
@@ -27,7 +30,7 @@ public final class CompanionAiAsk {
                           boolean announceThinking, boolean reportErrors) {
         if (player == null || companion == null || companion.isRemoved() || !companion.isOwnedBy(player)) {
             if (reportErrors && player != null) {
-                player.displayClientMessage(Component.literal(
+                player.sendOverlayMessage(Component.literal(
                         "Ask only works on your own companions (multiplayer-safe)."), false);
             }
             return 0;
@@ -35,31 +38,38 @@ public final class CompanionAiAsk {
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
         if (!runtime.isEnabled()) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal(
-                        "Companion AI is disabled. Edit config/azscompanions-ai.toml on the server (provider)."), false);
+                player.sendSystemMessage(Component.literal(
+                        "Companion AI is disabled. Edit config/azscompanions-ai.toml on the server (provider)."));
             }
             return 0;
         }
         if (!FtbCompat.mayAsk(player)) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal(
-                        "You lack permission to ask companions (FTB Ranks)."), false);
+                player.sendSystemMessage(Component.literal(
+                        "You lack permission to ask companions (FTB Ranks)."));
             }
             return 0;
         }
-        String safeMessage = censorPrompt(message, runtime.settings(), true);
-        CompanionChatContext ctx = buildContext(companion, player.getGameProfile().getName(), safeMessage, runtime);
+        String safeMessage = censorPrompt(message, runtime.settings());
+        CompanionChatContext ctx = buildContext(companion, player.getGameProfile().name(), safeMessage, runtime);
         boolean showChat = runtime.settings().enableChatMessages();
         if (announceThinking) {
-            player.displayClientMessage(Component.literal("… " + companion.getChatDisplayName() + " is thinking"), true);
+            player.sendOverlayMessage(Component.literal("… " + companion.getChatDisplayName() + " is thinking"));
         }
+        notifyThinking(player, companion, true);
         boolean accepted = runtime.requestChatAsync(ctx, (reply, error) -> {
-            MinecraftServer server = player.getServer();
+            MinecraftServer server = player.level().getServer();
             if (server == null) {
                 return;
             }
-            server.execute(() -> deliver(player, companion, reply, error, showChat, reportErrors));
+            server.execute(() -> {
+                notifyThinking(player, companion, false);
+                deliver(player, companion, reply, error, showChat, reportErrors);
+            });
         });
+        if (!accepted) {
+            notifyThinking(player, companion, false);
+        }
         return accepted ? 1 : 0;
     }
 
@@ -109,14 +119,23 @@ public final class CompanionAiAsk {
         }
         String censored = censorPrompt(promptMessage, runtime.settings(), speakerIsOwner);
         CompanionChatContext ctx = buildContext(companion,
-                speakerName == null || speakerName.isBlank() ? owner.getGameProfile().getName() : speakerName,
+                speakerName == null || speakerName.isBlank() ? owner.getGameProfile().name() : speakerName,
                 censored, runtime, speakerIsOwner);
-        return runtime.requestChatAsync(ctx, (reply, error) -> {
-            MinecraftServer server = owner.getServer();
+        notifyThinking(owner, companion, true);
+        if (notifySpeaker != null && notifySpeaker.isAlive()
+                && (owner == null || !notifySpeaker.getUUID().equals(owner.getUUID()))) {
+            notifyThinking(notifySpeaker, companion, true);
+        }
+        boolean accepted = runtime.requestChatAsync(ctx, (reply, error) -> {
+            MinecraftServer server = owner.level().getServer();
             if (server == null) {
                 return;
             }
             server.execute(() -> {
+                notifyThinking(owner, companion, false);
+                if (notifySpeaker != null) {
+                    notifyThinking(notifySpeaker, companion, false);
+                }
                 if (!owner.isAlive() || companion.isRemoved() || !companion.isOwnedBy(owner)) {
                     return;
                 }
@@ -126,7 +145,7 @@ public final class CompanionAiAsk {
                 String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
                 CompanionAiSettings settings = CompanionAiRuntime.get().settings();
                 boolean runActions = effective.allowsActions()
-                        && settings.enableAiActions()
+                        && companion.isAiModeEnabled()
                         && FtbCompat.mayAiActions(owner);
                 CompanionAiActionParser.ParsedReply parsed = runActions
                         ? CompanionAiActionParser.parse(clipped)
@@ -138,7 +157,7 @@ public final class CompanionAiAsk {
                     if (showChat) {
                         companion.speakLine(line);
                     } else {
-                        owner.displayClientMessage(Component.literal(line), false);
+                        owner.sendOverlayMessage(Component.literal(line), false);
                     }
                     notifySpeakerLine(companion, owner, notifySpeaker, line);
                 }
@@ -151,10 +170,36 @@ public final class CompanionAiAsk {
                 }
             });
         });
+        if (!accepted) {
+            notifyThinking(owner, companion, false);
+            if (notifySpeaker != null) {
+                notifyThinking(notifySpeaker, companion, false);
+            }
+        }
+        return accepted;
+    }
+
+    private static void notifyThinking(ServerPlayer player, CompanionEntity companion, boolean active) {
+        if (player == null || !player.isAlive()) {
+            return;
+        }
+        // Keep HUD up while another queued request is still in flight.
+        if (!active && CompanionAiRuntime.get().isBusy()) {
+            return;
+        }
+        CompanionAiSettings settings = CompanionAiRuntime.get().settings();
+        if (active) {
+            String name = companion == null ? "Companion" : companion.getChatDisplayName();
+            PacketDistributor.sendToPlayer(player,
+                    CompanionAiThinkingPacket.start(name, settings.timeoutSeconds()));
+        } else {
+            PacketDistributor.sendToPlayer(player, CompanionAiThinkingPacket.stop());
+        }
     }
 
     private static String censorPrompt(String promptMessage, CompanionAiSettings settings, boolean speakerIsOwner) {
-        String censored = CompanionProfanityFilter.maybeCensor(settings.censorChat(), promptMessage);
+        String normalized = CompanionAiInput.normalize(promptMessage, settings);
+        String censored = CompanionProfanityFilter.maybeCensor(settings.censorChat(), normalized);
         if (!speakerIsOwner) {
             return CompanionChatCensor.censorStrangerInput(censored, settings);
         }
@@ -169,8 +214,8 @@ public final class CompanionAiAsk {
         if (owner != null && notifySpeaker.getUUID().equals(owner.getUUID())) {
             return;
         }
-        notifySpeaker.displayClientMessage(
-                Component.literal("<" + companion.getChatDisplayName() + "> " + line), false);
+        notifySpeaker.sendSystemMessage(
+                Component.literal("<" + companion.getChatDisplayName() + "> " + line));
     }
 
     private static void deliver(ServerPlayer player, CompanionEntity companion, String reply, Throwable error,
@@ -180,19 +225,19 @@ public final class CompanionAiAsk {
         }
         if (error != null) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal("Companion AI error: " + error.getMessage()), false);
+                player.sendSystemMessage(Component.literal("Companion AI error: " + error.getMessage()));
             }
             return;
         }
         if (reply == null || reply.isBlank()) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal("Companion AI returned an empty reply."), false);
+                player.sendSystemMessage(Component.literal("Companion AI returned an empty reply."));
             }
             return;
         }
         String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
         CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-        boolean allowActions = settings.enableAiActions() && FtbCompat.mayAiActions(player);
+        boolean allowActions = companion.isAiModeEnabled() && FtbCompat.mayAiActions(player);
         CompanionAiActionParser.ParsedReply parsed = allowActions
                 ? CompanionAiActionParser.parse(clipped)
                 : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
@@ -201,7 +246,7 @@ public final class CompanionAiAsk {
             if (showChat) {
                 companion.speakLine(speak.length() > 512 ? speak.substring(0, 509) + "…" : speak);
             } else {
-                player.displayClientMessage(Component.literal(speak), false);
+                player.sendSystemMessage(Component.literal(speak));
             }
         }
         if (allowActions && parsed.hasActions() && companion.isOwnedBy(player)) {
@@ -250,7 +295,7 @@ public final class CompanionAiAsk {
             return null;
         }
         AABB box = speaker.getBoundingBox().inflate(range);
-        MinecraftServer server = speaker.getServer();
+        MinecraftServer server = speaker.level().getServer();
         return speaker.level().getEntitiesOfClass(CompanionEntity.class, box, c -> {
                     if (!CompanionAskResolve.namesMatch(c.getChatDisplayName(), nameQuery)) {
                         return false;
@@ -272,7 +317,7 @@ public final class CompanionAiAsk {
             return null;
         }
         AABB box = speaker.getBoundingBox().inflate(range);
-        MinecraftServer server = speaker.getServer();
+        MinecraftServer server = speaker.level().getServer();
         return speaker.level().getEntitiesOfClass(CompanionEntity.class, box, c -> {
                     if (!c.isAlive()) {
                         return false;
@@ -307,7 +352,7 @@ public final class CompanionAiAsk {
                     if (ownerId == null) {
                         return false;
                     }
-                    MinecraftServer server = speaker.getServer();
+                    MinecraftServer server = speaker.level().getServer();
                     return server != null && server.getPlayerList().getPlayer(ownerId) != null;
                 });
         return near.stream()
@@ -321,7 +366,7 @@ public final class CompanionAiAsk {
 
     private static CompanionChatContext buildContext(CompanionEntity companion, String speaker,
                                                      String message, CompanionAiRuntime runtime) {
-        return buildContext(companion, speaker, message, runtime, true);
+        return buildContext(companion, speaker, message, runtime);
     }
 
     private static CompanionChatContext buildContext(CompanionEntity companion, String speaker,
@@ -347,7 +392,8 @@ public final class CompanionAiAsk {
                 child,
                 speakerIsOwner,
                 List.of(),
-                companion.getPersona()
+                companion.getPersona(),
+                companion.isAiModeEnabled()
         );
     }
 }

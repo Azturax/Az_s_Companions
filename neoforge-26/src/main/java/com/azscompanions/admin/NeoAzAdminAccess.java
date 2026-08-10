@@ -23,12 +23,12 @@ public final class NeoAzAdminAccess {
         if (!isCommandEnabled()) {
             return false;
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server != null && !server.isDedicatedServer()
                 && server.isSingleplayerOwner(player.getGameProfile())) {
             return true;
         }
-        if (player.hasPermissions(2)) {
+        if (player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)) {
             return true;
         }
         List<String> primary = new ArrayList<>();
@@ -40,7 +40,7 @@ public final class NeoAzAdminAccess {
             alias.add(s);
         }
         return AzAdminWhitelist.matchesAny(
-                primary, alias, player.getUUID(), player.getGameProfile().getName());
+                primary, alias, player.getUUID(), player.getGameProfile().name());
     }
 
     public static String denyMessage(ServerPlayer player) {

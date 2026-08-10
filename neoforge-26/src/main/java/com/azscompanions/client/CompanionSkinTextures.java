@@ -4,6 +4,7 @@ import com.azscompanions.AzsCompanions;
 import com.azscompanions.entity.CompanionEntity;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
@@ -112,9 +113,9 @@ public final class CompanionSkinTextures {
         }
         if (mc.player != null && uuid.equals(mc.player.getUUID())) {
             PlayerSkin skin = mc.player.getSkin();
-            if (skin != null && skin.capeTexture() != null) {
-                PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
-                return skin.capeTexture();
+            if (skin != null && (skin.cape() == null ? null : skin.cape().texturePath()) != null) {
+                PLAYER_CAPE_CACHE.put(uuid, (skin.cape() == null ? null : skin.cape().texturePath()));
+                return (skin.cape() == null ? null : skin.cape().texturePath());
             }
             CAPE_ABSENT.add(uuid);
             return null;
@@ -248,18 +249,18 @@ public final class CompanionSkinTextures {
         }
         if (mc.player != null && uuid.equals(mc.player.getUUID())) {
             PlayerSkin skin = mc.player.getSkin();
-            if (skin != null && skin.texture() != null) {
-                PLAYER_TEXTURE_CACHE.put(uuid, skin.texture());
-                PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerSkin.Model.SLIM);
-                if (skin.capeTexture() != null) {
-                    PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
+            if (skin != null && skin.body().texturePath() != null) {
+                PLAYER_TEXTURE_CACHE.put(uuid, skin.body().texturePath());
+                PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerModelType.SLIM);
+                if ((skin.cape() == null ? null : skin.cape().texturePath()) != null) {
+                    PLAYER_CAPE_CACHE.put(uuid, (skin.cape() == null ? null : skin.cape().texturePath()));
                     CAPE_ABSENT.remove(uuid);
                 } else {
                     CAPE_ABSENT.add(uuid);
                 }
                 LOADING.remove(uuid);
                 notifyWaiters(uuid, Optional.of(new ReadySkin(
-                        uuid, skin.texture(), skin.model() == PlayerSkin.Model.SLIM)));
+                        uuid, skin.body().texturePath(), skin.model() == PlayerModelType.SLIM)));
                 return;
             }
         }
@@ -328,10 +329,10 @@ public final class CompanionSkinTextures {
         }
         if (mc.player != null && uuid.equals(mc.player.getUUID())) {
             PlayerSkin skin = mc.player.getSkin();
-            if (skin != null && skin.texture() != null) {
-                PLAYER_TEXTURE_CACHE.put(uuid, skin.texture());
-                PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerSkin.Model.SLIM);
-                return skin.texture();
+            if (skin != null && skin.body().texturePath() != null) {
+                PLAYER_TEXTURE_CACHE.put(uuid, skin.body().texturePath());
+                PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerModelType.SLIM);
+                return skin.body().texturePath();
             }
         }
         ensurePlayerSkinLoaded(uuid);
@@ -347,13 +348,13 @@ public final class CompanionSkinTextures {
             return false;
         }
         PlayerSkin skin = info.getSkin();
-        if (skin == null || skin.texture() == null) {
+        if (skin == null || skin.body().texturePath() == null) {
             return false;
         }
-        PLAYER_TEXTURE_CACHE.put(uuid, skin.texture());
-        PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerSkin.Model.SLIM);
-        if (skin.capeTexture() != null) {
-            PLAYER_CAPE_CACHE.put(uuid, skin.capeTexture());
+        PLAYER_TEXTURE_CACHE.put(uuid, skin.body().texturePath());
+        PLAYER_SLIM_CACHE.put(uuid, skin.model() == PlayerModelType.SLIM);
+        if ((skin.cape() == null ? null : skin.cape().texturePath()) != null) {
+            PLAYER_CAPE_CACHE.put(uuid, (skin.cape() == null ? null : skin.cape().texturePath()));
             CAPE_ABSENT.remove(uuid);
         } else {
             CAPE_ABSENT.add(uuid);
@@ -369,7 +370,7 @@ public final class CompanionSkinTextures {
         if (info == null || info.getSkin() == null) {
             return false;
         }
-        Identifier cape = info.getSkin().capeTexture();
+        Identifier cape = (info.getSkin().cape() == null ? null : info.getSkin().cape().texturePath());
         if (cape == null) {
             CAPE_ABSENT.add(uuid);
             return false;
@@ -434,7 +435,7 @@ public final class CompanionSkinTextures {
             NativeImage modern = new NativeImage(64, 64, true);
             for (int y = 0; y < 32; y++) {
                 for (int x = 0; x < 64; x++) {
-                    modern.setPixelRGBA(x, y, image.getPixelRGBA(x, y));
+                    modern.setPixel(x, y, image.getPixel(x, y));
                 }
             }
             image.close();
@@ -474,7 +475,7 @@ public final class CompanionSkinTextures {
                         || dstX >= image.getWidth() || dstY >= image.getHeight()) {
                     continue;
                 }
-                image.setPixelRGBA(dstX, dstY, image.getPixelRGBA(srcX, srcY));
+                image.setPixel(dstX, dstY, image.getPixel(srcX, srcY));
             }
         }
     }
@@ -482,14 +483,14 @@ public final class CompanionSkinTextures {
     private static void doNotchTransparencyHack(NativeImage image, int x1, int y1, int x2, int y2) {
         for (int y = y1; y < y2; y++) {
             for (int x = x1; x < x2; x++) {
-                if ((image.getPixelRGBA(x, y) >>> 24) < 128) {
+                if ((image.getPixel(x, y) >>> 24) < 128) {
                     return;
                 }
             }
         }
         for (int y = y1; y < y2; y++) {
             for (int x = x1; x < x2; x++) {
-                image.setPixelRGBA(x, y, image.getPixelRGBA(x, y) & 0x00FFFFFF);
+                image.setPixel(x, y, image.getPixel(x, y) & 0x00FFFFFF);
             }
         }
     }
@@ -497,7 +498,7 @@ public final class CompanionSkinTextures {
     private static void setNoAlpha(NativeImage image, int x1, int y1, int x2, int y2) {
         for (int y = y1; y < y2; y++) {
             for (int x = x1; x < x2; x++) {
-                image.setPixelRGBA(x, y, image.getPixelRGBA(x, y) | 0xFF000000);
+                image.setPixel(x, y, image.getPixel(x, y) | 0xFF000000);
             }
         }
     }

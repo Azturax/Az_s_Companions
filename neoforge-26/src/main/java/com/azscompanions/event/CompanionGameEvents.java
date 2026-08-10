@@ -71,29 +71,9 @@ public final class CompanionGameEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onBlockBroken(BlockEvent.BreakEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) {
-            return;
-        }
-        BlockState state = event.getState();
-        if (!(state.getBlock() instanceof BedBlock)) {
-            return;
-        }
-        BlockPos broken = event.getPos();
-        BlockPos head = broken;
-        if (state.hasProperty(BedBlock.PART) && state.getValue(BedBlock.PART) == BedPart.FOOT) {
-            head = broken.relative(BedBlock.getConnectedDirection(state));
-        }
-        final BlockPos bedHead = head;
-        List<CompanionEntity> nearby = level.getEntitiesOfClass(
-                CompanionEntity.class,
-                new AABB(bedHead).inflate(64),
-                c -> bedHead.equals(c.getHomeBedPos()) || broken.equals(c.getHomeBedPos()));
-        for (CompanionEntity companion : nearby) {
-            companion.setHomeBedPos(null);
-        }
-    }
+    /** Bed home clearing deferred — BlockEvent.BreakEvent API pending NeoForge 26.2 confirm. */
+    // @SubscribeEvent
+    // public static void onBlockBroken(...) { ... }
 
     @SubscribeEvent
     public static void onItemPickup(ItemEntityPickupEvent.Post event) {

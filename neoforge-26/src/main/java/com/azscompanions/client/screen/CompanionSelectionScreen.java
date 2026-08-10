@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -58,13 +59,13 @@ public final class CompanionSelectionScreen extends AbstractContainerScreen<Comp
                             c -> minecraft.player.getUUID().equals(c.getOwnerUuid()))
                     .size();
             if (owned >= ServerConfig.MAX_COMPANIONS_PER_PLAYER.get()) {
-                minecraft.player.displayClientMessage(
-                        Component.translatable("message.azscompanions.limit_reached"), true);
+                minecraft.player.sendOverlayMessage(
+                        Component.translatable("message.azscompanions.limit_reached"));
                 return;
             }
         }
         Identifier id = definitions.isEmpty() ? CompanionRegistry.KON_ID : definitions.get(selectedIndex).id();
-        PacketDistributor.sendToServer(new RecruitCompanionPacket(id.toString()));
+        ClientPacketDistributor.sendToServer(new RecruitCompanionPacket(id.toString()));
     }
 
     @Override

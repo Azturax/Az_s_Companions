@@ -22,7 +22,9 @@ public final class CompanionCommandActions {
         /** Parent/child menu: store a world Bit on the parent (count up). */
         REMOVE_CHILD,
         /** Call next stored Bit (count down). */
-        CALL_STORED_CHILD
+        CALL_STORED_CHILD,
+        /** Toggle per-companion AI Mode (LLM play; pauses normal goals). */
+        TOGGLE_AI_MODE
     }
 
     private CompanionCommandActions() {
@@ -92,6 +94,12 @@ public final class CompanionCommandActions {
                     serverPlayer.displayClientMessage(Component.translatable(
                             "message.azscompanions.child_limit_reached"), true);
                 }
+            }
+            case TOGGLE_AI_MODE -> {
+                companion.toggleAiMode();
+                toast(serverPlayer, companion, companion.isAiModeEnabled()
+                        ? "message.azscompanions.ai_mode_on"
+                        : "message.azscompanions.ai_mode_off");
             }
         }
     }

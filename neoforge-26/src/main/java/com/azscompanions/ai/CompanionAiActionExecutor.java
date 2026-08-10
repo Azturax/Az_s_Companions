@@ -67,7 +67,7 @@ public final class CompanionAiActionExecutor {
             results.add("not_owner");
             return results;
         }
-        if (!settings.enableAiActions()) {
+        if (!companion.isAiModeEnabled()) {
             results.add("actions_disabled");
             return results;
         }

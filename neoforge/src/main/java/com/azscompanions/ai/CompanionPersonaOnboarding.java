@@ -7,7 +7,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * First-create persona onboarding (NeoForge). Ask once; charm recall never re-opens.
- * CCI whoAmI/whatAmIDoing/howWillIBe sets initialized and skips this.
+ * CCI whoAmI/whatAmIDoing/howWillIBe (and optional speech/relationship/quirks) sets initialized and skips this.
  */
 public final class CompanionPersonaOnboarding {
     private CompanionPersonaOnboarding() {

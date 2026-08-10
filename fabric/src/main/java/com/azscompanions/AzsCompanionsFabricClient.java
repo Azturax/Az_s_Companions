@@ -1,5 +1,6 @@
 package com.azscompanions;
 
+import com.azscompanions.client.hud.CompanionAiThinkingHudOverlay;
 import com.azscompanions.client.hud.TeamFightHudOverlay;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
@@ -36,7 +37,10 @@ public final class AzsCompanionsFabricClient implements ClientModInitializer {
         MenuScreens.register(FabricModScreenHandlers.SELECTION, FabricCompanionSelectionScreen::new);
         MenuScreens.register(FabricModScreenHandlers.INVENTORY, FabricCompanionInventoryScreen::new);
         FabricNetworkingClient.register();
-        HudRenderCallback.EVENT.register((graphics, tickCounter) -> TeamFightHudOverlay.render(graphics, 0f));
+        HudRenderCallback.EVENT.register((graphics, tickCounter) -> {
+            TeamFightHudOverlay.render(graphics, 0f);
+            CompanionAiThinkingHudOverlay.render(graphics, 0f);
+        });
         com.azscompanions.compat.map.FabricMapCompat.bootstrapClient();
         com.azscompanions.compat.fancyanim.FabricFancyAnimCompat.bootstrapClient();
 

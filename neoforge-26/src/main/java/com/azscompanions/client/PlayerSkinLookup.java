@@ -68,7 +68,7 @@ public final class PlayerSkinLookup {
             if (mc.getConnection() != null) {
                 PlayerInfo info = mc.getConnection().getPlayerInfo(uuid);
                 if (info != null && info.getSkin() != null) {
-                    slim = info.getSkin().model() == net.minecraft.client.resources.PlayerSkin.Model.SLIM;
+                    slim = info.getSkin().model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
                 }
             }
             final boolean slimFinal = slim;
@@ -106,8 +106,8 @@ public final class PlayerSkinLookup {
             }
         }
         if (mc.player != null
-                && mc.player.getGameProfile().getName() != null
-                && mc.player.getGameProfile().getName().equalsIgnoreCase(username)) {
+                && mc.player.getGameProfile().name() != null
+                && mc.player.getGameProfile().name().equalsIgnoreCase(username)) {
             return Optional.of(mc.player.getUUID());
         }
         return Optional.empty();

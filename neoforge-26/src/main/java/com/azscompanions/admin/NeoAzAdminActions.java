@@ -29,7 +29,7 @@ public final class NeoAzAdminActions {
 
     public static void openPanel(ServerPlayer player) {
         if (!NeoAzAdminAccess.mayUse(player)) {
-            player.displayClientMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
+            player.sendOverlayMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
             return;
         }
         AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(AiConfig.toAiSettings());
@@ -44,32 +44,32 @@ public final class NeoAzAdminActions {
 
     public static boolean saveAiConfig(ServerPlayer player, AdminAiConfigSnapshot snap) {
         if (!NeoAzAdminAccess.mayUse(player)) {
-            player.displayClientMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
+            player.sendSystemMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)));
             return false;
         }
         if (snap == null) {
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID), false);
+            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_INVALID));
             return false;
         }
         String err = snap.validate();
         if (err != null) {
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID + " (" + err + ")"), false);
+            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_INVALID + " (" + err + ")"));
             return false;
         }
         try {
             CompanionAiSettings merged = snap.mergeInto(AiConfig.toAiSettings());
             AiConfig.saveSettingsToDiskWithoutReload(merged);
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVED_RESTART), false);
+            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_SAVED_RESTART));
             return true;
         } catch (Exception e) {
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED), false);
+            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED));
             return false;
         }
     }
 
     public static void handleAction(ServerPlayer player, String action) {
         if (!NeoAzAdminAccess.mayUse(player)) {
-            player.displayClientMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
+            player.sendSystemMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)));
             return;
         }
         if (action == null || action.isBlank()) {
@@ -80,33 +80,33 @@ public final class NeoAzAdminActions {
                 TeamFightSession session = TeamFightSession.of(player.getUUID());
                 session.setEnabled(true);
                 PacketDistributor.sendToPlayer(player, new TeamFightHudPacket(session.snapshot().encode()));
-                player.displayClientMessage(Component.literal("Team fight ON"), true);
+                player.sendSystemMessage(Component.literal("Team fight ON"));
             }
             case "TEAMFIGHT_OFF" -> {
                 TeamFightSession session = TeamFightSession.of(player.getUUID());
                 session.setEnabled(false);
                 PacketDistributor.sendToPlayer(player, new TeamFightHudPacket(session.snapshot().encode()));
-                player.displayClientMessage(Component.literal("Team fight OFF"), true);
+                player.sendOverlayMessage(Component.literal("Team fight OFF"));
             }
-            case "AI_STATUS" -> player.displayClientMessage(
-                    Component.literal(CompanionAiRuntime.get().statusLine()), false);
-            case "LIST_COMPANIONS" -> player.displayClientMessage(
-                    Component.literal(summarizeCompanions(player)), false);
+            case "AI_STATUS" -> player.sendOverlayMessage(
+                    Component.literal(CompanionAiRuntime.get().statusLine()));
+            case "LIST_COMPANIONS" -> player.sendSystemMessage(
+                    Component.literal(summarizeCompanions(player)));
             case "DISMISS_OWNED" -> dismissOwned(player);
-            case "CHUNK_NOTE" -> player.displayClientMessage(Component.literal(
+            case "CHUNK_NOTE" -> player.sendSystemMessage(Component.literal(
                     "companionChunkLoading=" + ServerConfig.COMPANION_CHUNK_LOADING.get()
-                            + " (entity tickets; not FTB claims). Edit server config + restart to change."), false);
+                            + " (entity tickets; not FTB claims). Edit server config + restart to change."));
             case "PERSONA_CLEAR_NEAREST" -> personaClearNearest(player);
-            case "SHOW_ARMOR_NEAREST" -> showArmorNearest(player, true);
+            case "SHOW_ARMOR_NEAREST" -> showArmorNearest(player);
             case "HIDE_ARMOR_NEAREST" -> showArmorNearest(player, false);
             case "BEHAVIOR_RESET_NEAREST" -> behaviorResetNearest(player);
-            default -> player.displayClientMessage(Component.literal("Unknown admin action: " + action), false);
+            default -> player.sendOverlayMessage(Component.literal("Unknown admin action: " + action), false);
         }
     }
 
     private static void dismissOwned(ServerPlayer player) {
         int removed = 0;
-        for (ServerLevel level : player.getServer().getAllLevels()) {
+        for (ServerLevel level : player.level().getServer().getAllLevels()) {
             List<CompanionEntity> doomed = new ArrayList<>();
             for (Entity e : level.getAllEntities()) {
                 if (e instanceof CompanionEntity c && c.isOwnedBy(player) && !c.isFightSpawn()) {
@@ -118,41 +118,41 @@ public final class NeoAzAdminActions {
                 removed++;
             }
         }
-        player.displayClientMessage(Component.literal("Dismissed " + removed + " owned companion(s)."), false);
+        player.sendSystemMessage(Component.literal("Dismissed " + removed + " owned companion(s)."));
     }
 
     private static void personaClearNearest(ServerPlayer player) {
         CompanionEntity c = nearestOwned(player);
         if (c == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendSystemMessage(Component.literal("No owned companion nearby"));
             return;
         }
         c.setPersona(c.getPersona().cleared());
-        player.displayClientMessage(Component.literal(c.getChatDisplayName() + " — persona cleared"), true);
+        player.sendSystemMessage(Component.literal(c.getChatDisplayName() + " — persona cleared"));
     }
 
     private static void showArmorNearest(ServerPlayer player, boolean show) {
         CompanionEntity c = nearestOwned(player);
         if (c == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendOverlayMessage(Component.literal("No owned companion nearby"));
             return;
         }
         c.setArmorVisible(show);
-        player.displayClientMessage(Component.literal(
-                c.getChatDisplayName() + " — armor " + (show ? "shown" : "hidden")), true);
+        player.sendSystemMessage(Component.literal(
+                c.getChatDisplayName() + " — armor " + (show ? "shown" : "hidden")));
     }
 
     private static void behaviorResetNearest(ServerPlayer player) {
         CompanionEntity c = nearestOwned(player);
         if (c == null) {
-            player.displayClientMessage(Component.literal("No owned companion nearby"), false);
+            player.sendOverlayMessage(Component.literal("No owned companion nearby"));
             return;
         }
         c.setFollowRadius(CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
         c.setPersonalSpace(CompanionFollowDistances.DEFAULT_PERSONAL_SPACE);
         c.setWanderRadius(CompanionFollowDistances.DEFAULT_WANDER_RADIUS);
         c.setMode(CompanionMode.FOLLOW);
-        player.displayClientMessage(Component.literal(c.getChatDisplayName() + " — behavior reset"), true);
+        player.sendSystemMessage(Component.literal(c.getChatDisplayName() + " — behavior reset"));
     }
 
     private static CompanionEntity nearestOwned(ServerPlayer player) {
@@ -174,10 +174,10 @@ public final class NeoAzAdminActions {
         Map<UUID, Integer> byOwner = new HashMap<>();
         Map<UUID, String> names = new HashMap<>();
         int total = 0;
-        if (admin.getServer() == null) {
+        if (admin.level().getServer() == null) {
             return "Companions: (no server)";
         }
-        for (ServerLevel level : admin.getServer().getAllLevels()) {
+        for (ServerLevel level : admin.level().getServer().getAllLevels()) {
             for (Entity e : level.getAllEntities()) {
                 if (e instanceof CompanionEntity c) {
                     UUID owner = c.getOwnerUuid();
@@ -186,8 +186,8 @@ public final class NeoAzAdminActions {
                     }
                     total++;
                     byOwner.merge(owner, 1, Integer::sum);
-                    ServerPlayer op = admin.getServer().getPlayerList().getPlayer(owner);
-                    names.putIfAbsent(owner, op != null ? op.getGameProfile().getName() : owner.toString().substring(0, 8));
+                    ServerPlayer op = admin.level().getServer().getPlayerList().getPlayer(owner);
+                    names.putIfAbsent(owner, op != null ? op.getGameProfile().name() : owner.toString().substring(0, 8));
                 }
             }
         }

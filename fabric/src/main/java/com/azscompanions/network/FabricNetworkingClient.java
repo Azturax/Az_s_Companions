@@ -1,5 +1,6 @@
 package com.azscompanions.network;
 
+import com.azscompanions.ai.ClientCompanionAiHud;
 import com.azscompanions.client.screen.FabricCompanionMenuScreen;
 import com.azscompanions.client.screen.FabricCompanionPersonaScreen;
 import com.azscompanions.entity.FabricCompanionEntity;
@@ -36,7 +37,13 @@ public final class FabricNetworkingClient {
                     Entity entity = mc.level.getEntity(payload.entityId());
                     if (entity instanceof FabricCompanionEntity companion) {
                         mc.setScreen(new FabricCompanionPersonaScreen(
-                                companion, payload.whoAmI(), payload.whatAmIDoing(), payload.howWillIBe()));
+                                companion,
+                                payload.whoAmI(),
+                                payload.whatAmIDoing(),
+                                payload.howWillIBe(),
+                                payload.speechStyle(),
+                                payload.relationshipToOwner(),
+                                payload.quirks()));
                     }
                 }));
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.OpenStatsPayload.TYPE, (payload, context) ->
@@ -61,6 +68,9 @@ public final class FabricNetworkingClient {
                 }));
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.TeamFightHudPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> ClientTeamFightHud.apply(payload.payload())));
+        ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.AiThinkingPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> ClientCompanionAiHud.apply(
+                        payload.active(), payload.companionName(), payload.timeoutSeconds(), payload.progress())));
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.OpenAdminPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     Minecraft mc = Minecraft.getInstance();

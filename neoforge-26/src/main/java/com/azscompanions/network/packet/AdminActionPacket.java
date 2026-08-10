@@ -6,14 +6,14 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /** C2S: admin overview action. */
 public record AdminActionPacket(String action) implements CustomPacketPayload {
     public static final Type<AdminActionPacket> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "admin_action"));
+            Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, "admin_action"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, AdminActionPacket> STREAM_CODEC =
             StreamCodec.composite(ByteBufCodecs.STRING_UTF8, AdminActionPacket::action, AdminActionPacket::new);

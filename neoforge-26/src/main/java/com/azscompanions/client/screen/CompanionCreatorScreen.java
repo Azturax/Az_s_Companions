@@ -17,6 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -499,7 +500,7 @@ public final class CompanionCreatorScreen extends Screen {
     }
 
     private void pushLiveAppearance(int flags) {
-        PacketDistributor.sendToServer(new CompanionSettingsPacket(
+        ClientPacketDistributor.sendToServer(new CompanionSettingsPacket(
                 companion.getId(),
                 draft.name == null ? "" : draft.name,
                 draft.scale,
@@ -534,7 +535,7 @@ public final class CompanionCreatorScreen extends Screen {
                 | CompanionSettingsPacket.FLAG_PROPORTIONS | CompanionSettingsPacket.FLAG_GENDER
                 | CompanionSettingsPacket.FLAG_FORM | CompanionSettingsPacket.FLAG_SHOW_NAME
                 | CompanionSettingsPacket.FLAG_SHOW_ARMOR;
-        PacketDistributor.sendToServer(new CompanionSettingsPacket(
+        ClientPacketDistributor.sendToServer(new CompanionSettingsPacket(
                 companion.getId(),
                 draft.name,
                 draft.scale,
@@ -564,7 +565,7 @@ public final class CompanionCreatorScreen extends Screen {
     public void onClose() {
         ClientAppearanceDraft.ACTIVE = null;
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         }
     }
 

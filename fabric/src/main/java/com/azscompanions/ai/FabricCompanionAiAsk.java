@@ -2,6 +2,7 @@ package com.azscompanions.ai;
 
 import com.azscompanions.compat.ftb.FtbCompat;
 import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.network.FabricNetworking;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Fabric helper: ask nearby owned companion via configured LLM / MCP provider.
- * Replies are owner chat lines for every mob form (TTS packet path is NeoForge-only for now).
+ * Primary chat path is name-mention ({@code Kon, how are you?}) — slash ask is optional.
  */
 public final class FabricCompanionAiAsk {
     private FabricCompanionAiAsk() {
@@ -56,13 +57,20 @@ public final class FabricCompanionAiAsk {
         if (announceThinking) {
             player.displayClientMessage(Component.literal("… " + companion.getChatDisplayName() + " is thinking"), true);
         }
+        notifyThinking(player, companion, true);
         boolean accepted = runtime.requestChatAsync(ctx, (reply, error) -> {
             MinecraftServer server = player.getServer();
             if (server == null) {
                 return;
             }
-            server.execute(() -> deliver(player, companion, reply, error, reportErrors));
+            server.execute(() -> {
+                notifyThinking(player, companion, false);
+                deliver(player, companion, reply, error, reportErrors);
+            });
         });
+        if (!accepted) {
+            notifyThinking(player, companion, false);
+        }
         return accepted ? 1 : 0;
     }
 
@@ -113,12 +121,21 @@ public final class FabricCompanionAiAsk {
         CompanionChatContext ctx = buildContext(companion,
                 speakerName == null || speakerName.isBlank() ? owner.getGameProfile().getName() : speakerName,
                 censored, runtime, speakerIsOwner);
-        return runtime.requestChatAsync(ctx, (reply, error) -> {
+        notifyThinking(owner, companion, true);
+        if (notifySpeaker != null && notifySpeaker.isAlive()
+                && !notifySpeaker.getUUID().equals(owner.getUUID())) {
+            notifyThinking(notifySpeaker, companion, true);
+        }
+        boolean accepted = runtime.requestChatAsync(ctx, (reply, error) -> {
             MinecraftServer server = owner.getServer();
             if (server == null) {
                 return;
             }
             server.execute(() -> {
+                notifyThinking(owner, companion, false);
+                if (notifySpeaker != null) {
+                    notifyThinking(notifySpeaker, companion, false);
+                }
                 if (!owner.isAlive() || companion.isRemoved() || !companion.isOwnedBy(owner)) {
                     return;
                 }
@@ -128,7 +145,7 @@ public final class FabricCompanionAiAsk {
                 String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
                 CompanionAiSettings settings = CompanionAiRuntime.get().settings();
                 boolean runActions = effective.allowsActions()
-                        && settings.enableAiActions()
+                        && companion.isAiModeEnabled()
                         && FtbCompat.mayAiActions(owner);
                 CompanionAiActionParser.ParsedReply parsed = runActions
                         ? CompanionAiActionParser.parse(clipped)
@@ -149,10 +166,34 @@ public final class FabricCompanionAiAsk {
                 }
             });
         });
+        if (!accepted) {
+            notifyThinking(owner, companion, false);
+            if (notifySpeaker != null) {
+                notifyThinking(notifySpeaker, companion, false);
+            }
+        }
+        return accepted;
+    }
+
+    private static void notifyThinking(ServerPlayer player, FabricCompanionEntity companion, boolean active) {
+        if (player == null || !player.isAlive()) {
+            return;
+        }
+        if (!active && CompanionAiRuntime.get().isBusy()) {
+            return;
+        }
+        CompanionAiSettings settings = CompanionAiRuntime.get().settings();
+        if (active) {
+            String name = companion == null ? "Companion" : companion.getChatDisplayName();
+            FabricNetworking.sendAiThinking(player, true, name, settings.timeoutSeconds(), -1f);
+        } else {
+            FabricNetworking.sendAiThinking(player, false, "", 0, -1f);
+        }
     }
 
     private static String censorPrompt(String promptMessage, CompanionAiSettings settings, boolean speakerIsOwner) {
-        String censored = CompanionProfanityFilter.maybeCensor(settings.censorChat(), promptMessage);
+        String normalized = CompanionAiInput.normalize(promptMessage, settings);
+        String censored = CompanionProfanityFilter.maybeCensor(settings.censorChat(), normalized);
         if (!speakerIsOwner) {
             return CompanionChatCensor.censorStrangerInput(censored, settings);
         }
@@ -190,7 +231,7 @@ public final class FabricCompanionAiAsk {
         }
         String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
         CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-        boolean allowActions = settings.enableAiActions() && FtbCompat.mayAiActions(player);
+        boolean allowActions = companion.isAiModeEnabled() && FtbCompat.mayAiActions(player);
         CompanionAiActionParser.ParsedReply parsed = allowActions
                 ? CompanionAiActionParser.parse(clipped)
                 : new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
@@ -346,7 +387,8 @@ public final class FabricCompanionAiAsk {
                 child,
                 speakerIsOwner,
                 List.of(),
-                companion.getPersona()
+                companion.getPersona(),
+                companion.isAiModeEnabled()
         );
     }
 }

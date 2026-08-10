@@ -125,6 +125,9 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Per-companion AI Mode — LLM play; pauses autonomous goals when true. */
+    private static final EntityDataAccessor<Boolean> DATA_AI_MODE =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_ATTITUDE =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> DATA_TEAM =
@@ -250,6 +253,7 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
+        builder.define(DATA_AI_MODE, false);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
         builder.define(DATA_TEAM, "");
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
@@ -262,6 +266,11 @@ public class CompanionEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
+        registerNormalGoals();
+    }
+
+    /** Full autonomous companion goal set (used at spawn and when AI Mode turns OFF). */
+    private void registerNormalGoals() {
         // Sit/stay stop movement; combat/potions/sleep outrank follow; wander when owner idle nearby.
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new CompanionSitGoal(this));
@@ -280,32 +289,70 @@ public class CompanionEntity extends PathfinderMob {
         targetSelector.addGoal(3, new HurtByTargetGoal(this));
     }
 
+    /**
+     * AI Mode ON: drop follow/wander/sit/sleep/potion/look/target goals so the LLM drives play.
+     * Keeps {@link FloatGoal}, {@link OpenDoorGoal}, and {@link MeleeAttackGoal} (for AI-set targets).
+     */
+    private void pauseGoalsForAiMode() {
+        if (level().isClientSide) {
+            return;
+        }
+        goalSelector.removeAllGoals(g ->
+                !(g instanceof FloatGoal) && !(g instanceof OpenDoorGoal) && !(g instanceof MeleeAttackGoal));
+        targetSelector.removeAllGoals(g -> true);
+        setTarget(null);
+        getNavigation().stop();
+        if (isSleeping()) {
+            stopSleeping();
+        }
+    }
+
+    /** AI Mode OFF: clear and restore the full goal set. */
+    private void restoreGoalsAfterAiMode() {
+        if (level().isClientSide) {
+            return;
+        }
+        goalSelector.removeAllGoals(g -> true);
+        targetSelector.removeAllGoals(g -> true);
+        registerNormalGoals();
+    }
+
     @Override
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            boolean aiMode = isAiModeEnabled();
             // Preserve player/CCI command modes; allow TASK while AI/task queue is active.
-            CompanionMode mode = getMode();
-            if (mode != CompanionMode.FOLLOW
-                    && mode != CompanionMode.SIT
-                    && mode != CompanionMode.STAY
-                    && mode != CompanionMode.WANDER
-                    && mode != CompanionMode.TASK) {
-                setMode(CompanionMode.FOLLOW);
+            // In AI Mode the LLM owns movement mode — do not force FOLLOW.
+            if (!aiMode) {
+                CompanionMode mode = getMode();
+                if (mode != CompanionMode.FOLLOW
+                        && mode != CompanionMode.SIT
+                        && mode != CompanionMode.STAY
+                        && mode != CompanionMode.WANDER
+                        && mode != CompanionMode.TASK) {
+                    setMode(CompanionMode.FOLLOW);
+                }
             }
             taskQueue.tick(serverLevel);
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
             tickOwnerActivity();
-            tickHomeBedLeash();
+            if (!aiMode) {
+                tickHomeBedLeash();
+            }
             tickSleepPurr();
             tickPlayfulEvil();
             tickAiAmbientSpeech();
             tickPlayBehavior();
-            tickChildParentLeash();
+            if (!aiMode) {
+                tickChildParentLeash();
+            }
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
-            tickStuckRecovery();
+            if (!aiMode) {
+                tickStuckRecovery();
+            }
             tickSurvival();
             CompanionChunkTickets.tick(this, serverLevel);
         }
@@ -1640,6 +1687,31 @@ public class CompanionEntity extends PathfinderMob {
         }
     }
 
+    /**
+     * Per-companion AI Mode (“Let the LLM play the game!”).
+     * When ON: pauses autonomous goals; idle/name chat may issue move/mine/craft tools (provider must be on).
+     */
+    public boolean isAiModeEnabled() {
+        return entityData.get(DATA_AI_MODE);
+    }
+
+    public void setAiModeEnabled(boolean enabled) {
+        boolean was = isAiModeEnabled();
+        entityData.set(DATA_AI_MODE, enabled);
+        if (level().isClientSide || was == enabled) {
+            return;
+        }
+        if (enabled) {
+            pauseGoalsForAiMode();
+        } else {
+            restoreGoalsAfterAiMode();
+        }
+    }
+
+    public void toggleAiMode() {
+        setAiModeEnabled(!isAiModeEnabled());
+    }
+
     /** Copy spacing from a parent; Bits get a slightly tighter leash. */
     public void inheritSpacingFrom(CompanionEntity parent) {
         if (parent == null) {
@@ -1883,6 +1955,7 @@ public class CompanionEntity extends PathfinderMob {
         tag.putString(com.azscompanions.ai.CompanionPersona.NBT_QUIRKS, getPersona().quirks());
         tag.putBoolean(com.azscompanions.ai.CompanionPersona.NBT_INITIALIZED, getPersona().initialized());
         tag.putBoolean("ChunkLoading", chunkLoadingEnabled);
+        tag.putBoolean("AiPlayMode", isAiModeEnabled());
         tag.putString("CustomNameOverride", entityData.get(DATA_CUSTOM_NAME_OVERRIDE));
         tag.putString("CompanionForm", getForm().serializedName());
         tag.putBoolean("ShowNameTag", isNameTagVisible());
@@ -1990,6 +2063,11 @@ public class CompanionEntity extends PathfinderMob {
             chunkLoadingEnabled = tag.getBoolean("ChunkLoading");
         } else {
             chunkLoadingEnabled = true;
+        }
+        if (tag.contains("AiPlayMode")) {
+            setAiModeEnabled(tag.getBoolean("AiPlayMode"));
+        } else {
+            setAiModeEnabled(false);
         }
         if (tag.contains("CustomNameOverride")) {
             String override = tag.getString("CustomNameOverride");

@@ -17,6 +17,9 @@ public record CompanionPersonaPacket(
         String whoAmI,
         String whatAmIDoing,
         String howWillIBe,
+        String speechStyle,
+        String relationshipToOwner,
+        String quirks,
         boolean skip
 ) implements CustomPacketPayload {
     public static final Type<CompanionPersonaPacket> TYPE = new Type<>(
@@ -27,19 +30,33 @@ public record CompanionPersonaPacket(
 
     private static void write(RegistryFriendlyByteBuf buf, CompanionPersonaPacket p) {
         buf.writeVarInt(p.entityId);
-        buf.writeUtf(p.whoAmI == null ? "" : p.whoAmI, CompanionPersona.MAX_LEN);
-        buf.writeUtf(p.whatAmIDoing == null ? "" : p.whatAmIDoing, CompanionPersona.MAX_LEN);
-        buf.writeUtf(p.howWillIBe == null ? "" : p.howWillIBe, CompanionPersona.MAX_LEN);
+        writeField(buf, p.whoAmI);
+        writeField(buf, p.whatAmIDoing);
+        writeField(buf, p.howWillIBe);
+        writeField(buf, p.speechStyle);
+        writeField(buf, p.relationshipToOwner);
+        writeField(buf, p.quirks);
         buf.writeBoolean(p.skip);
     }
 
     private static CompanionPersonaPacket read(RegistryFriendlyByteBuf buf) {
         return new CompanionPersonaPacket(
                 buf.readVarInt(),
-                buf.readUtf(CompanionPersona.MAX_LEN),
-                buf.readUtf(CompanionPersona.MAX_LEN),
-                buf.readUtf(CompanionPersona.MAX_LEN),
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf),
+                readField(buf),
                 buf.readBoolean());
+    }
+
+    private static void writeField(RegistryFriendlyByteBuf buf, String value) {
+        buf.writeUtf(value == null ? "" : value, CompanionPersona.MAX_LEN);
+    }
+
+    private static String readField(RegistryFriendlyByteBuf buf) {
+        return buf.readUtf(CompanionPersona.MAX_LEN);
     }
 
     @Override
@@ -63,9 +80,9 @@ public record CompanionPersonaPacket(
                             packet.whoAmI(),
                             packet.whatAmIDoing(),
                             packet.howWillIBe(),
-                            current.speechStyle(),
-                            current.relationshipToOwner(),
-                            current.quirks(),
+                            packet.speechStyle(),
+                            packet.relationshipToOwner(),
+                            packet.quirks(),
                             true);
             companion.setPersona(next);
             player.displayClientMessage(net.minecraft.network.chat.Component.literal(
