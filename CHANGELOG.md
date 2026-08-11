@@ -8,10 +8,6 @@
 - Gemma-like model ids send `think:false` + `reasoning_effort:none` and bump request `max_tokens` to at least 512.
 - Player-facing `/ask` errors are **short** (no raw JSON body). Full body + diagnosis go to the **server log** only.
 
-### Companion swim-follow
-- When the owner is swimming / in water, following companions enter water (water pathfinding malus cleared + float navigation) and use **direct swim steering** to match owner depth instead of floating at the surface or pathing around shorelines.
-- Follow goals stay active while the owner is wet and the companion is still ashore; Fabric now enables `GroundPathNavigation#setCanFloat` like NeoForge. NeoForge 26.2 wiring included in tree (no jar shipped).
-
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
 |-----------|----------|--------|--------------|------------|
