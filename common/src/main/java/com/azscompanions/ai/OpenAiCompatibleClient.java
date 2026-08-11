@@ -98,7 +98,15 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("LLM HTTP " + response.statusCode() + ": " + truncate(response.body()));
         }
-        return Optional.ofNullable(extractAssistantText(response.body())).filter(s -> !s.isBlank());
+        Optional<String> text = Optional.ofNullable(extractAssistantText(response.body())).filter(s -> !s.isBlank());
+        if (text.isEmpty()) {
+            // HTTP OK but no speakable text — usually wrong/empty upstream content, not a mod crash.
+            throw new IllegalStateException(
+                    "LLM returned empty assistant content (HTTP " + response.statusCode()
+                            + "). Check model id vs LiteLLM/proxy config, then proxy logs. Body: "
+                            + truncate(response.body()));
+        }
+        return text;
     }
 
     static String extractAssistantText(String json) {
@@ -143,9 +151,19 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
                 return parsed.speakText();
             }
         }
+        // Non-chat completions style
         JsonElement text = first.get("text");
         if (text != null && text.isJsonPrimitive()) {
             return text.getAsString().trim();
+        }
+        // Some proxies put the delta on streaming-shaped objects even for non-stream replies
+        JsonElement delta = first.get("delta");
+        if (delta != null && delta.isJsonObject()) {
+            CompanionAiActionParser.ParsedReply parsed =
+                    CompanionAiActionParser.parseMessageObject(delta.getAsJsonObject());
+            if (!parsed.speakText().isBlank()) {
+                return parsed.speakText();
+            }
         }
         return null;
     }

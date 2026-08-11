@@ -540,7 +540,7 @@ While an AI request is in flight, the owner (and stranger speaker when relevant)
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `idleChat` | bool | `false` | Occasional ambient LLM lines when owner is online and nearby |
+| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line. |
 | `idleChatSecondsMin` | int | `90` | Min seconds between ambient lines; clamped **30–3600** |
 | `idleChatSecondsMax` | int | `240` | Max seconds (random in `[min,max]`); clamped **30–3600** |
 
@@ -616,7 +616,7 @@ Use material gather tasks instead (`/az gather <item> <count> [nearest|look]` or
   "nameListen": true,
   "chatReactRange": 48.0,
   "chatReactCooldownSeconds": 20,
-  "idleChat": false,
+  "idleChat": true,
   "idleChatSecondsMin": 90,
   "idleChatSecondsMax": 240,
   "callPlayerWhenAway": false,
@@ -665,7 +665,7 @@ chatListenMode = "off"
 nameListen = true
 chatReactRange = 48.0
 chatReactCooldownSeconds = 20
-idleChat = false
+idleChat = true
 idleChatSecondsMin = 90
 idleChatSecondsMax = 240
 callPlayerWhenAway = false

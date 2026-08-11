@@ -78,9 +78,9 @@ public final class CompanionAiActionParser {
         if (message == null) {
             return new ParsedReply("", List.of());
         }
-        String content = "";
-        if (message.has("content") && message.get("content").isJsonPrimitive()) {
-            content = message.get("content").getAsString();
+        String content = extractMessageContentText(message);
+        if (content.isBlank() && message.has("refusal") && message.get("refusal").isJsonPrimitive()) {
+            content = message.get("refusal").getAsString();
         }
         List<CompanionAiAction> actions = new ArrayList<>();
         if (message.has("tool_calls") && message.get("tool_calls").isJsonArray()) {
@@ -115,6 +115,56 @@ public final class CompanionAiActionParser {
         List<CompanionAiAction> merged = new ArrayList<>(actions);
         merged.addAll(fromText.actions());
         return new ParsedReply(fromText.speakText(), merged);
+    }
+
+    /**
+     * OpenAI-compatible {@code message.content} may be a string, null, or an array of parts
+     * ({@code [{"type":"text","text":"..."}]}). Older code only read string primitives and dropped
+     * array content as empty.
+     */
+    static String extractMessageContentText(JsonObject message) {
+        if (message == null || !message.has("content")) {
+            return "";
+        }
+        JsonElement contentEl = message.get("content");
+        if (contentEl == null || contentEl.isJsonNull()) {
+            return "";
+        }
+        if (contentEl.isJsonPrimitive()) {
+            return contentEl.getAsString();
+        }
+        if (contentEl.isJsonArray()) {
+            StringBuilder sb = new StringBuilder();
+            for (JsonElement item : contentEl.getAsJsonArray()) {
+                if (item == null || item.isJsonNull()) {
+                    continue;
+                }
+                if (item.isJsonPrimitive()) {
+                    if (sb.length() > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(item.getAsString());
+                    continue;
+                }
+                if (!item.isJsonObject()) {
+                    continue;
+                }
+                JsonObject part = item.getAsJsonObject();
+                if (part.has("text") && part.get("text").isJsonPrimitive()) {
+                    if (sb.length() > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(part.get("text").getAsString());
+                } else if (part.has("content") && part.get("content").isJsonPrimitive()) {
+                    if (sb.length() > 0) {
+                        sb.append('\n');
+                    }
+                    sb.append(part.get("content").getAsString());
+                }
+            }
+            return sb.toString();
+        }
+        return "";
     }
 
     static List<CompanionAiAction> parseActionsJson(String json) {

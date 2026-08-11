@@ -121,4 +121,15 @@ class LlmProviderProfileTest {
         assertTrue(AzAdminWhitelist.matchesAny(List.of(), List.of("Alex"), id, "Alex"));
         assertFalse(AzAdminWhitelist.matches(List.of("other"), id, "Steve"));
     }
+
+    @Test
+    void mergePreservesIdleChat() {
+        CompanionAiSettings base = new CompanionAiSettings().setIdleChat(false);
+        AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(base);
+        assertFalse(snap.idleChat());
+        snap.setIdleChat(true);
+        assertTrue(snap.mergeInto(base).idleChat());
+        assertTrue(new AdminAiConfigSnapshot().idleChat());
+        assertTrue(snap.toWireJson().contains("\"idleChat\":true"));
+    }
 }

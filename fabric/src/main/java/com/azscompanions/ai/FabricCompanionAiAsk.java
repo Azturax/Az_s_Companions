@@ -99,12 +99,22 @@ public final class FabricCompanionAiAsk {
         CompanionAiActionTrust trust = speakerIsOwner
                 ? CompanionAiActionTrust.OWNER
                 : CompanionAiActionTrust.STRANGER;
-        return askQuiet(owner, companion, speakerName, promptMessage, trust, notifySpeaker);
+        return askQuiet(owner, companion, speakerName, promptMessage, trust, notifySpeaker, null);
     }
 
     public static boolean askQuiet(ServerPlayer owner, FabricCompanionEntity companion,
                                    String speakerName, String promptMessage,
                                    CompanionAiActionTrust trust, ServerPlayer notifySpeaker) {
+        return askQuiet(owner, companion, speakerName, promptMessage, trust, notifySpeaker, null);
+    }
+
+    /**
+     * @param fallbackLine spoken if the LLM errors or returns blank (ambient / call-away); null = silent fail
+     */
+    public static boolean askQuiet(ServerPlayer owner, FabricCompanionEntity companion,
+                                   String speakerName, String promptMessage,
+                                   CompanionAiActionTrust trust, ServerPlayer notifySpeaker,
+                                   String fallbackLine) {
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
         if (!runtime.isEnabled() || owner == null || companion == null || companion.isRemoved()) {
             return false;
@@ -140,27 +150,25 @@ public final class FabricCompanionAiAsk {
                     return;
                 }
                 if (error != null || reply == null || reply.isBlank()) {
+                    if (fallbackLine != null && !fallbackLine.isBlank()) {
+                        companion.speakLine(fallbackLine);
+                    }
                     return;
                 }
                 String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
                 CompanionAiSettings settings = CompanionAiRuntime.get().settings();
                 // AI Mode removed — /ask is text dialogue only (no LLM world tools).
-                CompanionAiActionParser.ParsedReply parsed =
-                        new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
-                boolean runActions = false;
-                String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
+                String speak = CompanionAiActionParser.parse(clipped).speakText();
+                if (speak.isBlank()) {
+                    speak = clipped;
+                }
                 if (!speak.isBlank()) {
                     String line = speak.length() > 512 ? speak.substring(0, 509) + "…" : speak;
                     line = CompanionChatCensor.censorOutput(line, settings);
                     companion.speakLine(line);
                     notifySpeakerLine(companion, owner, notifySpeaker, line);
-                }
-                if (runActions && parsed.hasActions()) {
-                    var filtered = effective.filter(parsed.actions());
-                    if (!filtered.isEmpty()) {
-                        FabricCompanionAiActionExecutor.execute(
-                                companion, owner, filtered, settings, notifySpeaker, effective.fullControl());
-                    }
+                } else if (fallbackLine != null && !fallbackLine.isBlank()) {
+                    companion.speakLine(fallbackLine);
                 }
             });
         });
@@ -217,28 +225,27 @@ public final class FabricCompanionAiAsk {
         }
         if (error != null) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal("Companion AI error: " + error.getMessage()), false);
+                String msg = error.getMessage() == null ? error.toString() : error.getMessage();
+                player.displayClientMessage(Component.literal("Companion AI error: " + msg), false);
             }
             return;
         }
         if (reply == null || reply.isBlank()) {
             if (reportErrors) {
-                player.displayClientMessage(Component.literal("Companion AI returned an empty reply."), false);
+                player.displayClientMessage(Component.literal(
+                        "Companion AI returned an empty reply (HTTP OK but no assistant text). "
+                                + "Check model id / LiteLLM logs, or /az ai status."), false);
             }
             return;
         }
         String clipped = reply.length() > 512 ? reply.substring(0, 509) + "…" : reply;
-        CompanionAiSettings settings = CompanionAiRuntime.get().settings();
-        // AI Mode removed — text dialogue only.
-        CompanionAiActionParser.ParsedReply parsed =
-                new CompanionAiActionParser.ParsedReply(clipped, java.util.List.of());
-        boolean allowActions = false;
-        String speak = parsed.speakText().isBlank() ? (parsed.hasActions() ? "" : clipped) : parsed.speakText();
+        // Strip leftover action fences so speech stays dialogue-only.
+        String speak = CompanionAiActionParser.parse(clipped).speakText();
+        if (speak.isBlank()) {
+            speak = clipped;
+        }
         if (!speak.isBlank()) {
             companion.speakLine(speak.length() > 512 ? speak.substring(0, 509) + "…" : speak);
-        }
-        if (allowActions && parsed.hasActions() && companion.isOwnedBy(player)) {
-            FabricCompanionAiActionExecutor.execute(companion, player, parsed.actions(), settings);
         }
     }
 

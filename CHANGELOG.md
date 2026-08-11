@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.16
+
+### Empty LLM reply / talk path
+- OpenAI-compatible parser now reads **array** `message.content` parts and `refusal` text (no longer drops valid replies as empty).
+- HTTP 200 with no assistant text becomes a clear **Companion AI error** (includes truncated body + model/LiteLLM hint) instead of a vague empty-reply-only path.
+- `/ask` strips leftover action fences before `speakLine` so dialogue stays visible owner chat.
+
+### Ambient idle chat (speech only)
+- **`idleChat` default ON** (new installs / NeoForge TOML default). Admin AI Config toggle **Idle chat: ON/OFF**.
+- Prefers LLM ambient prompts when the server provider is enabled; on empty/error or when AI is disabled, uses sparse scripted fallback lines.
+- Skips sleep, combat, busy LLM worker, and ~45s after any recent speak line. Interval still `idleChatSecondsMin`/`Max` (default 90–240s).
+- Docs: [COMPANION_AI.md](docs/COMPANION_AI.md), [ADMIN.md](docs/ADMIN.md).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.16+1.21.1.jar` | `azscompanions-fabric-0.3.16+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.16+1.21.1.jar` | `azscompanions-fabric-cci-0.3.16+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.15
 
 ### Admin AI Config — Use server LLM + API key

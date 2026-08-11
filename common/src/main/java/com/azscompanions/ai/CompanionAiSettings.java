@@ -74,7 +74,7 @@ public final class CompanionAiSettings {
     private int chatReactCooldownSeconds = CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS;
 
     /** Occasional ambient LLM lines while owner is online and near the companion. */
-    private boolean idleChat = false;
+    private boolean idleChat = true;
     private int idleChatSecondsMin = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN;
     private int idleChatSecondsMax = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MAX;
 

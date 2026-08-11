@@ -68,7 +68,7 @@ Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Al
 | MCP (HTTP) | `mcp` | mcp url `http://127.0.0.1:3001/mcp` |
 | Custom... | (yours) | (yours) |
 
-Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the wire; blank keeps current; Clear clears config key), `inputLanguage`, **Use server LLM** (`serverLlmOnly`), `mcpUrl`. Non-blank `apiKey` in the file wins over `apiKeyEnv` / `AZS_LLM_API_KEY`. Env remains fine for hosts that prefer not to store the key in the config file.
+Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the wire; blank keeps current; Clear clears config key), `inputLanguage`, **Use server LLM** (`serverLlmOnly`), **Idle chat** (`idleChat`), `mcpUrl`. Non-blank `apiKey` in the file wins over `apiKeyEnv` / `AZS_LLM_API_KEY`. Env remains fine for hosts that prefer not to store the key in the config file.
 
 #### Use server LLM
 
@@ -78,6 +78,10 @@ Toggle label **Use server LLM: ON/OFF** writes `serverLlmOnly` (default **ON**).
 |------|--------|
 | **ON** (recommended for multiplayer) | This host’s AI config (`provider` / `baseUrl` / `model` / MCP / keys) is authoritative for every companion. Joining clients do not run their own LLM. |
 | **OFF** | Only relevant on an integrated singleplayer/LAN host that is not already treated as shared (dedicated servers always use the server endpoint). |
+
+#### Idle chat
+
+Toggle **Idle chat: ON/OFF** writes `idleChat` (default **ON** for new configs). Companions near the owner occasionally speak (~90–240s). Uses the server LLM when configured; otherwise sparse scripted lines. Does not revive AI Mode or name-listen.
 
 API keys always live on the **server** process (config file or env). The admin GUI never sends the stored key to clients — only a status (`config` / `env` / not set). Clients never need their own key when Use server LLM is ON.
 

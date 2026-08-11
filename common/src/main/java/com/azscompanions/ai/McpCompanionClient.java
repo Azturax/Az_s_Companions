@@ -92,7 +92,13 @@ public final class McpCompanionClient implements CompanionAiClient {
         if (callResponse.statusCode() < 200 || callResponse.statusCode() >= 300) {
             throw new IllegalStateException("MCP HTTP " + callResponse.statusCode() + ": " + truncate(callResponse.body()));
         }
-        return Optional.ofNullable(extractToolText(callResponse.body())).filter(s -> !s.isBlank());
+        Optional<String> text = Optional.ofNullable(extractToolText(callResponse.body())).filter(s -> !s.isBlank());
+        if (text.isEmpty()) {
+            throw new IllegalStateException(
+                    "MCP tool returned empty content (HTTP " + callResponse.statusCode()
+                            + "). Body: " + truncate(callResponse.body()));
+        }
+        return text;
     }
 
     private Optional<String> chatStdio(CompanionAiSettings settings, CompanionChatContext context, String tool)
@@ -127,7 +133,11 @@ public final class McpCompanionClient implements CompanionAiClient {
             callParams.add("arguments", toolArguments(settings, context));
             writeLine(out, rpcRequest("tools/call", callParams));
             String resultJson = readJsonRpcResult(in, settings.timeoutSeconds());
-            return Optional.ofNullable(extractToolTextFromResult(resultJson)).filter(s -> !s.isBlank());
+            Optional<String> text = Optional.ofNullable(extractToolTextFromResult(resultJson)).filter(s -> !s.isBlank());
+            if (text.isEmpty()) {
+                throw new IllegalStateException("MCP stdio tool returned empty content: " + truncate(resultJson));
+            }
+            return text;
         } finally {
             process.destroy();
             process.waitFor(2, TimeUnit.SECONDS);

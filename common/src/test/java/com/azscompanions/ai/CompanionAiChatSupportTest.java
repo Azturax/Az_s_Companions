@@ -74,6 +74,18 @@ class CompanionAiChatSupportTest {
     }
 
     @Test
+    void spokeTooRecentlyUsesCooldown() {
+        assertTrue(CompanionAiChatSupport.spokeTooRecently(20, 45));
+        assertFalse(CompanionAiChatSupport.spokeTooRecently(45 * 20, 45));
+        assertFalse(CompanionAiChatSupport.spokeTooRecently(-1, 45));
+    }
+
+    @Test
+    void idleChatDefaultsOn() {
+        assertTrue(new CompanionAiSettings().idleChat());
+    }
+
+    @Test
     void sharedServerLlmFlagOnDedicatedHost() {
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
         runtime.clearServerContext();

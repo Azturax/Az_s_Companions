@@ -80,11 +80,26 @@ public final class CompanionAiChatSupport {
     }
 
     public static String fallbackIdleLine(String ownerName) {
-        return "Hey " + ownerName + "… just checking you're still there.";
+        String name = ownerName == null || ownerName.isBlank() ? "friend" : ownerName.trim();
+        String[] lines = {
+                "Hey " + name + "… just checking you're still there.",
+                "Hmm… nice day for an adventure, " + name + ".",
+                "I'm right here if you need me, " + name + ".",
+                "Wonder what we should do next…",
+                name + ", want to explore a bit?"
+        };
+        int idx = Math.floorMod(name.hashCode() ^ (int) (System.currentTimeMillis() / 60_000L), lines.length);
+        return lines[idx];
     }
 
     public static String fallbackCallLine(String ownerName) {
-        return ownerName + "? Where did you go?";
+        String name = ownerName == null || ownerName.isBlank() ? "friend" : ownerName.trim();
+        return name + "? Where did you go?";
+    }
+
+    /** True when ambient speech should wait because the companion spoke recently. */
+    public static boolean spokeTooRecently(int ticksSinceSpeak, int cooldownSeconds) {
+        return ticksSinceSpeak >= 0 && ticksSinceSpeak < Math.max(5, cooldownSeconds) * 20;
     }
 
     public static int clampIdleSeconds(int value) {

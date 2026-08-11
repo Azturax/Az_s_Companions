@@ -151,7 +151,7 @@ public final class AiConfig {
         CHAT_REACT_COOLDOWN_SECONDS = builder.comment("Per-companion and per-owner cooldown between auto-replies.")
                 .defineInRange("chatReactCooldownSeconds",
                         CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS, 5, 600);
-        IDLE_CHAT = builder.define("idleChat", false);
+        IDLE_CHAT = builder.define("idleChat", true);
         IDLE_CHAT_SECONDS_MIN = builder.defineInRange("idleChatSecondsMin",
                 CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN, 30, 3600);
         IDLE_CHAT_SECONDS_MAX = builder.defineInRange("idleChatSecondsMax",

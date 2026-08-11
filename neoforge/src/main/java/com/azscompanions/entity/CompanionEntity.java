@@ -1,6 +1,7 @@
 package com.azscompanions.entity;
 
 import com.azscompanions.ai.ChildAutonomyMode;
+import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAiChatSupport;
 import com.azscompanions.ai.CompanionAiRuntime;
@@ -180,6 +181,7 @@ public class CompanionEntity extends PathfinderMob {
     private int nextIdleChatTick;
     private int ownerAwayTicks;
     private int lastCallPlayerTick = Integer.MIN_VALUE / 4;
+    private int lastSpeakTick;
     private CompanionPlayMode playMode = CompanionPlayMode.NONE;
     private int playTicksRemaining;
     private BlockPos playHideTarget;
@@ -380,16 +382,14 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     /**
-     * Idle ambient lines + call-when-away. Only when AI provider is enabled and toggles are on.
+     * Idle ambient lines + call-when-away.
+     * Prefers LLM when the server provider is enabled; otherwise sparse scripted fallbacks when idleChat is on.
      */
     private void tickAiAmbientSpeech() {
         if (tickCount % 20 != 0) {
             return;
         }
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
-        if (!runtime.isEnabled()) {
-            return;
-        }
         CompanionAiSettings settings = runtime.settings();
         if (!settings.idleChat() && !settings.callPlayerWhenAway()) {
             return;
@@ -401,9 +401,13 @@ public class CompanionEntity extends PathfinderMob {
         if (isSleeping() || (getTarget() != null && getTarget().isAlive())) {
             return;
         }
+        if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, 45)) {
+            return;
+        }
         String ownerName = owner.getGameProfile().getName();
         double dist = distanceTo(owner);
         double callDist = settings.callPlayerDistance();
+        boolean llmOn = runtime.isEnabled();
 
         if (settings.callPlayerWhenAway()) {
             if (dist > callDist) {
@@ -415,12 +419,18 @@ public class CompanionEntity extends PathfinderMob {
             int cool = settings.callPlayerCooldownSeconds() * 20;
             if (ownerAwayTicks >= need
                     && tickCount - lastCallPlayerTick >= cool
-                    && !runtime.isBusy()) {
+                    && !(llmOn && runtime.isBusy())) {
                 lastCallPlayerTick = tickCount;
                 ownerAwayTicks = 0;
-                String prompt = CompanionAiChatSupport.callPlayerPrompt(ownerName);
-                if (!CompanionAiAsk.askQuiet(owner, this, ownerName, prompt)) {
-                    speakLine(CompanionAiChatSupport.fallbackCallLine(ownerName));
+                String fallback = CompanionAiChatSupport.fallbackCallLine(ownerName);
+                if (llmOn) {
+                    String prompt = CompanionAiChatSupport.callPlayerPrompt(ownerName);
+                    if (!CompanionAiAsk.askQuiet(owner, this, ownerName, prompt,
+                            CompanionAiActionTrust.OWNER, null, fallback)) {
+                        speakLine(fallback);
+                    }
+                } else {
+                    speakLine(fallback);
                 }
                 if (getMode() == CompanionMode.FOLLOW) {
                     getNavigation().moveTo(owner, 1.15d);
@@ -431,10 +441,9 @@ public class CompanionEntity extends PathfinderMob {
             ownerAwayTicks = 0;
         }
 
-        if (!settings.idleChat() || runtime.isBusy()) {
+        if (!settings.idleChat() || (llmOn && runtime.isBusy())) {
             return;
         }
-        // Children: less frequent chatter; prefer talking to parent when cling/balanced
         boolean child = getLeaderUuid() != null;
         double idleMul = child ? settings.childAutonomy().idleIntervalMultiplier() : 1.0d;
         if (dist > settings.chatReactRange()) {
@@ -452,6 +461,11 @@ public class CompanionEntity extends PathfinderMob {
         int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
                 settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
         nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+        String fallback = CompanionAiChatSupport.fallbackIdleLine(ownerName);
+        if (!llmOn) {
+            speakLine(fallback);
+            return;
+        }
         String prompt;
         if (child && settings.childAutonomy().prefersTalkToParent() && level() instanceof ServerLevel sl
                 && sl.getEntity(getLeaderUuid()) instanceof CompanionEntity parent) {
@@ -460,8 +474,9 @@ public class CompanionEntity extends PathfinderMob {
         } else {
             prompt = CompanionAiChatSupport.idleAmbientPrompt(ownerName);
         }
-        if (!CompanionAiAsk.askQuiet(owner, this, ownerName, prompt)) {
-            speakLine(CompanionAiChatSupport.fallbackIdleLine(ownerName));
+        if (!CompanionAiAsk.askQuiet(owner, this, ownerName, prompt,
+                CompanionAiActionTrust.OWNER, null, fallback)) {
+            speakLine(fallback);
         }
     }
 
@@ -1117,6 +1132,7 @@ public class CompanionEntity extends PathfinderMob {
         if (text == null || text.isBlank()) {
             return;
         }
+        lastSpeakTick = tickCount;
         if (getOwner() instanceof ServerPlayer owner) {
             owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
         }

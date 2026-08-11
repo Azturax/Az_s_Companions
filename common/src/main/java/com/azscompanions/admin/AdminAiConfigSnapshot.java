@@ -43,6 +43,7 @@ public final class AdminAiConfigSnapshot {
     private String apiKeyUpdate = null;
     private String inputLanguage = "en";
     private boolean serverLlmOnly = true;
+    private boolean idleChat = true;
     private boolean enableChatMessages = true;
     private String mcpUrl = "http://127.0.0.1:3001/mcp";
 
@@ -61,6 +62,7 @@ public final class AdminAiConfigSnapshot {
         snap.apiKeyUpdate = null;
         snap.inputLanguage = s.inputLanguage();
         snap.serverLlmOnly = s.serverLlmOnly();
+        snap.idleChat = s.idleChat();
         snap.enableChatMessages = s.enableChatMessages();
         snap.mcpUrl = s.mcpUrl();
         snap.profileId = LlmProviderProfile.detect(snap).name().toLowerCase();
@@ -79,6 +81,7 @@ public final class AdminAiConfigSnapshot {
         }
         out.setInputLanguage(trimOr(inputLanguage, "en"));
         out.setServerLlmOnly(serverLlmOnly);
+        out.setIdleChat(idleChat);
         out.setEnableChatMessages(enableChatMessages);
         out.setMcpUrl(trimOr(mcpUrl, "http://127.0.0.1:3001/mcp"));
         // Retired: always force ask-only defaults
@@ -242,6 +245,15 @@ public final class AdminAiConfigSnapshot {
         return this;
     }
 
+    public boolean idleChat() {
+        return idleChat;
+    }
+
+    public AdminAiConfigSnapshot setIdleChat(boolean idleChat) {
+        this.idleChat = idleChat;
+        return this;
+    }
+
     public boolean enableChatMessages() {
         return enableChatMessages;
     }
@@ -274,6 +286,7 @@ public final class AdminAiConfigSnapshot {
         }
         o.addProperty("inputLanguage", inputLanguage);
         o.addProperty("serverLlmOnly", serverLlmOnly);
+        o.addProperty("idleChat", idleChat);
         o.addProperty("enableChatMessages", enableChatMessages);
         o.addProperty("mcpUrl", mcpUrl);
         return o.toString();
@@ -312,6 +325,9 @@ public final class AdminAiConfigSnapshot {
             }
             if (o.has("serverLlmOnly")) {
                 snap.setServerLlmOnly(o.get("serverLlmOnly").getAsBoolean());
+            }
+            if (o.has("idleChat")) {
+                snap.setIdleChat(o.get("idleChat").getAsBoolean());
             }
             if (o.has("enableChatMessages")) {
                 snap.setEnableChatMessages(o.get("enableChatMessages").getAsBoolean());

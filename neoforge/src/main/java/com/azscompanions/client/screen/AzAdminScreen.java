@@ -17,7 +17,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class AzAdminScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
-    private static final int PANEL_H = 268;
+    private static final int PANEL_H = 288;
 
     private enum Tab { OVERVIEW, AI }
 
@@ -38,6 +38,7 @@ public final class AzAdminScreen extends Screen {
     private EditBox mcpUrlBox;
     private Button profileButton;
     private Button serverLlmButton;
+    private Button idleChatButton;
     private boolean syncingFields;
     /** True when Clear was pressed; blank apiKey box alone keeps the existing key. */
     private boolean clearApiKeyOnSave;
@@ -204,8 +205,14 @@ public final class AzAdminScreen extends Screen {
                 b -> {
                     snap.setServerLlmOnly(!snap.serverLlmOnly());
                     serverLlmButton.setMessage(Component.literal(serverLlmLabel(snap.serverLlmOnly())));
-                }).bounds(bx, y, bw, 18).build();
+                }).bounds(bx, y, bw / 2 - 4, 18).build();
         addRenderableWidget(serverLlmButton);
+        idleChatButton = Button.builder(Component.literal(idleChatLabel(snap.idleChat())),
+                b -> {
+                    snap.setIdleChat(!snap.idleChat());
+                    idleChatButton.setMessage(Component.literal(idleChatLabel(snap.idleChat())));
+                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
+        addRenderableWidget(idleChatButton);
 
         addRenderableWidget(Button.builder(Component.literal("Save & apply"), b -> save())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
@@ -293,6 +300,10 @@ public final class AzAdminScreen extends Screen {
     /** Maps to config {@code serverLlmOnly} — host LLM is authoritative for all companions. */
     private static String serverLlmLabel(boolean on) {
         return "Use server LLM: " + (on ? "ON" : "OFF");
+    }
+
+    private static String idleChatLabel(boolean on) {
+        return "Idle chat: " + (on ? "ON" : "OFF");
     }
 
     @Override
