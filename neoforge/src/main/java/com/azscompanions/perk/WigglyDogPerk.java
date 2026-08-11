@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#WOLFY_PLAYER_UUID}.
+ * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID}.
  * Ground-follows when the owner walks; floats beside them only while they fly/elytra.
  * Separate from the Wolfy companion grant and Mister Wiggly's companion sidekick.
  */

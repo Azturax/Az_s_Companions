@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Dragon Ball–style flight aura + trails (0.4.2+)
+- Soft **ki aura bubble** (cutout + eyes emissive, orb-safe) on **players** (creative/survival flight, elytra), **companions**, and **Bits** while airborne / air-following.
+- **Motion trails** are afterimage billboards streaming **behind** at **foot / cloud height** — no rising particle columns into first-person view. Local FP skips the body shell; trails still draw low.
+- Color: warm gold/orange default; companions/Bits tint from orb color or team when set. Off on ground / in fluid; player body aura off while riding Jindujun (cloud trails instead).
+
+### Jindujun Whistle / Flying Nimbus (Überschallwolke)
+- New item **Jindujun Whistle** (`jindujun_whistle`): right-click summons a **rideable yellow Flying Nimbus** cloud; player sits on top and **steers** (WASD + jump up / sneak down; look pitch leans climb). Use again while mounted to dismiss; use with an existing owned cloud nearby to recall/mount.
+- **Loot:** 2% on `minecraft:archaeology/trail_ruins_rare` brushes, only when the dig site is in a **`#minecraft:is_taiga`** biome (NeoForge GLM + Fabric loot modify). Very rare hidden Trail Ruins find — not craftable.
+- Nimbus motion uses the same foot/cloud-height trail style (no FP face obstruction).
+
+## 0.4.1
+
+### Fix: special perk UUID mapping
+- **Wolfy** (`7c97e337-2c49-448c-b710-7655487f18df`): brown wolf companion grant **only** — no toggle Wiggly, no glowing changes.
+- **Special flight UUID** (`4274c47f-d61f-4850-bf29-9e5c185db4ac`): survival flight + flying companion + toggleable **Wiggly** (H / `/az wiggly`); **auto-glowing removed** (leftover Glowing cleared on player / companions / toggle dog).
+- 0.4.0 had wrongly attached Wiggly (and glow-clear logic) to the Wolfy UUID; corrected here.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.1+1.21.1.jar` | `azscompanions-fabric-0.4.1+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.1+1.21.1.jar` | `azscompanions-fabric-cci-0.4.1+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.0
 
 ### Glowing Orb form
@@ -15,12 +39,10 @@
 - Far flight snaps use the follow leash (default **48**, floor **12**), never under personal space. Applies to special-perk companions and toggle Wiggly dog flight.
 - **Wander** while the owner is flying: leisurely air roam inside the wander radius, outside personal space; lands when the owner stops flying (no permanent hover).
 
-### Toggleable Wiggly dog (Wolfy UUID)
-- UUID `7c97e337-2c49-448c-b710-7655487f18df` gets a separate pink-collar dog named **Wiggly** (alongside the Wolfy companion grant).
-- Toggle: keybind **Toggle Wiggly Dog** (default **H**) under Options → Controls → **Az's Companions**, or `/az wiggly`.
+### Toggleable Wiggly dog
+- Pink-collar dog named **Wiggly** with toggle keybind **H** / `/az wiggly` (UUID mapping corrected in **0.4.1** — see above).
 - Behavior: ground-follows when you walk; floats beside you only while you are flying / elytra (same rule as special companions — no permanent flight).
 - Playful sit/stand wiggle on the ground; light bob while floating. Visibility persists via `azscompanions.wiggly_dog_hidden`.
-- This UUID never receives the auto-**glowing** special perk (glow remains only for the separate special-perk UUID); leftover Glowing is cleared on the player / their companions / the toggle dog.
 
 ### Wolfy UUID perk
 - UUID `7c97e337-2c49-448c-b710-7655487f18df` receives a one-time **wolf-form** companion named **Wolfy** (brown / `minecraft:chestnut` coat) on join/perk apply.

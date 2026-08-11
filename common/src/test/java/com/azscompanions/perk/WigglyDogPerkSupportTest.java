@@ -11,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WigglyDogPerkSupportTest {
     @Test
-    void eligibleMatchesWolfyUuid() {
-        assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.WOLFY_PLAYER_UUID));
-        assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
+    void eligibleMatchesSpecialPerkUuid() {
+        assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
+        assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.WOLFY_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(null));
         assertFalse(WigglyDogPerkSupport.isEligible(UUID.randomUUID()));

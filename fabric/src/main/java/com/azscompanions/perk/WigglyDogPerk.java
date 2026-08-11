@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#WOLFY_PLAYER_UUID} (Fabric).
+ * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID} (Fabric).
  * Ground-follows when walking; floats only while the owner flies/elytra.
  */
 public final class WigglyDogPerk {

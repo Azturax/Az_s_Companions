@@ -6,7 +6,6 @@ import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -17,11 +16,9 @@ import java.util.UUID;
 
 /**
  * UUID-gated perks (Fabric):
- * flight + glow, and client-side Kon ears cosmetic (see {@link #hasKonEars}).
+ * flight + toggle Wiggly (no auto-glow), and client-side Kon ears cosmetic (see {@link #hasKonEars}).
  */
 public final class SpecialPlayerPerks {
-    private static final int GLOW_DURATION_TICKS = 100;
-    private static final int GLOW_REFRESH_BELOW = 40;
     /** Soft hover offset above the owner's feet while flying. */
     private static final double FLIGHT_HOVER_Y = CompanionFlightFollowSupport.HOVER_Y;
     /** Never land-teleport when already this close (matches ground MIN_TELEPORT_DISTANCE). */
@@ -62,8 +59,7 @@ public final class SpecialPlayerPerks {
                 abilities.mayfly = true;
                 player.onUpdateAbilities();
             }
-            ensureGlow(player);
-        } else if (WigglyDogPerkSupport.isEligible(player.getUUID())) {
+            // Flight + Wiggly only — auto-glow removed for this UUID.
             clearGlow(player);
         }
         WolfyCompanionPerk.ensureFor(player);
@@ -71,15 +67,12 @@ public final class SpecialPlayerPerks {
     }
 
     public static void applyCompanionPerks(Mob companion, UUID ownerUuid) {
-        if (WigglyDogPerkSupport.isEligible(ownerUuid)) {
-            clearGlow(companion);
-        }
         if (companion instanceof FabricCompanionEntity orb && orb.getForm().isOrb()) {
             companion.setNoGravity(true);
             return;
         }
         if (isSpecial(ownerUuid)) {
-            ensureGlow(companion);
+            clearGlow(companion);
             Player owner = companion.level().getPlayerByUUID(ownerUuid);
             if (isHoldingStayPosition(companion)) {
                 if (companion.isNoGravity()) {
@@ -277,19 +270,6 @@ public final class SpecialPlayerPerks {
         companion.setDeltaMovement(Vec3.ZERO);
         companion.hasImpulse = true;
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
-    }
-
-    private static void ensureGlow(LivingEntity entity) {
-        MobEffectInstance existing = entity.getEffect(MobEffects.GLOWING);
-        if (existing == null || existing.getDuration() < GLOW_REFRESH_BELOW) {
-            entity.addEffect(new MobEffectInstance(
-                    MobEffects.GLOWING,
-                    GLOW_DURATION_TICKS,
-                    0,
-                    true,
-                    false,
-                    true));
-        }
     }
 
     private static void clearGlow(LivingEntity entity) {

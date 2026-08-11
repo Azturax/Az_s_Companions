@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * Loader-agnostic helpers for the UUID-gated toggleable Wiggly dog perk
- * ({@link AzsCompanionsConstants#WOLFY_PLAYER_UUID}).
+ * ({@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID}).
  * <p>
  * Separate from the one-shot Wolfy companion grant and from Mister Wiggly's
  * companion-following sidekick. Visibility persists via {@link #PLAYER_HIDDEN_TAG}.
@@ -25,7 +25,7 @@ public final class WigglyDogPerkSupport {
     }
 
     public static boolean isEligible(UUID uuid) {
-        return uuid != null && AzsCompanionsConstants.WOLFY_PLAYER_UUID.equals(uuid);
+        return uuid != null && AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID.equals(uuid);
     }
 
     public static boolean isToggleDogName(String name) {

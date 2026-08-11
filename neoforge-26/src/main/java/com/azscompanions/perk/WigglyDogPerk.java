@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#WOLFY_PLAYER_UUID} (NeoForge 26.2).
+ * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID} (NeoForge 26.2).
  * Ground-follows when walking; floats only while the owner flies/elytra.
  */
 public final class WigglyDogPerk {
