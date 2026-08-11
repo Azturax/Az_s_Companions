@@ -29,10 +29,8 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         if (rawBase.isBlank()) {
             throw new IllegalStateException("Companion AI baseUrl is empty — set baseUrl in azscompanions-ai config");
         }
-        if (settings.provider() == LlmProviderMode.OPENAI_COMPATIBLE && settings.resolveApiKey().isBlank()) {
-            throw new IllegalStateException(
-                    "Missing LLM API key — set env " + settings.apiKeyEnv() + " or apiKey in config");
-        }
+        // API key is optional: local LiteLLM / open proxies may not require auth.
+        // When a key is set, Authorization: Bearer is added; secured proxies return HTTP 401 without one.
         String base = rawBase.replaceAll("/+$", "");
         if (!base.endsWith("/v1")) {
             // Allow either http://host:11434/v1 or http://host:11434

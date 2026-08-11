@@ -94,7 +94,9 @@ Do not commit real keys. Config files often live under the instance folder and g
 
 ## Remote LLM setups (openai_compatible)
 
-Use `provider = "openai_compatible"` (or an alias like `openrouter`) with a public `/v1` base URL and a model id from that provider. Always set `AZS_LLM_API_KEY` (or fill `apiKey` only for local testing).
+Use `provider = "openai_compatible"` (or an alias like `openrouter`) with a public `/v1` base URL and a model id from that provider.
+
+**API key:** optional when the proxy has no auth (e.g. local LiteLLM without `master_key`). Set `AZS_LLM_API_KEY` (or `apiKey`) for OpenAI / OpenRouter / Groq and for LiteLLM when a master/virtual key is enabled. `/az ai status` shows `(no API key)` vs `(key set)` — informational only; `/ask` is not blocked solely for a blank key.
 
 Common bases:
 
@@ -107,7 +109,7 @@ Common bases:
 | **LiteLLM** (local/remote proxy) | `http://127.0.0.1:4000/v1` | model id as configured in LiteLLM |
 | Azure / custom proxy | your gateway’s `…/v1` | as exposed by the proxy |
 
-Auth: HTTP clients send `Authorization: Bearer <key>` from `AZS_LLM_API_KEY` / `apiKey`. If the value already starts with `Bearer `, it is not double-prefixed. LiteLLM’s master key (and virtual keys) require this header on **chat** and on **MCP** (`POST /mcp/`).
+Auth: when a key is resolved, HTTP clients send `Authorization: Bearer <key>`. If the value already starts with `Bearer `, it is not double-prefixed. LiteLLM’s master key (and virtual keys) require this header on **chat** and on **MCP** (`POST /mcp/`). Without a key, no Authorization header is sent (open proxies still work; secured ones return HTTP 401).
 
 ### Fabric — LiteLLM proxy (JSON)
 
@@ -143,7 +145,7 @@ enableChatMessages = true
 chatListenMode = "off"
 ```
 
-Set the LiteLLM master key (or a virtual key) in the server JVM env:
+If LiteLLM has a master/virtual key, set it in the **server** JVM env (singleplayer integrated server = same game process):
 
 ```bash
 # Windows PowerShell
@@ -152,6 +154,8 @@ $env:AZS_LLM_API_KEY = "sk-..."
 # Verify proxy (same Bearer as the mod uses)
 curl -s -H "Authorization: Bearer $env:AZS_LLM_API_KEY" http://127.0.0.1:4000/v1/model/info
 ```
+
+If the proxy runs **without** auth, leave `apiKey` empty and do not set the env var — status may show `(no API key)` while `/ask` still works.
 
 ### Fabric — OpenRouter (JSON)
 
@@ -781,7 +785,7 @@ Examples of status text:
 - `AI: openai_compatible @ https://openrouter.ai/api/v1 model=… (key set) chatListen=player [server LLM shared]`
 - `AI: mcp http url=http://127.0.0.1:3001/mcp tool=companion_chat …`
 
-If remote shows `(no API key)`, the JVM does not see `AZS_LLM_API_KEY` (or `apiKey`).
+If status shows `(no API key)`, the JVM does not see `AZS_LLM_API_KEY` (or `apiKey`). That is fine for open local proxies; for secured remote APIs / LiteLLM with a master key, set the env on the **server** process and restart.
 
 4. Ask explicitly:
 

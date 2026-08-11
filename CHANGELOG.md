@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.14
+
+### LiteLLM / openai_compatible API key
+- `/ask` no longer fails with **Missing LLM API key** solely because `apiKey` / `AZS_LLM_API_KEY` is empty. Open local proxies (LiteLLM without `master_key`, etc.) work without a Bearer header.
+- Status still shows `(no API key)` when none is resolved (informational). Secured APIs return HTTP 401 from the proxy if a key is required.
+- Admin AI save still does **not** touch `apiKey` (env name only); set the key via server env or config file.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.14+1.21.1.jar` | `azscompanions-fabric-0.3.14+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.14+1.21.1.jar` | `azscompanions-fabric-cci-0.3.14+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.13
 
 Release: [v0.3.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.13) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)

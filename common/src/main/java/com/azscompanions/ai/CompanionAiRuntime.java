@@ -128,7 +128,9 @@ public final class CompanionAiRuntime {
         if (this.settings.provider().usesOpenAiCompatibleHttp()
                 && this.settings.provider() == LlmProviderMode.OPENAI_COMPATIBLE
                 && this.settings.resolveApiKey().isBlank()) {
-            LOGGER.warn("openai_compatible provider has no API key (config or env {}). Remote calls will likely fail.",
+            LOGGER.warn(
+                    "openai_compatible has no API key (config or env {}). OK for open local proxies; "
+                            + "secured endpoints (OpenRouter/OpenAI/LiteLLM master key) need a key.",
                     this.settings.apiKeyEnv());
         }
         if (this.settings.provider() == LlmProviderMode.MCP
