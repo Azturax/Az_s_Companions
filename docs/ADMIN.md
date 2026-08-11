@@ -72,27 +72,29 @@ Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the w
 
 #### Use server LLM
 
-Toggle label **Use server LLM: ON/OFF** writes `serverLlmOnly` (default **ON**).
+Toggle label **Use server LLM: ON/OFF** writes `serverLlmOnly` (default **OFF** — opt-in).
 
 | Mode | Effect |
 |------|--------|
-| **ON** (recommended for multiplayer) | This host’s AI config (`provider` / `baseUrl` / `model` / MCP / keys) is authoritative for every companion. Joining clients do not run their own LLM. |
-| **OFF** | Only relevant on an integrated singleplayer/LAN host that is not already treated as shared (dedicated servers always use the server endpoint). |
+| **OFF (default)** | Personal host config. On SP/integrated, point profiles at **your** LM Studio, Ollama, LiteLLM, or a remote API. Does not favor shared multiplayer. |
+| **ON** | This host’s AI config is the shared endpoint for companions. Joining clients do not run their own LLM. Use when you want host-authoritative multiplayer AI. |
+
+**Dedicated:** `/ask` always runs on the server process (keys stay on the host). There is no per-joiner client LLM. **SP/LAN:** declining the join prompt or leaving Use server LLM off keeps your own AI Config as the personal path.
 
 #### Idle chat
 
-Toggle **Idle chat: ON/OFF** writes `idleChat` (default **ON** for new configs). Companions near the owner occasionally speak (~90–240s). Uses the server LLM when configured; otherwise sparse scripted lines. Does not revive AI Mode or name-listen.
+Toggle **Idle chat: ON/OFF** writes `idleChat` (default **ON** for new configs). Companions near the owner occasionally speak (~90–240s). Uses the configured host LLM when enabled; otherwise sparse scripted lines. Does not revive AI Mode or name-listen.
 
-API keys always live on the **server** process (config file or env). The admin GUI never sends the stored key to clients — only a status (`config` / `env` / not set). Clients never need their own key when Use server LLM is ON.
+API keys always live on the **host** process (config file or env). The admin GUI never sends the stored key to clients — only a status (`config` / `env` / not set). Clients never need their own key when Use server LLM is ON.
 
-#### Join-time “use server LLM?” prompt
+#### Join-time LLM prompt (optional)
 
-On join, players may see a yes/no confirm when Companion AI is available:
+On join, players may see a yes/no confirm — it asks; it does not auto-connect:
 
-- **Dedicated / configured host:** server syncs that AI is enabled (`provider` ≠ `disabled`).
+- **Dedicated / Use server LLM ON:** server syncs that a shared AI is available.
 - **Singleplayer / integrated:** if AI is still disabled, the client briefly probes local LiteLLM (`127.0.0.1:4000`), Ollama (`11434`), and LM Studio (`1234`).
 
-**Yes** enables Use server LLM for hosts/admins (and may apply a local profile when AI was off). **No** remembers dismissal for that server address for the client session — no spam, no auto-connect.
+**Yes (local probe)** enables your local LLM and leaves Use server LLM **OFF**. **Yes (server offer)** opts hosts/admins into Use server LLM ON. **No** remembers dismissal for that server address for the client session — no spam; you can still set any local/remote LLM in AI Config.
 
 **Ask-only (0.3.12+):** companions reply via **`/ask`** / **`/az ask`** only. Admin toggles for `chatListenMode`, `enableAiActions`, and `nameListen` are removed; legacy config keys are ignored.
 

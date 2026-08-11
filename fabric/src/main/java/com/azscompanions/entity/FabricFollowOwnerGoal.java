@@ -60,7 +60,11 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (owner == null || owner.isSleeping()) {
             return false;
         }
-        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
+        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+            return true;
+        }
+        if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
+                || (CompanionSwimFollow.isOwnerInWater(owner) && CompanionSwimFollow.isCompanionInWater(companion))) {
             return true;
         }
         double dist = companion.distanceTo(owner);
@@ -85,7 +89,11 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
+        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+            return true;
+        }
+        if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
+                || (CompanionSwimFollow.isOwnerInWater(owner) && CompanionSwimFollow.isCompanionInWater(companion))) {
             return true;
         }
         double dist = companion.distanceTo(owner);
@@ -104,7 +112,13 @@ public final class FabricFollowOwnerGoal extends Goal {
             return;
         }
         double teleportLeash = Math.max(TELEPORT_DISTANCE, followRadius());
-        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash)) {
+        if (CompanionOrbFollow.tick(companion, owner)) {
+            return;
+        }
+        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash, personalSpace())) {
+            return;
+        }
+        if (CompanionSwimFollow.tick(companion, owner, personalSpace())) {
             return;
         }
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
@@ -121,7 +135,7 @@ public final class FabricFollowOwnerGoal extends Goal {
                     && companion.isOwnerExploring();
             if (mayTeleport) {
                 companion.safeTeleportNearOwner(owner);
-            } else if (dist > followStop()) {
+            } else if (dist > followStop() || CompanionSwimFollow.shouldKeepFollowing(owner, companion)) {
                 pathTowardPreferredRing();
             } else {
                 companion.getNavigation().stop();

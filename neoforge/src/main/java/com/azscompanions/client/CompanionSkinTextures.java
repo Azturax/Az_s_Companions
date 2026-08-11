@@ -1,6 +1,7 @@
 package com.azscompanions.client;
 
 import com.azscompanions.AzsCompanions;
+import com.azscompanions.entity.CompanionContextSkinSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
@@ -12,12 +13,18 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,8 +36,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
- * Resolves companion skins from resource locations and Mojang {@code player:<uuid>} skins.
- * Local file skins are not supported.
+ * Resolves companion skins from resource locations, Mojang {@code player:<uuid>} skins,
+ * {@code local:} files under {@code config/azscompanions/skins/}, and {@code url:}/{@code http(s):} downloads.
+ *
+ * <p>Player-form render priority: active context outfit → custom {@code SkinPath} → base default.
  *
  * <p>Important: never apply {@code player:<uuid>} until the dynamic texture is registered.
  * Showing {@link net.minecraft.client.resources.DefaultPlayerSkin} while loading causes
@@ -55,22 +64,34 @@ public final class CompanionSkinTextures {
     private static final Map<UUID, Boolean> PLAYER_SLIM_CACHE = new ConcurrentHashMap<>();
     private static final Set<UUID> LOADING = ConcurrentHashMap.newKeySet();
     private static final Map<UUID, List<Consumer<Optional<ReadySkin>>>> WAITERS = new ConcurrentHashMap<>();
+    private static final Map<String, ResourceLocation> EXTERNAL_TEXTURE_CACHE = new ConcurrentHashMap<>();
+    private static final Set<String> EXTERNAL_LOADING = ConcurrentHashMap.newKeySet();
+    private static final Set<String> EXTERNAL_FAILED = ConcurrentHashMap.newKeySet();
+    private static final int MAX_EXTERNAL_BYTES = 2 * 1024 * 1024;
 
     private CompanionSkinTextures() {
     }
 
     public static ResourceLocation resolve(CompanionEntity entity) {
         if (ClientAppearanceDraft.matches(entity)) {
-            String draftSkin = ClientAppearanceDraft.ACTIVE.skinPath;
+            String draftSkin = resolveDraftSkinPath(entity);
             if (draftSkin != null && !draftSkin.isBlank()) {
-                return resolve(draftSkin);
+                ResourceLocation ready = resolveReadyOrNull(draftSkin);
+                if (ready != null) {
+                    return ready;
+                }
+                // Prefer custom draft skin over base while context URL/local loads.
+                String custom = ClientAppearanceDraft.ACTIVE.skinPath;
+                if (custom != null && !custom.isBlank() && !custom.equals(draftSkin)) {
+                    return resolve(custom);
+                }
             }
             String draftName = ClientAppearanceDraft.ACTIVE.name;
             if (draftName != null && draftName.trim().equalsIgnoreCase("Kon")) {
                 return DEFAULT_KON;
             }
         }
-        String skinPath = entity.getSkinPath();
+        String skinPath = entity.getRenderSkinPath();
         if (skinPath == null || skinPath.isBlank()) {
             if (entity.isKonNamed()) {
                 return DEFAULT_KON;
@@ -81,7 +102,39 @@ public final class CompanionSkinTextures {
             }
             return DEFAULT_KON;
         }
-        return resolve(skinPath);
+        ResourceLocation ready = resolveReadyOrNull(skinPath);
+        if (ready != null) {
+            return ready;
+        }
+        // Context local/url still downloading — keep custom applied skin over base.
+        String custom = entity.getSkinPath();
+        if (custom != null && !custom.isBlank() && !custom.equals(skinPath)) {
+            return resolve(custom);
+        }
+        if (entity.isKonNamed()) {
+            return DEFAULT_KON;
+        }
+        UUID owner = entity.getOwnerUuid();
+        if (owner != null) {
+            return resolvePlayer(owner);
+        }
+        return DEFAULT_KON;
+    }
+
+    private static String resolveDraftSkinPath(CompanionEntity entity) {
+        ClientAppearanceDraft draft = ClientAppearanceDraft.ACTIVE;
+        if (draft == null) {
+            return entity.getRenderSkinPath();
+        }
+        CompanionContextSkinSupport.Context active =
+                CompanionContextSkinSupport.Context.byId(entity.getActiveContextSkinId());
+        return CompanionContextSkinSupport.resolveRenderSkinPath(
+                draft.form != null && draft.form.isPlayer(),
+                active,
+                draft.sleepingSkinPath,
+                draft.bathingSkinPath,
+                draft.adventuringSkinPath,
+                draft.skinPath);
     }
 
     /**
@@ -164,8 +217,18 @@ public final class CompanionSkinTextures {
     }
 
     public static ResourceLocation resolve(String skinPath) {
+        ResourceLocation ready = resolveReadyOrNull(skinPath);
+        return ready != null ? ready : DEFAULT_KON;
+    }
+
+    /**
+     * Resolve immediately when cached; kick async load for url/local and return null until ready
+     * so callers can fall back to custom skin instead of base.
+     */
+    @Nullable
+    public static ResourceLocation resolveReadyOrNull(String skinPath) {
         if (skinPath == null || skinPath.isBlank()) {
-            return DEFAULT_KON;
+            return null;
         }
         if (skinPath.startsWith("player:")) {
             try {
@@ -175,11 +238,108 @@ public final class CompanionSkinTextures {
                 return DEFAULT_KON;
             }
         }
-        if (skinPath.startsWith("local:")) {
-            return DEFAULT_KON;
+        if (CompanionContextSkinSupport.isLocalSkin(skinPath) || CompanionContextSkinSupport.isUrlSkin(skinPath)) {
+            String key = skinPath.trim();
+            ResourceLocation cached = EXTERNAL_TEXTURE_CACHE.get(key);
+            if (cached != null) {
+                return cached;
+            }
+            if (!EXTERNAL_FAILED.contains(key)) {
+                ensureExternalSkinLoaded(key);
+            }
+            return null;
         }
         ResourceLocation parsed = ResourceLocation.tryParse(skinPath);
         return parsed != null ? parsed : DEFAULT_KON;
+    }
+
+    private static void ensureExternalSkinLoaded(String skinPath) {
+        if (EXTERNAL_TEXTURE_CACHE.containsKey(skinPath) || !EXTERNAL_LOADING.add(skinPath)) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        CompletableFuture.supplyAsync(() -> loadExternalBytes(skinPath))
+                .whenComplete((bytes, err) -> mc.execute(() -> {
+                    EXTERNAL_LOADING.remove(skinPath);
+                    if (err != null || bytes == null || bytes.length == 0) {
+                        EXTERNAL_FAILED.add(skinPath);
+                        AzsCompanions.LOGGER.warn("External skin failed for {}: {}", skinPath,
+                                err != null ? err.toString() : "empty");
+                        return;
+                    }
+                    try {
+                        NativeImage image = NativeImage.read(new ByteArrayInputStream(bytes));
+                        image = processSkinImage(image);
+                        String hash = shortHash(skinPath);
+                        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(
+                                AzsCompanions.MOD_ID, "dynamic_external_skin/" + hash);
+                        DynamicTexture texture = new DynamicTexture(image);
+                        mc.getTextureManager().register(id, texture);
+                        EXTERNAL_TEXTURE_CACHE.put(skinPath, id);
+                        EXTERNAL_FAILED.remove(skinPath);
+                    } catch (Exception e) {
+                        EXTERNAL_FAILED.add(skinPath);
+                        AzsCompanions.LOGGER.warn("External skin register failed for {}", skinPath, e);
+                    }
+                }));
+    }
+
+    @Nullable
+    private static byte[] loadExternalBytes(String skinPath) {
+        try {
+            if (CompanionContextSkinSupport.isLocalSkin(skinPath)) {
+                String relative = CompanionContextSkinSupport.extractLocalRelative(skinPath);
+                if (relative == null) {
+                    return null;
+                }
+                Path base = Minecraft.getInstance().gameDirectory.toPath()
+                        .resolve("config").resolve("azscompanions").resolve("skins").normalize();
+                Path file = base.resolve(relative).normalize();
+                if (!file.startsWith(base) || !Files.isRegularFile(file)) {
+                    return null;
+                }
+                long size = Files.size(file);
+                if (size <= 0 || size > MAX_EXTERNAL_BYTES) {
+                    return null;
+                }
+                return Files.readAllBytes(file);
+            }
+            String url = CompanionContextSkinSupport.extractUrl(skinPath);
+            if (url == null) {
+                return null;
+            }
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(12))
+                    .GET()
+                    .build();
+            HttpResponse<InputStream> response = HTTP.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            if (response.statusCode() != 200 || response.body() == null) {
+                return null;
+            }
+            try (InputStream in = response.body()) {
+                byte[] data = in.readNBytes(MAX_EXTERNAL_BYTES + 1);
+                if (data.length == 0 || data.length > MAX_EXTERNAL_BYTES) {
+                    return null;
+                }
+                return data;
+            }
+        } catch (IOException | InterruptedException | IllegalArgumentException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            return null;
+        }
+    }
+
+    private static String shortHash(String value) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] dig = md.digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(dig, 0, 8);
+        } catch (Exception e) {
+            return Integer.toHexString(value.hashCode());
+        }
     }
 
     public static boolean isPlayerSkinReady(UUID uuid) {

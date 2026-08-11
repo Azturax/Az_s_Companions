@@ -297,7 +297,7 @@ public final class FabricAzAdminScreen extends Screen {
         return snap.apiKeyStatusLabel();
     }
 
-    /** Maps to config {@code serverLlmOnly} — host LLM is authoritative for all companions. */
+    /** Maps to config {@code serverLlmOnly} — opt-in shared host endpoint (default OFF). */
     private static String serverLlmLabel(boolean on) {
         return "Use server LLM: " + (on ? "ON" : "OFF");
     }

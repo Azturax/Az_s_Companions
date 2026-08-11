@@ -1,5 +1,74 @@
 # Changelog
 
+## Unreleased
+
+## 0.4.0
+
+### Glowing Orb form
+- New selectable form **Glowing Orb** (Customization → Form → Special / `glowing_orb`): ~0.5×0.5 floating companion — no player/mob mesh, no humanoid/wolf armor.
+- Always-air follow with personal-space ring + owner-local **Offset X/Y/Z**, float height/bob/speed, RGB color, and **Brightness** (0–15) for dynamic-lights soft-compat.
+- Children of orb parents inherit orb form + orb settings (cake / CCI / spawnChild).
+- Render: Sodium + Iris/Oculus-safe **cutout core + eyes emissive** (no translucent-only path). Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Air personal space + wander flight
+- Flight follow holds the same personal-space ring as ground/swim (default stand-off **~3.5** blocks via `preferredDistance(personalSpace)`; default personal space **2**) instead of bee-lining into the owner.
+- Far flight snaps use the follow leash (default **48**, floor **12**), never under personal space. Applies to special-perk companions and toggle Wiggly dog flight.
+- **Wander** while the owner is flying: leisurely air roam inside the wander radius, outside personal space; lands when the owner stops flying (no permanent hover).
+
+### Toggleable Wiggly dog (Wolfy UUID)
+- UUID `7c97e337-2c49-448c-b710-7655487f18df` gets a separate pink-collar dog named **Wiggly** (alongside the Wolfy companion grant).
+- Toggle: keybind **Toggle Wiggly Dog** (default **H**) under Options → Controls → **Az's Companions**, or `/az wiggly`.
+- Behavior: ground-follows when you walk; floats beside you only while you are flying / elytra (same rule as special companions — no permanent flight).
+- Playful sit/stand wiggle on the ground; light bob while floating. Visibility persists via `azscompanions.wiggly_dog_hidden`.
+- This UUID never receives the auto-**glowing** special perk (glow remains only for the separate special-perk UUID); leftover Glowing is cleared on the player / their companions / the toggle dog.
+
+### Wolfy UUID perk
+- UUID `7c97e337-2c49-448c-b710-7655487f18df` receives a one-time **wolf-form** companion named **Wolfy** (brown / `minecraft:chestnut` coat) on join/perk apply.
+- Idempotent: after grant, player tag/NBT `azscompanions.wolfy_granted` (Fabric/NeoForge 1.21.1 scoreboard tag; NeoForge 26.2 persistent data); skips if Wolfy already exists in-world or stored in a Companion Charm.
+- Shared helpers in common (`WolfyPerkSupport`); loader hooks via existing `SpecialPlayerPerks.applyPlayerPerks`. Charm recruit for that UUID also defaults to Wolfy.
+
+### Companion swim-with-player
+- Follow mode keeps companions with you in water: direct swim steering when both are wet, goal stays active while the owner is in water.
+- Shared helpers (`CompanionSwimFollowSupport`) + Fabric / NeoForge follow-goal wiring.
+
+### CCI user-facing messages
+- CCI outcomes (greet/wave/say, modes, summon/modify, persona, play, AI status/ask, teamfight, interaction Bit spawn, dismiss) now use **lang keys** (`toast.azscompanions.cci.*` / `message.azscompanions.cci.*` / dialogue keys) instead of hardcoded English.
+- Feedback via CCI informational toast when available, plus action-bar fallback (`Title — body`).
+- Fabric `/azscci` shows usage on bare invoke and a chat deny for unknown subjects.
+- Shared helper: `CciMessages` in common. Docs: [CCI.md](docs/CCI.md).
+
+### Command menu icons + Sit + keybind
+- Command menu shows icon buttons for **Follow**, **Stay**, **Sit**, and **Wander** (name + short description in tooltip). Close with **ESC** (no Back button).
+- **Sit** is a separate mode from Stay (sitting pose / hold still).
+- Keybind **Open Command Menu** (default **K**) under Options → Controls → **Az's Companions** — targets look-at companion, else nearest owned/trusted within 32 blocks. Still available via charm + Shift+RMB → Command.
+
+### Simple Voice Chat soft-compat (plus VoiceMod detect)
+- Soft-detect **Simple Voice Chat** (`voicechat` / `voicechat_api`) alongside optional `voicemod` awareness — no hard jar dependency.
+- Reference pin for NeoForge 1.21.1: **`voicechat-neoforge-1.21.1-2.6.21.jar`** (2.6.21); Fabric equivalent documented.
+- Optional soft-deps in NeoForge `neoforge.mods.toml` + Fabric `suggests`; bootstrap logs when present; Voicechat API class probed via reflection (entity audio emission not wired yet).
+- VoiceMod desktop TTS bridge remains **not shipped** (text dialogue only).
+- Docs: [COMPAT.md](docs/COMPAT.md).
+
+### Activity / context skins (player form only)
+- Companion Customization top tab **Activity**: Sleeping / Bathing / Adventuring outfits from **local** (`config/azscompanions/skins/`) or **URL**.
+- **Player form only** — mob forms keep form rendering; settings still save. Priority: context outfit → custom skin → base/default.
+- Sleeping = in bed; bathing = in water; adventuring = owner exploring. NBT + synced for multiplayer.
+- Docs: [CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md).
+
+### Server LLM optional (opt-in)
+- **`serverLlmOnly` default OFF** (admin **Use server LLM**). Personal local/remote LLM on SP/integrated is the default path; shared host endpoint is explicit opt-in.
+- **`integratedMultiplayerSharedLlm` default OFF** — friends joining no longer silently force shared-host status.
+- Join prompt is optional: **Yes** on a local probe enables your LLM without turning Use server LLM on; **Yes** on a server offer opts hosts into shared mode; **No** skips and leaves personal AI Config available.
+- Dedicated: `/ask` still runs on the server process (no per-joiner client LLM); Use server LLM is no longer forced on by dedicated alone.
+- Docs: [COMPANION_AI.md](docs/COMPANION_AI.md), [ADMIN.md](docs/ADMIN.md), [COMPAT.md](docs/COMPAT.md).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.0+1.21.1.jar` | `azscompanions-fabric-0.4.0+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.0+1.21.1.jar` | `azscompanions-fabric-cci-0.4.0+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.17
 
 ### `/ask` empty reply UX (Gemma / LiteLLM)

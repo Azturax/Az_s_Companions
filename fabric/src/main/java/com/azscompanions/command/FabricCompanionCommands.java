@@ -179,6 +179,17 @@ public final class FabricCompanionCommands {
                         }))
                 .then(com.azscompanions.deposit.FabricDepositCommands.buildBranch())
                 .then(buildPersonaBranch())
+                .then(Commands.literal("wiggly")
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            if (!com.azscompanions.perk.WigglyDogPerkSupport.isEligible(player.getUUID())) {
+                                ctx.getSource().sendFailure(Component.translatable(
+                                        "message.azscompanions.wiggly_dog_denied"));
+                                return 0;
+                            }
+                            com.azscompanions.perk.WigglyDogPerk.toggle(player);
+                            return 1;
+                        }))
                 .then(Commands.literal("teamfight")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("on")

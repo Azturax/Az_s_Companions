@@ -15,6 +15,7 @@ public final class CompanionCommandActions {
         CUSTOMIZE,
         FOLLOW,
         STAY,
+        SIT,
         WANDER
     }
 
@@ -45,6 +46,10 @@ public final class CompanionCommandActions {
             case STAY -> {
                 companion.setMode(CompanionMode.STAY);
                 toast(serverPlayer, companion, "message.azscompanions.mode_stay");
+            }
+            case SIT -> {
+                companion.setMode(CompanionMode.SIT);
+                toast(serverPlayer, companion, "message.azscompanions.mode_sit");
             }
             case WANDER -> {
                 companion.setMode(CompanionMode.WANDER);

@@ -96,6 +96,14 @@ public final class FabricNetworkingClient {
         ClientPlayNetworking.send(payload);
     }
 
+    public static void sendContextSkins(FabricNetworking.ContextSkinsPayload payload) {
+        ClientPlayNetworking.send(payload);
+    }
+
+    public static void sendOrbSettings(FabricNetworking.OrbSettingsPayload payload) {
+        ClientPlayNetworking.send(payload);
+    }
+
     public static void sendMenuAction(int entityId, String action) {
         ClientPlayNetworking.send(new FabricNetworking.MenuActionPayload(entityId, action));
     }
@@ -122,5 +130,9 @@ public final class FabricNetworkingClient {
                 accepted,
                 suggestProfile == null ? "" : suggestProfile,
                 applyProfile));
+    }
+
+    public static void sendToggleWigglyDog() {
+        ClientPlayNetworking.send(new FabricNetworking.ToggleWigglyDogPayload());
     }
 }

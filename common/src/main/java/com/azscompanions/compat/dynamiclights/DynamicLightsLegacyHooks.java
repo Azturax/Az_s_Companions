@@ -2,6 +2,7 @@ package com.azscompanions.compat.dynamiclights;
 
 import java.lang.reflect.Method;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 /**
  * Optional reflection hooks for older Dynamic Lights APIs (pre-LDL-v4 / RyoamicLights forks)
@@ -19,6 +20,20 @@ public final class DynamicLightsLegacyHooks {
      * @return true if a registration call succeeded
      */
     public static boolean tryRegisterLivingEntityHandler(Supplier<Object> entityTypeSupplier) {
+        return tryRegisterLivingEntityHandler(entityTypeSupplier, entity -> 0);
+    }
+
+    /**
+     * Same as {@link #tryRegisterLivingEntityHandler(Supplier)} with an extra luminance source
+     * (e.g. glowing-orb brightness). Merged with held-item scanning when
+     * {@code makeLivingEntityHandler} exists.
+     *
+     * @param extraLuminance receives the entity instance; return 0–15
+     */
+    public static boolean tryRegisterLivingEntityHandler(
+            Supplier<Object> entityTypeSupplier,
+            ToIntFunction<Object> extraLuminance
+    ) {
         if (!DynamicLightsCompat.shouldApplyHooks()) {
             return false;
         }
@@ -31,6 +46,7 @@ public final class DynamicLightsLegacyHooks {
         if (entityType == null) {
             return false;
         }
+        ToIntFunction<Object> luminance = extraLuminance == null ? entity -> 0 : extraLuminance;
 
         String[] handlerOwnerCandidates = {
                 "dev.lambdaurora.lambdynlights.api.DynamicLightHandlers",
@@ -44,30 +60,34 @@ public final class DynamicLightsLegacyHooks {
         };
 
         for (int i = 0; i < handlerOwnerCandidates.length; i++) {
-            if (tryRegister(handlerOwnerCandidates[i], handlerTypeCandidates[i], entityType)) {
+            if (tryRegister(handlerOwnerCandidates[i], handlerTypeCandidates[i], entityType, luminance)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean tryRegister(String handlersClassName, String handlerClassName, Object entityType) {
+    private static boolean tryRegister(
+            String handlersClassName,
+            String handlerClassName,
+            Object entityType,
+            ToIntFunction<Object> extraLuminance
+    ) {
         try {
             Class<?> handlers = Class.forName(handlersClassName);
             Class<?> handler = Class.forName(handlerClassName);
 
             Object livingHandler;
+            Object extra = proxyLuminanceHandler(handler, extraLuminance);
+            if (extra == null) {
+                return false;
+            }
             try {
                 Method makeLiving = handler.getMethod("makeLivingEntityHandler", handler);
-                // Zero-luminance extra handler — makeLivingEntityHandler merges held-item scanning.
-                Object empty = proxyEmptyHandler(handler);
-                if (empty == null) {
-                    return false;
-                }
-                livingHandler = makeLiving.invoke(null, empty);
+                // makeLivingEntityHandler merges held-item scanning with our extra luminance.
+                livingHandler = makeLiving.invoke(null, extra);
             } catch (NoSuchMethodException noMake) {
-                // Some forks only expose registerDynamicLightHandler(EntityType, DynamicLightHandler)
-                livingHandler = proxyEmptyHandler(handler);
+                livingHandler = extra;
             }
             if (livingHandler == null) {
                 return false;
@@ -85,10 +105,9 @@ public final class DynamicLightsLegacyHooks {
     }
 
     /**
-     * Builds a no-op DynamicLightHandler (getLuminance → 0) via a simple JDK proxy when the
-     * interface is present; otherwise returns null and skips registration.
+     * Builds a DynamicLightHandler whose {@code getLuminance} delegates to {@code luminanceFn}.
      */
-    private static Object proxyEmptyHandler(Class<?> handlerInterface) {
+    private static Object proxyLuminanceHandler(Class<?> handlerInterface, ToIntFunction<Object> luminanceFn) {
         if (!handlerInterface.isInterface()) {
             return null;
         }
@@ -98,7 +117,8 @@ public final class DynamicLightsLegacyHooks {
                 (proxy, method, args) -> {
                     String name = method.getName();
                     if ("getLuminance".equals(name)) {
-                        return 0;
+                        Object entity = (args != null && args.length > 0) ? args[0] : null;
+                        return entity == null ? 0 : Math.max(0, Math.min(15, luminanceFn.applyAsInt(entity)));
                     }
                     if ("isWaterSensitive".equals(name)) {
                         return false;

@@ -71,6 +71,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -107,6 +108,15 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<String> DATA_SKIN_PATH =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_SKIN_SLEEPING =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_SKIN_BATHING =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_SKIN_ADVENTURING =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    /** Synced activity context id for client skin resolve ({@code sleeping}/{@code bathing}/{@code adventuring}). */
+    private static final EntityDataAccessor<String> DATA_ACTIVE_CONTEXT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_SLIM_ARMS =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_GENDER =
@@ -123,6 +133,22 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<String> DATA_FORM =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Integer> DATA_ORB_COLOR =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_ORB_BRIGHTNESS =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_AMPLITUDE =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_SPEED =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_HEIGHT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_X =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_Y =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_Z =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
@@ -203,6 +229,9 @@ public class CompanionEntity extends PathfinderMob {
             ground.setCanOpenDoors(true);
             ground.setCanFloat(true);
         }
+        // Allow pathing through water when following a swimming owner (default WATER malus is high).
+        this.setPathfindingMalus(PathType.WATER, 0.0f);
+        this.setPathfindingMalus(PathType.WATER_BORDER, 0.0f);
         this.setCanPickUpLoot(true);
     }
 
@@ -243,6 +272,10 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_SITTING, false);
         builder.define(DATA_BODY_SCALE, DEFAULT_BODY_SCALE);
         builder.define(DATA_SKIN_PATH, "");
+        builder.define(DATA_SKIN_SLEEPING, "");
+        builder.define(DATA_SKIN_BATHING, "");
+        builder.define(DATA_SKIN_ADVENTURING, "");
+        builder.define(DATA_ACTIVE_CONTEXT, "");
         builder.define(DATA_SLIM_ARMS, false);
         builder.define(DATA_GENDER, CompanionGender.FEMALE.getSerializedName());
         builder.define(DATA_BUST, CompanionBodyProportions.DEFAULT_BUST);
@@ -251,6 +284,14 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
+        builder.define(DATA_ORB_COLOR, CompanionOrbSupport.DEFAULT_COLOR_RGB);
+        builder.define(DATA_ORB_BRIGHTNESS, CompanionOrbSupport.DEFAULT_BRIGHTNESS);
+        builder.define(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSupport.DEFAULT_FLOAT_AMPLITUDE);
+        builder.define(DATA_ORB_FLOAT_SPEED, CompanionOrbSupport.DEFAULT_FLOAT_SPEED);
+        builder.define(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSupport.DEFAULT_FLOAT_HEIGHT);
+        builder.define(DATA_ORB_OFFSET_X, CompanionOrbSupport.DEFAULT_OFFSET_X);
+        builder.define(DATA_ORB_OFFSET_Y, CompanionOrbSupport.DEFAULT_OFFSET_Y);
+        builder.define(DATA_ORB_OFFSET_Z, CompanionOrbSupport.DEFAULT_OFFSET_Z);
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
@@ -304,7 +345,11 @@ public class CompanionEntity extends PathfinderMob {
                 com.azscompanions.util.CompanionTorchHelper.tickWhileTasking(this, serverLevel);
             }
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
+            if (getForm().isOrb()) {
+                setNoGravity(true);
+            }
             tickOwnerActivity();
+            tickContextSkinState();
             tickHomeBedLeash();
             tickSleepPurr();
             tickPlayfulEvil();
@@ -379,6 +424,17 @@ public class CompanionEntity extends PathfinderMob {
             return;
         }
         ownerActivity.tick(owner.getX(), owner.getZ());
+    }
+
+    /** Sync active player-form context so clients apply sleeping/bathing/adventuring outfits. */
+    private void tickContextSkinState() {
+        boolean bathing = CompanionContextSkinSupport.isBathing(isSleeping(), isInWaterOrBubble());
+        CompanionContextSkinSupport.Context active = CompanionContextSkinSupport.activeContext(
+                getForm().isPlayer(), isSleeping(), bathing, isOwnerExploring());
+        String id = active == null ? "" : active.id();
+        if (!id.equals(entityData.get(DATA_ACTIVE_CONTEXT))) {
+            entityData.set(DATA_ACTIVE_CONTEXT, id);
+        }
     }
 
     /**
@@ -1512,6 +1568,56 @@ public class CompanionEntity extends PathfinderMob {
         entityData.set(DATA_SKIN_PATH, skinPath == null ? "" : skinPath);
     }
 
+    public String getSleepingSkinPath() {
+        return entityData.get(DATA_SKIN_SLEEPING);
+    }
+
+    public void setSleepingSkinPath(String skinPath) {
+        entityData.set(DATA_SKIN_SLEEPING, CompanionContextSkinSupport.sanitize(skinPath));
+    }
+
+    public String getBathingSkinPath() {
+        return entityData.get(DATA_SKIN_BATHING);
+    }
+
+    public void setBathingSkinPath(String skinPath) {
+        entityData.set(DATA_SKIN_BATHING, CompanionContextSkinSupport.sanitize(skinPath));
+    }
+
+    public String getAdventuringSkinPath() {
+        return entityData.get(DATA_SKIN_ADVENTURING);
+    }
+
+    public void setAdventuringSkinPath(String skinPath) {
+        entityData.set(DATA_SKIN_ADVENTURING, CompanionContextSkinSupport.sanitize(skinPath));
+    }
+
+    public void setContextSkins(String sleeping, String bathing, String adventuring) {
+        setSleepingSkinPath(sleeping);
+        setBathingSkinPath(bathing);
+        setAdventuringSkinPath(adventuring);
+    }
+
+    /** Synced activity context id, or blank when none / not player form. */
+    public String getActiveContextSkinId() {
+        return entityData.get(DATA_ACTIVE_CONTEXT);
+    }
+
+    /**
+     * Skin path for player-form rendering: context outfit → custom SkinPath → blank (base default).
+     */
+    public String getRenderSkinPath() {
+        CompanionContextSkinSupport.Context active =
+                CompanionContextSkinSupport.Context.byId(getActiveContextSkinId());
+        return CompanionContextSkinSupport.resolveRenderSkinPath(
+                getForm().isPlayer(),
+                active,
+                getSleepingSkinPath(),
+                getBathingSkinPath(),
+                getAdventuringSkinPath(),
+                getSkinPath());
+    }
+
     public boolean isSlimArms() {
         return entityData.get(DATA_SLIM_ARMS);
     }
@@ -1540,7 +1646,120 @@ public class CompanionEntity extends PathfinderMob {
         refreshDimensions();
         if (!level().isClientSide && previous != value) {
             ejectIncompatibleArmor();
+            if (!value.isOrb() && isNoGravity()) {
+                setNoGravity(false);
+            }
         }
+    }
+
+    public int getOrbColor() {
+        return CompanionOrbSupport.clampRgb(entityData.get(DATA_ORB_COLOR));
+    }
+
+    public void setOrbColor(int rgb) {
+        entityData.set(DATA_ORB_COLOR, CompanionOrbSupport.clampRgb(rgb));
+    }
+
+    public int getOrbBrightness() {
+        return CompanionOrbSupport.clampBrightness(entityData.get(DATA_ORB_BRIGHTNESS));
+    }
+
+    public void setOrbBrightness(int brightness) {
+        entityData.set(DATA_ORB_BRIGHTNESS, CompanionOrbSupport.clampBrightness(brightness));
+    }
+
+    public float getOrbFloatAmplitude() {
+        return CompanionOrbSupport.clampFloatAmplitude(entityData.get(DATA_ORB_FLOAT_AMPLITUDE));
+    }
+
+    public void setOrbFloatAmplitude(float amplitude) {
+        entityData.set(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSupport.clampFloatAmplitude(amplitude));
+    }
+
+    public float getOrbFloatSpeed() {
+        return CompanionOrbSupport.clampFloatSpeed(entityData.get(DATA_ORB_FLOAT_SPEED));
+    }
+
+    public void setOrbFloatSpeed(float speed) {
+        entityData.set(DATA_ORB_FLOAT_SPEED, CompanionOrbSupport.clampFloatSpeed(speed));
+    }
+
+    public float getOrbFloatHeight() {
+        return CompanionOrbSupport.clampFloatHeight(entityData.get(DATA_ORB_FLOAT_HEIGHT));
+    }
+
+    public void setOrbFloatHeight(float height) {
+        entityData.set(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSupport.clampFloatHeight(height));
+    }
+
+    public float getOrbOffsetX() {
+        return CompanionOrbSupport.clampOffset(entityData.get(DATA_ORB_OFFSET_X));
+    }
+
+    public void setOrbOffsetX(float offset) {
+        entityData.set(DATA_ORB_OFFSET_X, CompanionOrbSupport.clampOffset(offset));
+    }
+
+    public float getOrbOffsetY() {
+        return CompanionOrbSupport.clampOffset(entityData.get(DATA_ORB_OFFSET_Y));
+    }
+
+    public void setOrbOffsetY(float offset) {
+        entityData.set(DATA_ORB_OFFSET_Y, CompanionOrbSupport.clampOffset(offset));
+    }
+
+    public float getOrbOffsetZ() {
+        return CompanionOrbSupport.clampOffset(entityData.get(DATA_ORB_OFFSET_Z));
+    }
+
+    public void setOrbOffsetZ(float offset) {
+        entityData.set(DATA_ORB_OFFSET_Z, CompanionOrbSupport.clampOffset(offset));
+    }
+
+    /** Copy glowing-orb appearance / stand-off from another companion (Bits inherit parent). */
+    public void copyOrbSettingsFrom(CompanionEntity other) {
+        inheritOrbSettingsFrom(other);
+    }
+
+    /** Copy glowing-orb customization from a parent (children of orbs stay orbs visually). */
+    public void inheritOrbSettingsFrom(CompanionEntity parent) {
+        if (parent == null) {
+            return;
+        }
+        setOrbSettings(
+                parent.getOrbColor(),
+                parent.getOrbBrightness(),
+                parent.getOrbFloatAmplitude(),
+                parent.getOrbFloatSpeed(),
+                parent.getOrbFloatHeight(),
+                parent.getOrbOffsetX(),
+                parent.getOrbOffsetY(),
+                parent.getOrbOffsetZ());
+    }
+
+    /** Alias for drafts / packets that use the {@code Rgb} suffix. */
+    public int getOrbColorRgb() {
+        return getOrbColor();
+    }
+
+    public void setOrbSettings(
+            int colorRgb,
+            int brightness,
+            float floatAmplitude,
+            float floatSpeed,
+            float floatHeight,
+            float offsetX,
+            float offsetY,
+            float offsetZ
+    ) {
+        setOrbColor(colorRgb);
+        setOrbBrightness(brightness);
+        setOrbFloatAmplitude(floatAmplitude);
+        setOrbFloatSpeed(floatSpeed);
+        setOrbFloatHeight(floatHeight);
+        setOrbOffsetX(offsetX);
+        setOrbOffsetY(offsetY);
+        setOrbOffsetZ(offsetZ);
     }
 
     /** Move armor that this form cannot show into backpack (or drop) so slots stay honest. */
@@ -1825,6 +2044,13 @@ public class CompanionEntity extends PathfinderMob {
             setNameTagVisible(true);
             return;
         }
+        if (com.azscompanions.AzsCompanionsConstants.isWolfyOwner(player.getUUID())) {
+            setForm(CompanionForm.WOLF);
+            setCustomDisplayName(com.azscompanions.AzsCompanionsConstants.WOLFY_COMPANION_NAME);
+            setSkinPath("");
+            setNameTagVisible(true);
+            return;
+        }
         String playerName = player.getGameProfile().getName();
         setCustomDisplayName(playerName);
         if (!isKonNamed()) {
@@ -1920,6 +2146,9 @@ public class CompanionEntity extends PathfinderMob {
         tag.putString("Mode", entityData.get(DATA_MODE));
         tag.putString("VoiceProfile", voiceProfile);
         tag.putString("SkinPath", getSkinPath());
+        tag.putString("SkinSleeping", getSleepingSkinPath());
+        tag.putString("SkinBathing", getBathingSkinPath());
+        tag.putString("SkinAdventuring", getAdventuringSkinPath());
         tag.putBoolean("SlimArms", isSlimArms());
         tag.putString("Gender", getGender().getSerializedName());
         tag.putBoolean("KonBedGranted", konBedGranted);
@@ -1941,6 +2170,14 @@ public class CompanionEntity extends PathfinderMob {
         tag.putBoolean("ChunkLoading", chunkLoadingEnabled);
         tag.putString("CustomNameOverride", entityData.get(DATA_CUSTOM_NAME_OVERRIDE));
         tag.putString("CompanionForm", getForm().serializedName());
+        tag.putInt(CompanionOrbSupport.NBT_COLOR, getOrbColor());
+        tag.putInt(CompanionOrbSupport.NBT_BRIGHTNESS, getOrbBrightness());
+        tag.putFloat(CompanionOrbSupport.NBT_FLOAT_AMPLITUDE, getOrbFloatAmplitude());
+        tag.putFloat(CompanionOrbSupport.NBT_FLOAT_SPEED, getOrbFloatSpeed());
+        tag.putFloat(CompanionOrbSupport.NBT_FLOAT_HEIGHT, getOrbFloatHeight());
+        tag.putFloat(CompanionOrbSupport.NBT_OFFSET_X, getOrbOffsetX());
+        tag.putFloat(CompanionOrbSupport.NBT_OFFSET_Y, getOrbOffsetY());
+        tag.putFloat(CompanionOrbSupport.NBT_OFFSET_Z, getOrbOffsetZ());
         tag.putBoolean("ShowNameTag", isNameTagVisible());
         tag.putBoolean("ShowArmor", isArmorVisible());
         tag.putString("Attitude", getAttitude().serializedName());
@@ -2005,6 +2242,15 @@ public class CompanionEntity extends PathfinderMob {
         if (tag.contains("SkinPath")) {
             setSkinPath(tag.getString("SkinPath"));
         }
+        if (tag.contains("SkinSleeping")) {
+            setSleepingSkinPath(tag.getString("SkinSleeping"));
+        }
+        if (tag.contains("SkinBathing")) {
+            setBathingSkinPath(tag.getString("SkinBathing"));
+        }
+        if (tag.contains("SkinAdventuring")) {
+            setAdventuringSkinPath(tag.getString("SkinAdventuring"));
+        }
         if (tag.contains("SlimArms")) {
             setSlimArms(tag.getBoolean("SlimArms"));
         }
@@ -2059,6 +2305,30 @@ public class CompanionEntity extends PathfinderMob {
         } else {
             setForm(CompanionForm.PLAYER);
         }
+        setOrbColor(tag.contains(CompanionOrbSupport.NBT_COLOR)
+                ? tag.getInt(CompanionOrbSupport.NBT_COLOR)
+                : CompanionOrbSupport.DEFAULT_COLOR_RGB);
+        setOrbBrightness(tag.contains(CompanionOrbSupport.NBT_BRIGHTNESS)
+                ? tag.getInt(CompanionOrbSupport.NBT_BRIGHTNESS)
+                : CompanionOrbSupport.DEFAULT_BRIGHTNESS);
+        setOrbFloatAmplitude(tag.contains(CompanionOrbSupport.NBT_FLOAT_AMPLITUDE)
+                ? tag.getFloat(CompanionOrbSupport.NBT_FLOAT_AMPLITUDE)
+                : CompanionOrbSupport.DEFAULT_FLOAT_AMPLITUDE);
+        setOrbFloatSpeed(tag.contains(CompanionOrbSupport.NBT_FLOAT_SPEED)
+                ? tag.getFloat(CompanionOrbSupport.NBT_FLOAT_SPEED)
+                : CompanionOrbSupport.DEFAULT_FLOAT_SPEED);
+        setOrbFloatHeight(tag.contains(CompanionOrbSupport.NBT_FLOAT_HEIGHT)
+                ? tag.getFloat(CompanionOrbSupport.NBT_FLOAT_HEIGHT)
+                : CompanionOrbSupport.DEFAULT_FLOAT_HEIGHT);
+        setOrbOffsetX(tag.contains(CompanionOrbSupport.NBT_OFFSET_X)
+                ? tag.getFloat(CompanionOrbSupport.NBT_OFFSET_X)
+                : CompanionOrbSupport.DEFAULT_OFFSET_X);
+        setOrbOffsetY(tag.contains(CompanionOrbSupport.NBT_OFFSET_Y)
+                ? tag.getFloat(CompanionOrbSupport.NBT_OFFSET_Y)
+                : CompanionOrbSupport.DEFAULT_OFFSET_Y);
+        setOrbOffsetZ(tag.contains(CompanionOrbSupport.NBT_OFFSET_Z)
+                ? tag.getFloat(CompanionOrbSupport.NBT_OFFSET_Z)
+                : CompanionOrbSupport.DEFAULT_OFFSET_Z);
         if (tag.contains("ShowNameTag")) {
             setNameTagVisible(tag.getBoolean("ShowNameTag"));
         } else {

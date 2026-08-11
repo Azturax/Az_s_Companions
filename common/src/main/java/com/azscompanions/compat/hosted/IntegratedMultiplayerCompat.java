@@ -100,6 +100,7 @@ public final class IntegratedMultiplayerCompat {
     /**
      * When {@link CompanionAiSettings#integratedMultiplayerSharedLlm()} is on, treat the integrated
      * host like a shared-LLM multiplayer server even if {@code serverLlmOnly=false}.
+     * Default for that setting is false (opt-in) — does not silently favor server LLM.
      */
     public static boolean shouldForceSharedHostLlm(CompanionAiSettings settings) {
         if (settings == null || dedicatedServer.get()) {

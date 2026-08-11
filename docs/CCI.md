@@ -250,7 +250,7 @@ Prefer structured IMC. Freeform chat without `key=value` is ignored (map your pl
 | File | Keys |
 |------|------|
 | `azscompanions-server.toml` / Fabric defaults | `maxCompanionsPerPlayer`, `maxChildCompanionsPerLeader` (default 3), `supportAmountPerCompanion` (default 100), combat, chat messages |
-| `azscompanions-ai.json` / `.toml` | `provider`, `baseUrl`, `model`, `apiKeyEnv` (`AZS_LLM_API_KEY`), `serverLlmOnly` (default true — shared server endpoint), `perCompanionMemory` / `memoryMaxMessages` (separate minds), `idleChat`, `callPlayerWhenAway`, `childAutonomy`, `childLeashRadius`, MCP block. Legacy `chatListenMode` / `nameListen` / `enableAiActions` ignored. |
+| `azscompanions-ai.json` / `.toml` | `provider`, `baseUrl`, `model`, `apiKeyEnv` (`AZS_LLM_API_KEY`), `serverLlmOnly` (default **false** — opt-in shared host endpoint; SP uses the same file as a personal local/remote LLM), `perCompanionMemory` / `memoryMaxMessages` (separate minds), `idleChat`, `callPlayerWhenAway`, `childAutonomy`, `childLeashRadius`, MCP block. Legacy `chatListenMode` / `nameListen` / `enableAiActions` ignored. |
 
 Full key reference + copy-paste setups (LM Studio, Ollama, **remote** OpenAI/OpenRouter/Groq, MCP, disabled): [COMPANION_AI.md](COMPANION_AI.md).
 
@@ -310,15 +310,17 @@ Example ask outcome:
 
 | Symptom | Fix |
 |---------|-----|
-| Unknown subject | Check spelling/aliases; mod id must be `azscompanions` |
-| No companion nearby | Charm-summon or `companion_summon` first; stay within ~96 blocks |
-| Summon failed | Hit `maxCompanionsPerPlayer` (Bits/fight spawns exempt) |
-| AI ask disabled | Set `provider` in AI config; check `/az ai status` or `ai_status` |
+| Unknown subject | Check spelling/aliases; mod id must be `azscompanions`. Fabric `/azscci` prints a chat error for bad subjects. |
+| No companion nearby | Charm-summon or `companion_summon` first; stay within ~96 blocks — action bar: **No companion nearby** |
+| Summon failed | Hit `maxCompanionsPerPlayer` (Bits/fight spawns exempt) — toast **Summon failed** |
+| AI ask disabled | Set `provider` in AI config; check `/az ai status` or `ai_status` — toast **Companion AI** |
 | Greet still canned | Provider still `disabled`, or AI worker busy (falls back) |
-| Teamfight spawn idle | `/az teamfight on` first |
+| Teamfight spawn idle | `/az teamfight on` first — toast uses existing teamfight lang keys |
 | Wrong loader CCI | Match CCI + iChunUtil to Fabric vs NeoForge 1.21.1 |
 | Dedicated server | Streamer client with CCI must be online; actions bind to that player’s UUID |
 | Wrong player’s Kon | Name ask / CCI find are owner-scoped — check you own the companion |
+
+Streamer feedback: successful and failed CCI outcomes show a short **action-bar** line (`Title — body`) and, when the CCI API is present, an informational toast. Strings live under `assets/azscompanions/lang/en_us.json` (`toast.azscompanions.cci.*`, `message.azscompanions.cci.*`, `dialogue.azscompanions.cci.*`).
 
 ---
 

@@ -4,6 +4,8 @@ import com.azscompanions.config.CommonConfig;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
+import com.azscompanions.entity.CompanionOrbFollow;
+import com.azscompanions.entity.CompanionSwimFollow;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -72,7 +74,11 @@ public final class CompanionFollowGoal extends Goal {
         if (owner == null || owner.isSpectator() || owner.isSleeping()) {
             return false;
         }
-        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
+        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+            return true;
+        }
+        if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
+                || (CompanionSwimFollow.isOwnerInWater(owner) && CompanionSwimFollow.isCompanionInWater(companion))) {
             return true;
         }
         double dist = companion.distanceTo(owner);
@@ -99,7 +105,11 @@ public final class CompanionFollowGoal extends Goal {
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
+        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+            return true;
+        }
+        if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
+                || (CompanionSwimFollow.isOwnerInWater(owner) && CompanionSwimFollow.isCompanionInWater(companion))) {
             return true;
         }
         double dist = companion.distanceTo(owner);
@@ -129,7 +139,13 @@ public final class CompanionFollowGoal extends Goal {
             return;
         }
         double teleportLeash = Math.max(CommonConfig.TELEPORT_DISTANCE.get(), followRadius());
-        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash)) {
+        if (CompanionOrbFollow.tick(companion, owner)) {
+            return;
+        }
+        if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash, personalSpace())) {
+            return;
+        }
+        if (CompanionSwimFollow.tick(companion, owner, personalSpace())) {
             return;
         }
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
@@ -148,7 +164,8 @@ public final class CompanionFollowGoal extends Goal {
                     && companion.isOwnerExploring();
             if (mayTeleport) {
                 companion.safeTeleportNear(owner.blockPosition());
-            } else if (dist > followStop()) {
+            } else if (dist > followStop() || CompanionSwimFollow.shouldKeepFollowing(owner, companion)) {
+                // Owner in water: keep pathing into/toward them even inside the usual stop band.
                 pathTowardPreferredRing();
             } else {
                 companion.getNavigation().stop();

@@ -43,12 +43,10 @@ public final class FabricAiJoinOfferEvents {
             CompanionAiRuntime.get().applySettings(merged);
             if (wantApply) {
                 player.displayClientMessage(Component.literal(
-                        "Companion AI enabled (Use server LLM ON) and applied on this host."), false);
-            } else if (!merged.serverLlmOnly()) {
-                // apply() always sets serverLlmOnly true — tip alone is enough
-            } else {
+                        "Companion AI enabled with your local LLM (Use server LLM stays OFF — turn it ON in AI Config to share with others)."), false);
+            } else if (merged.serverLlmOnly()) {
                 player.displayClientMessage(Component.literal(
-                        "Use server LLM is ON for this host."), false);
+                        "Use server LLM is ON for this host (shared endpoint)."), false);
             }
         } catch (Exception e) {
             player.displayClientMessage(Component.literal(

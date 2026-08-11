@@ -45,10 +45,28 @@ public final class AzsCompanionsConstants {
 
     public static final String PECKER_COMPANION_NAME = "Pecker";
 
+    /**
+     * Wolfy: one-time brown wolf-form companion grant for this owner on join / perk apply.
+     */
+    public static final UUID WOLFY_PLAYER_UUID =
+            UUID.fromString("7c97e337-2c49-448c-b710-7655487f18df");
+
+    public static final String WOLFY_COMPANION_NAME = "Wolfy";
+
+    /**
+     * Toggleable player-following dog for {@link #WOLFY_PLAYER_UUID} (pink collar).
+     * Flies only while the owner is actively flying — same rule as special companions.
+     */
+    public static final String TOGGLE_WIGGLY_DOG_NAME = "Wiggly";
+
     private AzsCompanionsConstants() {
     }
 
     public static boolean isPeckerOwner(UUID uuid) {
         return uuid != null && PECKER_PLAYER_UUID.equals(uuid);
+    }
+
+    public static boolean isWolfyOwner(UUID uuid) {
+        return uuid != null && WOLFY_PLAYER_UUID.equals(uuid);
     }
 }

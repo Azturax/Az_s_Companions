@@ -105,15 +105,16 @@ public final class CompanionAiRuntime {
     }
 
     /**
-     * True when this host's AI config is authoritative for all companions
-     * ({@code serverLlmOnly}, a dedicated server, or integrated multiplayer with
-     * Essential/e4mc/LAN friends when {@code integratedMultiplayerSharedLlm} is on).
+     * True when this host's AI config is treated as the shared / authoritative LLM endpoint
+     * ({@code serverLlmOnly}, or integrated multiplayer when {@code integratedMultiplayerSharedLlm}
+     * is on). Dedicated servers are shared only when {@code serverLlmOnly} is on — ask still
+     * runs in the server process whenever the provider is enabled (no per-client LLM path).
      */
     public boolean usesSharedServerLlm() {
         if (!serverHostActive.get()) {
             return false;
         }
-        if (settings.serverLlmOnly() || dedicatedServerHost) {
+        if (settings.serverLlmOnly()) {
             return true;
         }
         return IntegratedMultiplayerCompat.shouldForceSharedHostLlm(settings);

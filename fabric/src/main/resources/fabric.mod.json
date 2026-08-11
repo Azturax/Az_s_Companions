@@ -42,7 +42,9 @@
     "e4mc": "*",
     "world-host": "*",
     "lambdynlights": "*",
-    "ryoamiclights": "*"
+    "ryoamiclights": "*",
+    "voicechat": "*",
+    "voicemod": "*"
   },
   "custom": {
     "azscompanions:support": {

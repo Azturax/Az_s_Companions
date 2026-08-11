@@ -24,12 +24,15 @@ public enum CompanionForm {
     SPIDER(FormGroup.HOSTILE, 1.4f, 0.9f),
     ENDERMAN(FormGroup.HOSTILE, 0.6f, 2.9f),
     HUSK(FormGroup.HOSTILE, 0.6f, 1.95f),
-    STRAY(FormGroup.HOSTILE, 0.6f, 1.99f);
+    STRAY(FormGroup.HOSTILE, 0.6f, 1.99f),
+    /** Soft glowing flying orb — custom color/brightness/float/offset; no mob proxy. */
+    GLOWING_ORB(FormGroup.SPECIAL, 0.45f, 0.45f);
 
     public enum FormGroup {
         PLAYER,
         ANIMAL,
-        HOSTILE
+        HOSTILE,
+        SPECIAL
     }
 
     private final FormGroup group;
@@ -58,9 +61,14 @@ public enum CompanionForm {
         return this == PLAYER;
     }
 
+    /** Glowing flying orb form (billboard render + dynamic light + always-air follow). */
+    public boolean isOrb() {
+        return this == GLOWING_ORB;
+    }
+
     /**
      * Forms that use vanilla humanoid armor layers (player mesh or zombie-family / skeleton / enderman proxies).
-     * True animals and spider have no humanoid armor layers — do not accept plate armor for them.
+     * True animals, spider, and orbs have no humanoid armor layers — do not accept plate armor for them.
      */
     public boolean supportsHumanoidArmor() {
         return switch (this) {
@@ -79,6 +87,9 @@ public enum CompanionForm {
     }
 
     public String displayLabel() {
+        if (this == GLOWING_ORB) {
+            return "Glowing Orb";
+        }
         String raw = name().toLowerCase(Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
@@ -87,8 +98,12 @@ public enum CompanionForm {
         if (value == null || value.isBlank()) {
             return PLAYER;
         }
+        String key = value.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        if ("ORB".equals(key) || "GLOWINGORB".equals(key.replace("_", ""))) {
+            return GLOWING_ORB;
+        }
         try {
-            return CompanionForm.valueOf(value.trim().toUpperCase(Locale.ROOT));
+            return CompanionForm.valueOf(key);
         } catch (IllegalArgumentException ex) {
             return PLAYER;
         }

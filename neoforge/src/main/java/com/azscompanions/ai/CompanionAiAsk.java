@@ -39,7 +39,7 @@ public final class CompanionAiAsk {
         if (!runtime.isEnabled()) {
             if (reportErrors) {
                 player.displayClientMessage(Component.literal(
-                        "Companion AI isn't available on this server. /ask requires server AI config (set provider in config/azscompanions-ai.toml — not disabled). There is no client-side LLM fallback."), false);
+                        "Companion AI isn't configured here. Set a provider in /az admin → AI Config (or config/azscompanions-ai.toml) — local LM Studio/Ollama or a remote API. On dedicated servers, AI runs on the host only."), false);
             }
             return 0;
         }

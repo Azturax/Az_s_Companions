@@ -60,10 +60,11 @@ All characters remain explicitly adult, wholesome, and non-sexual across every p
 - [x] Text-first companion AI (local / OpenAI-compatible / MCP) — see `docs/COMPANION_AI.md`
 - [ ] Custom Kon voice pack assets
 - [ ] Per-line subtitle timing
-- [ ] Simple Voice Chat proximity emission (optional)
+- [x] Simple Voice Chat soft-detect + optional soft-dep (`voicechat`, ref 2.6.21) — see [COMPAT.md](COMPAT.md)
+- [ ] Simple Voice Chat proximity emission (optional entity audio)
 - [ ] Privacy mode (owner-only / party-only / silent)
 
-~~VoiceMod bridge~~ — dropped (Control API is voice-filter/soundboard, not free companion TTS).
+~~VoiceMod TTS bridge~~ — not shipped (desktop Control API is voice-filter/soundboard, not free companion TTS). Mod id `voicemod` is soft-detected for awareness only.
 
 ## Testing matrix (target)
 

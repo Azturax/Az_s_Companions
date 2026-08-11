@@ -203,6 +203,7 @@ public final class CompanionRecruitment {
         child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
         child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
         child.inheritSpacingFrom(root);
+        child.inheritOrbSettingsFrom(root);
         level.addFreshEntity(child);
         return child;
     }

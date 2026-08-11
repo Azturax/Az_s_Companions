@@ -2,6 +2,8 @@ package com.azscompanions.perk;
 
 import com.azscompanions.AzsCompanionsConstants;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionFlightFollowSupport;
+import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -20,10 +22,8 @@ import java.util.UUID;
 public final class SpecialPlayerPerks {
     private static final int GLOW_DURATION_TICKS = 100;
     private static final int GLOW_REFRESH_BELOW = 40;
-    /** Max distance from owner while both are flying before a snap teleport. */
-    private static final double FLIGHT_KEEP_RADIUS = 5.0d;
     /** Soft hover offset above the owner's feet while flying. */
-    private static final double FLIGHT_HOVER_Y = 0.35d;
+    private static final double FLIGHT_HOVER_Y = CompanionFlightFollowSupport.HOVER_Y;
     /** Never land-teleport when already this close (matches ground MIN_TELEPORT_DISTANCE). */
     private static final double MIN_SAFE_LAND_TELEPORT = 24.0d;
 
@@ -71,10 +71,22 @@ public final class SpecialPlayerPerks {
                 player.onUpdateAbilities();
             }
             ensureGlow(player);
+        } else if (WigglyDogPerkSupport.isEligible(player.getUUID())) {
+            // Wolfy UUID: never auto-glow (glow is only for SPECIAL_PERK_PLAYER_UUID).
+            clearGlow(player);
         }
+        WolfyCompanionPerk.ensureFor(player);
+        WigglyDogPerk.tick(player);
     }
 
     public static void applyCompanionPerks(Mob companion, UUID ownerUuid) {
+        if (WigglyDogPerkSupport.isEligible(ownerUuid)) {
+            clearGlow(companion);
+        }
+        if (companion instanceof CompanionEntity orb && orb.getForm().isOrb()) {
+            companion.setNoGravity(true);
+            return;
+        }
         if (isSpecial(ownerUuid)) {
             ensureGlow(companion);
             Player owner = companion.level().getPlayerByUUID(ownerUuid);
@@ -108,12 +120,16 @@ public final class SpecialPlayerPerks {
     }
 
     /**
-     * Special-UUID flying companion follow.
+     * Special-UUID flying companion follow — holds the personal-space ring (not the owner's hitbox).
      *
      * @return {@code true} if this method fully handled movement (owner flying);
      *         {@code false} when the owner is grounded so normal ground follow should run.
      */
-    public static boolean tickCompanionFlightFollow(Mob companion, Player owner, double teleportDistance) {
+    public static boolean tickCompanionFlightFollow(
+            Mob companion,
+            Player owner,
+            double teleportDistance,
+            double personalSpace) {
         if (owner == null || !isSpecial(owner.getUUID())) {
             return false;
         }
@@ -123,41 +139,84 @@ public final class SpecialPlayerPerks {
             }
             return true; // fully handled: stay put
         }
+        return tickOwnedMobFlightFollow(companion, owner, teleportDistance, personalSpace, false);
+    }
 
+    public static boolean tickCompanionFlightFollow(Mob companion, Player owner, double teleportDistance) {
+        double space = CompanionFollowDistances.DEFAULT_PERSONAL_SPACE;
+        if (companion instanceof CompanionEntity c) {
+            space = c.getPersonalSpace();
+        }
+        return tickCompanionFlightFollow(companion, owner, teleportDistance, space);
+    }
+
+    /**
+     * Owner-relative flight follow for any mob (e.g. toggle Wiggly dog).
+     * Flies only while the owner is actively flying; lands when grounded.
+     *
+     * @return {@code true} if flight movement was applied; {@code false} if grounded follow should run.
+     */
+    public static boolean tickOwnedMobFlightFollow(Mob mob, Player owner) {
+        return tickOwnedMobFlightFollow(
+                mob,
+                owner,
+                CompanionFollowDistances.TELEPORT_DISTANCE,
+                CompanionFollowDistances.DEFAULT_PERSONAL_SPACE,
+                true);
+    }
+
+    private static boolean tickOwnedMobFlightFollow(
+            Mob mob,
+            Player owner,
+            double teleportDistance,
+            double personalSpace,
+            boolean playfulBob) {
+        if (owner == null || mob == null) {
+            return false;
+        }
         if (!isOwnerActivelyFlying(owner)) {
-            landCompanionNearOwner(companion, owner);
+            landCompanionNearOwner(mob, owner);
             return false;
         }
 
-        companion.setNoGravity(true);
-        companion.getNavigation().stop();
+        mob.setNoGravity(true);
+        mob.getNavigation().stop();
 
-        double dist = companion.distanceTo(owner);
-        if (dist > FLIGHT_KEEP_RADIUS) {
-            snapBesideOwner(companion, owner, Math.min(2.0d, FLIGHT_KEEP_RADIUS * 0.4d));
+        double space = Math.max(CompanionFollowDistances.PERSONAL_SPACE_MIN, personalSpace);
+        double preferred = CompanionFollowDistances.preferredDistance(space);
+        double dist = mob.distanceTo(owner);
+        if (CompanionFlightFollowSupport.shouldFlightSnap(dist, teleportDistance)) {
+            snapBesideOwner(mob, owner, preferred, space);
             return true;
         }
 
-        Vec3 target = owner.position().add(0.0d, FLIGHT_HOVER_Y, 0.0d);
-        Vec3 delta = target.subtract(companion.position());
-        double len = delta.length();
-        if (len < 0.45d) {
-            Vec3 motion = companion.getDeltaMovement().scale(0.55d);
-            double yDelta = target.y - companion.getY();
-            if (Math.abs(yDelta) > 0.2d) {
-                motion = new Vec3(motion.x, clamp(yDelta * 0.22d, -0.4d, 0.4d), motion.z);
-            }
-            companion.setDeltaMovement(motion);
-            companion.hurtMarked = true;
-            companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+        double[] target = CompanionFlightFollowSupport.preferredFlightTarget(
+                owner.getX(), owner.getY(), owner.getZ(),
+                mob.getX(), mob.getZ(),
+                preferred);
+        double distToTarget = mob.position().distanceTo(new Vec3(target[0], target[1], target[2]));
+        if (distToTarget < CompanionFlightFollowSupport.ARRIVE_EPSILON) {
+            Vec3 motion = mob.getDeltaMovement();
+            double[] hold = CompanionFlightFollowSupport.holdVelocity(
+                    motion.x, motion.y, motion.z, target[1], mob.getY());
+            double bob = playfulBob ? WigglyDogFlightSupport.bobDeltaY(mob.tickCount) : 0.0d;
+            mob.setDeltaMovement(hold[0], hold[1] + bob, hold[2]);
+            mob.hurtMarked = true;
+            mob.getLookControl().setLookAt(owner, 10.0f, mob.getMaxHeadXRot());
             return true;
         }
 
-        // Strong pull so the companion cannot drift near the 5-block edge.
-        double speed = dist > 3.0d ? 0.72d : (dist > 1.5d ? 0.52d : 0.38d);
-        companion.setDeltaMovement(delta.scale(1.0d / len).scale(speed));
-        companion.hurtMarked = true;
-        companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+        double speed = CompanionFollowDistances.tooClose(dist, space)
+                ? CompanionFlightFollowSupport.FLIGHT_SPEED_FAR
+                : CompanionFlightFollowSupport.speedForDistance(distToTarget);
+        double[] vel = CompanionFlightFollowSupport.velocityToward(
+                mob.getX(), mob.getY(), mob.getZ(),
+                target[0], target[1], target[2],
+                speed);
+        double bob = playfulBob ? WigglyDogFlightSupport.bobDeltaY(mob.tickCount) : 0.0d;
+        mob.setDeltaMovement(vel[0], vel[1] + bob, vel[2]);
+        mob.hurtMarked = true;
+        mob.getLookControl().setLookAt(owner, 10.0f, mob.getMaxHeadXRot());
         return true;
     }
 
@@ -174,11 +233,9 @@ public final class SpecialPlayerPerks {
             companion.hurtMarked = true;
             return;
         }
-        if (dist >= MIN_SAFE_LAND_TELEPORT && (floatingAbove || dist > FLIGHT_KEEP_RADIUS * 3.0d)) {
-            companion.teleportTo(owner.getX() + 0.5d, owner.getY(), owner.getZ() + 0.5d);
-            companion.setDeltaMovement(Vec3.ZERO);
-            companion.getNavigation().stop();
-            companion.hurtMarked = true;
+        if (dist >= MIN_SAFE_LAND_TELEPORT && (floatingAbove || dist > 15.0d)) {
+            double preferred = CompanionFollowDistances.PREFERRED_DISTANCE;
+            snapBesideOwner(companion, owner, preferred, CompanionFollowDistances.MIN_PERSONAL_SPACE);
         } else {
             Vec3 motion = companion.getDeltaMovement();
             if (Math.abs(motion.y) > 0.05d && motion.y > 0.0d) {
@@ -188,16 +245,17 @@ public final class SpecialPlayerPerks {
         }
     }
 
-    private static void snapBesideOwner(Mob companion, Player owner, double sideOffset) {
-        // Flight keep-radius snaps are intentional while flying, but never under ~personal space.
-        if (companion.distanceTo(owner) < 2.0d) {
+    private static void snapBesideOwner(Mob companion, Player owner, double sideOffset, double personalSpace) {
+        // Never snap under personal space — land on the preferred follow ring.
+        if (companion.distanceTo(owner) < personalSpace) {
             return;
         }
+        double offsetDist = Math.max(personalSpace, sideOffset);
         Vec3 away = companion.position().subtract(owner.position());
         if (away.horizontalDistanceSqr() < 1.0e-4d) {
             away = new Vec3(0.5d, 0.0d, 0.5d);
         }
-        Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(sideOffset);
+        Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(offsetDist);
         companion.teleportTo(
                 owner.getX() + offset.x,
                 owner.getY() + FLIGHT_HOVER_Y,
@@ -220,7 +278,9 @@ public final class SpecialPlayerPerks {
         }
     }
 
-    private static double clamp(double v, double min, double max) {
-        return Math.max(min, Math.min(max, v));
+    private static void clearGlow(LivingEntity entity) {
+        if (entity != null && entity.hasEffect(MobEffects.GLOWING)) {
+            entity.removeEffect(MobEffects.GLOWING);
+        }
     }
 }

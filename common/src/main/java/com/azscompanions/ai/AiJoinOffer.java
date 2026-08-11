@@ -40,7 +40,14 @@ public final class AiJoinOffer {
         boolean enabled = runtime != null && runtime.isEnabled();
         boolean allowProbe = !dedicatedServer;
         if (!enabled) {
+            // SP/integrated: optional local probe — does not favor server LLM
             return new AiJoinOffer(false, SOURCE_SERVER, "", "", "", !dedicatedServer, allowProbe);
+        }
+        // Only prompt about the *server* LLM when sharing is on, or on dedicated (host process
+        // is the only ask path). Personal SP/integrated configs (serverLlmOnly off) stay quiet.
+        boolean offerServerLlm = dedicatedServer || s.serverLlmOnly();
+        if (!offerServerLlm) {
+            return new AiJoinOffer(false, SOURCE_SERVER, "", "", "", false, false);
         }
         String label = s.provider().name().toLowerCase();
         String hint = LlmEndpointProbe.endpointHint(s.baseUrl());
@@ -53,7 +60,7 @@ public final class AiJoinOffer {
         } catch (Exception ignored) {
             // keep empty
         }
-        // Integrated host may still flip serverLlmOnly on Yes; dedicated already authoritative.
+        // Integrated host Yes → opt into serverLlmOnly; dedicated has no client LLM path.
         return new AiJoinOffer(true, SOURCE_SERVER, label, hint, profile, !dedicatedServer, false);
     }
 
@@ -113,8 +120,12 @@ public final class AiJoinOffer {
             where = "a local LLM";
         }
         if (SOURCE_LOCAL.equals(source)) {
-            return "Found a running LLM (" + where + ").\nConnect and use it as the server LLM for companion chat?";
+            return "Found a running LLM (" + where + ").\n"
+                    + "Optional: connect it for companion chat (/ask)?\n"
+                    + "No keeps AI off — you can still set any local or remote LLM in /az admin → AI Config.";
         }
-        return "This world/server has Companion AI ready (" + where + ").\nUse the server LLM for companion chat?";
+        return "This world/server offers a shared Companion AI (" + where + ").\n"
+                + "Optional: use the server LLM for companion chat?\n"
+                + "No leaves Use server LLM off — on singleplayer/LAN you can use your own LLM in AI Config instead.";
     }
 }

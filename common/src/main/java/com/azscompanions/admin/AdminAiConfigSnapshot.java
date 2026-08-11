@@ -42,7 +42,7 @@ public final class AdminAiConfigSnapshot {
      */
     private String apiKeyUpdate = null;
     private String inputLanguage = "en";
-    private boolean serverLlmOnly = true;
+    private boolean serverLlmOnly = false;
     private boolean idleChat = true;
     private boolean enableChatMessages = true;
     private String mcpUrl = "http://127.0.0.1:3001/mcp";

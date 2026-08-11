@@ -20,22 +20,33 @@ class LlmEndpointProbeTest {
     }
 
     @Test
-    void consentApplyEnablesServerLlmAndLiteLlmWhenDisabled() {
+    void consentApplyEnablesLocalLlmWithoutForcingServerMode() {
         CompanionAiSettings disabled = new CompanionAiSettings().setProvider(LlmProviderMode.DISABLED);
         CompanionAiSettings next = AiJoinConsentApply.apply(disabled, "litellm", true);
-        assertTrue(next.serverLlmOnly());
+        assertFalse(next.serverLlmOnly());
         assertEquals(LlmProviderMode.OPENAI_COMPATIBLE, next.provider());
         assertTrue(next.baseUrl().contains("4000"));
     }
 
     @Test
-    void consentApplyKeepsExistingProvider() {
+    void consentApplyServerOfferOptsIntoSharedMode() {
+        CompanionAiSettings local = new CompanionAiSettings()
+                .setProvider(LlmProviderMode.LOCAL)
+                .setBaseUrl(CompanionAiSettings.DEFAULT_BASE_URL)
+                .setServerLlmOnly(false);
+        CompanionAiSettings next = AiJoinConsentApply.apply(local, "litellm", false);
+        assertTrue(next.serverLlmOnly());
+        assertEquals(LlmProviderMode.LOCAL, next.provider());
+    }
+
+    @Test
+    void consentApplyKeepsExistingProviderOnLocalProbe() {
         CompanionAiSettings local = new CompanionAiSettings()
                 .setProvider(LlmProviderMode.LOCAL)
                 .setBaseUrl(CompanionAiSettings.DEFAULT_BASE_URL)
                 .setServerLlmOnly(false);
         CompanionAiSettings next = AiJoinConsentApply.apply(local, "litellm", true);
-        assertTrue(next.serverLlmOnly());
+        assertFalse(next.serverLlmOnly());
         assertEquals(LlmProviderMode.LOCAL, next.provider());
     }
 
@@ -47,5 +58,27 @@ class LlmEndpointProbeTest {
         assertFalse(offer.available());
         assertTrue(offer.allowLocalProbe());
         assertTrue(offer.allowApply());
+    }
+
+    @Test
+    void joinOfferSkipsWhenPersonalLlmOnIntegrated() {
+        CompanionAiRuntime runtime = CompanionAiRuntime.get();
+        runtime.applySettings(new CompanionAiSettings()
+                .setProvider(LlmProviderMode.LOCAL)
+                .setServerLlmOnly(false));
+        AiJoinOffer offer = AiJoinOffer.fromServerRuntime(runtime, false);
+        assertFalse(offer.available());
+        assertFalse(offer.allowLocalProbe());
+    }
+
+    @Test
+    void joinOfferAvailableOnDedicatedWhenAiEnabled() {
+        CompanionAiRuntime runtime = CompanionAiRuntime.get();
+        runtime.applySettings(new CompanionAiSettings()
+                .setProvider(LlmProviderMode.LOCAL)
+                .setServerLlmOnly(false));
+        AiJoinOffer offer = AiJoinOffer.fromServerRuntime(runtime, true);
+        assertTrue(offer.available());
+        assertFalse(offer.allowLocalProbe());
     }
 }

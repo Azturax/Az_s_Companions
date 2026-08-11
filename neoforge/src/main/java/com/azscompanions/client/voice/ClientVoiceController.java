@@ -17,7 +17,8 @@ public final class ClientVoiceController {
     }
 
     public static void init() {
-        // No external voice bridges.
+        // Soft-compat for Simple Voice Chat / VoiceMod is bootstrapped from CompatBootstrap
+        // (VoiceChatCompatModule) / FabricVoiceChatCompat — no TTS bridge here.
     }
 
     public static void handleDialogue(int entityId, String categoryName, String line, String voiceProfileId) {

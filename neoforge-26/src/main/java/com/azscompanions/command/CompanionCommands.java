@@ -126,6 +126,17 @@ public final class CompanionCommands {
                                 .executes(ctx -> openStats(ctx.getSource().getPlayerOrException(),
                                         StringArgumentType.getString(ctx, "name")))))
                 .then(buildPersonaBranch())
+                .then(Commands.literal("wiggly")
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            if (!com.azscompanions.perk.WigglyDogPerkSupport.isEligible(player.getUUID())) {
+                                ctx.getSource().sendFailure(Component.translatable(
+                                        "message.azscompanions.wiggly_dog_denied"));
+                                return 0;
+                            }
+                            com.azscompanions.perk.WigglyDogPerk.toggle(player);
+                            return 1;
+                        }))
                 .then(Commands.literal("teamfight")
                         .requires(net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("on").executes(ctx -> teamfight(ctx.getSource(), true)))

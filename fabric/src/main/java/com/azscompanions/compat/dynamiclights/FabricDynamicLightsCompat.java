@@ -32,7 +32,9 @@ public final class FabricDynamicLightsCompat {
             AzsCompanionsFabric.LOGGER.info(
                     "Dynamic lights soft-compat ready ({})",
                     String.join(", ", DynamicLightsCompat.presentModIds()));
-            if (DynamicLightsLegacyHooks.tryRegisterLivingEntityHandler(() -> FabricModEntities.COMPANION)) {
+            if (DynamicLightsLegacyHooks.tryRegisterLivingEntityHandler(
+                    () -> FabricModEntities.COMPANION,
+                    com.azscompanions.entity.CompanionOrbSupport::lightLuminanceReflective)) {
                 AzsCompanionsFabric.LOGGER.info("Registered companion with legacy DynamicLightHandlers API");
             }
         }

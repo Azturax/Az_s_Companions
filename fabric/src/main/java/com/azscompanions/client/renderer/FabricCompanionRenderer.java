@@ -86,6 +86,25 @@ public final class FabricCompanionRenderer
         if (FabricClientAppearanceDraft.matches(entity) && FabricClientAppearanceDraft.ACTIVE.form != null) {
             form = FabricClientAppearanceDraft.ACTIVE.form;
         }
+        if (form.isOrb()) {
+            this.shadowRadius = 0.15f * entity.getBodyScale();
+            int color = entity.getOrbColorRgb();
+            float amp = entity.getOrbFloatAmplitude();
+            float speed = entity.getOrbFloatSpeed();
+            float scale = entity.getBodyScale();
+            if (FabricClientAppearanceDraft.matches(entity)) {
+                color = FabricClientAppearanceDraft.ACTIVE.orbColorRgb;
+                amp = FabricClientAppearanceDraft.ACTIVE.orbFloatAmplitude;
+                speed = FabricClientAppearanceDraft.ACTIVE.orbFloatSpeed;
+                scale = FabricClientAppearanceDraft.ACTIVE.scale;
+            }
+            CompanionOrbRenderer.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight,
+                    color, amp, speed, scale);
+            if (this.shouldShowName(entity)) {
+                this.renderNameTag(entity, entity.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
+            }
+            return;
+        }
         if (!form.isPlayer()) {
             this.shadowRadius = 0.4f * entity.getBodyScale();
             formRenderer.render(entity, form, entityYaw, partialTicks, poseStack, buffer, packedLight);

@@ -106,3 +106,18 @@ type="optional"
 versionRange="*"
 ordering="NONE"
 side="CLIENT"
+
+# Optional proximity voice (Simple Voice Chat) — soft-dep; ref NeoForge 1.21.1 pin 2.6.21
+[[dependencies.${mod_id}]]
+modId="voicechat"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="voicemod"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"

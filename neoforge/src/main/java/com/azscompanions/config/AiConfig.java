@@ -109,17 +109,18 @@ public final class AiConfig {
         ENABLE_CHAT_MESSAGES = builder.comment("Show LLM replies as owner chat lines.")
                 .define("enableChatMessages", true);
         SERVER_LLM_ONLY = builder.comment(
-                        "When true (default), this server's AI config is used for all companions.",
-                        "Joining clients do not need local LM Studio or API keys — ask/listen/idle/CCI run server-side.",
-                        "Dedicated and LAN hosts: configure provider/baseUrl/model once here (or env AZS_LLM_API_KEY).",
-                        "Singleplayer: this same file applies to the integrated server.",
+                        "When true, this host's AI config is the shared / authoritative LLM endpoint.",
+                        "Default false (opt-in): SP/integrated can use a personal local or remote LLM without favoring server mode.",
+                        "ON: joining players use this process's provider/baseUrl/model/keys (no per-client LLM path).",
+                        "Dedicated: keys always stay on the server; turn ON when you want shared multiplayer AI.",
                         "Shared endpoint only — each companion still has its own mind (see perCompanionMemory).")
-                .define("serverLlmOnly", true);
+                .define("serverLlmOnly", false);
         INTEGRATED_MULTIPLAYER_SHARED_LLM = builder.comment(
-                        "When true (default), Essential / e4mc / World Host / Open-to-LAN integrated multiplayer",
-                        "forces the host LLM to stay authoritative even if serverLlmOnly=false.",
-                        "No effect on dedicated servers (always shared there). See docs/COMPAT.md.")
-                .define("integratedMultiplayerSharedLlm", true);
+                        "When true, Essential / e4mc / World Host / Open-to-LAN integrated multiplayer",
+                        "forces shared-host LLM status even if serverLlmOnly=false.",
+                        "Default false — does not silently favor server LLM when friends join.",
+                        "No effect on dedicated. See docs/COMPAT.md.")
+                .define("integratedMultiplayerSharedLlm", false);
         OWNER_NAME_FALLBACK = builder.comment(
                         "When true (default), on integrated hosted multiplayer only, matching player names",
                         "count as companion owner if UUIDs diverge (offline↔online remap).",

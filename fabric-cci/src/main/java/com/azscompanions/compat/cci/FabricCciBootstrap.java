@@ -1,6 +1,7 @@
 package com.azscompanions.compat.cci;
 
 import com.azscompanions.AzsCompanionsFabric;
+import com.azscompanions.cci.CciMessages;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import me.ichun.mods.cci.api.CCIApi;
 import me.ichun.mods.cci.api.IApi;
@@ -23,20 +24,22 @@ public final class FabricCciBootstrap implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 dispatcher.register(Commands.literal("azscci")
                         .requires(source -> source.hasPermission(0))
+                        .executes(ctx -> {
+                            ctx.getSource().sendSuccess(() -> CciMsg.t(CciMessages.COMMAND_USAGE), false);
+                            return 0;
+                        })
                         .then(Commands.argument("subject", StringArgumentType.word())
                                 .executes(ctx -> {
                                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                                     String subject = StringArgumentType.getString(ctx, "subject");
-                                    FabricCciBridge.dispatchForPlayer(player, subject, "");
-                                    return 1;
+                                    return runAzscci(player, subject, "");
                                 })
                                 .then(Commands.argument("message", StringArgumentType.greedyString())
                                         .executes(ctx -> {
                                             ServerPlayer player = ctx.getSource().getPlayerOrException();
                                             String subject = StringArgumentType.getString(ctx, "subject");
                                             String message = StringArgumentType.getString(ctx, "message");
-                                            FabricCciBridge.dispatchForPlayer(player, subject, message);
-                                            return 1;
+                                            return runAzscci(player, subject, message);
                                         })))));
 
         IApi api = CCIApi.getApiImpl();
@@ -45,5 +48,15 @@ public final class FabricCciBootstrap implements ModInitializer {
                 "CCI edition (Fabric) active — Content Creator Integration API present={}", present);
         AzsCompanionsFabric.LOGGER.info(
                 "CCI bridge: IMCOutcome mixin (same subjects as NeoForge) + /azscci CommandOutcome fallback");
+    }
+
+    private static int runAzscci(ServerPlayer player, String subject, String message) {
+        FabricCciCompanionAction action = FabricCciCompanionAction.fromSubject(subject);
+        if (action == null) {
+            player.displayClientMessage(CciMsg.t(CciMessages.UNKNOWN_SUBJECT, subject), false);
+            return 0;
+        }
+        FabricCciCompanionActions.applyOnServer(player, action, message == null ? "" : message);
+        return 1;
     }
 }

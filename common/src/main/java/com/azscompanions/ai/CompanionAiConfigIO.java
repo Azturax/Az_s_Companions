@@ -235,8 +235,8 @@ public final class CompanionAiConfigIO {
         JsonObject root = new JsonObject();
         root.addProperty("_comment",
                 "Text dialogue AI via /ask only. provider: disabled|local|openai_compatible|mcp "
-                        + "(aliases: litellm, openrouter, …). Multiplayer: shared server LLM endpoint "
-                        + "(serverLlmOnly), separate minds per companion (perCompanionMemory). Prefer env API keys. "
+                        + "(aliases: litellm, openrouter, …). Opt-in shared host LLM "
+                        + "(serverLlmOnly, default false); separate minds per companion (perCompanionMemory). Prefer env API keys. "
                         + "Legacy chatListenMode/nameListen/enableAiActions are ignored.");
         root.addProperty("provider", s.provider().name().toLowerCase());
         root.addProperty("baseUrl", s.baseUrl());

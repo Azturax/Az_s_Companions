@@ -62,8 +62,10 @@ public final class NeoAiJoinOfferClient {
                 },
                 Component.literal(offer.promptTitle()),
                 Component.literal(offer.promptMessage()),
-                Component.literal("Yes — use server LLM"),
-                Component.literal("No")));
+                Component.literal(AiJoinOffer.SOURCE_LOCAL.equals(offer.source())
+                        ? "Yes — use this LLM"
+                        : "Yes — use server LLM"),
+                Component.literal("No — use my own / skip")));
     }
 
     private static void sendConsent(boolean accepted, AiJoinOffer offer) {

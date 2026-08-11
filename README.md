@@ -1,11 +1,12 @@
-﻿# Az's Companions
+# Az's Companions
 
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.3.17](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.17)
+- **Release:** [v0.4.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.4.0)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
+- **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
 - **Gather / deposit:** [docs/GATHER.md](docs/GATHER.md)
 - **Multi-version plan:** [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md)
 
@@ -16,10 +17,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.3.17+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.3.17+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.3.17+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.3.17+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.4.0+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.4.0+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.4.0+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.4.0+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -32,14 +33,18 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 **Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped yet — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (0.3.17)
+## Gameplay (0.4.0)
 
-- Companion Charm, Follow/Stay/Wander, Customize, inventory, night sleep
+- Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
+- **Glowing Orb** form (Special) with color/brightness/float/offset; air personal space + wander flight
+- **Swim follow:** companions swim with you in water while in Follow mode
+- **Activity skins** (player form): Sleeping / Bathing / Adventuring outfits — [CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
 - **Chunk tickets:** summoned companions and child Bits force-load their chunk (`companionChunkLoading`, default true) so AI/follow/sleep keep running when you walk away — NeoForge `config/azscompanions-server.toml` `[performance]`; Fabric mirrors defaults in code. Cap: `maxForcedChunksPerPlayer` (default 16). Not FTB claims.
 - **Optional AI:** `/ask` · `/az ask` text dialogue only (ask-only; no auto chat listen / name mention / AI world tools) — [COMPANION_AI.md](docs/COMPANION_AI.md)
-- **Admin:** `/az admin` · `/az ai config` (ops / host / whitelist) — editable LLM profiles + `serverLlmOnly`; save AI file (restart to apply) — [ADMIN.md](docs/ADMIN.md)
-- **Commands:** primary root `/az` (alias `/azscompanions`)
+- **Admin:** `/az admin` · `/az ai config` (ops / host / whitelist) — editable LLM profiles + opt-in `serverLlmOnly` (Use server LLM, default OFF); save AI file — [ADMIN.md](docs/ADMIN.md) · [COMPANION_AI.md](docs/COMPANION_AI.md)
+- **Commands:** primary root `/az` (alias `/azscompanions`); `/az wiggly` for UUID toggle dog
 - **CCI:** full manual **[CCI Documentation](docs/CCI.md)** — CCI-summoned companions use streamer chat; AI when configured
+- Soft-compat: Simple Voice Chat + dynamic lights — [COMPAT.md](docs/COMPAT.md)
 
 ## Build
 
@@ -47,7 +52,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 ./gradlew buildAll
 ```
 
-Outputs under `*/build/libs/azscompanions-*-0.3.17+1.21.1.jar`.
+Outputs under `*/build/libs/azscompanions-*-0.4.0+1.21.1.jar`.
 
 ## License
 

@@ -30,10 +30,12 @@ While summoned, each companion entity (primary and child Bits) holds a loader ch
 
 Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps. FTB Teams/Chunks/Ranks: reflection soft-deps — [COMPAT.md](COMPAT.md).
 
+**Glowing Orb** form (`CompanionForm.GLOWING_ORB`): settings in `CompanionOrbSettings` (NBT + synched); always-air follow via `CompanionOrbFollow` + `CompanionFlightFollowSupport`; render `CompanionOrbRenderer` (cutout + eyes — Sodium/Iris/Oculus safe); dynamic-light luminance via `DynamicLightsLegacyHooks`.
+
 ## Pathfinding / home blocks
 
 Baritone is **not** a hard dependency in 0.1.x. Prefer a light foundation later: owned **home beacon** + **deposit box** blocks that companions recognize via UUID ownership, rather than shipping Baritone in this pass.
 
 ## Voice
 
-`VoiceService` (server) → `CompanionDialoguePacket` → `ClientVoiceController` (owner text + optional Minecraft sound cues). Optional LLM/MCP **text** chat: [COMPANION_AI.md](COMPANION_AI.md). No VoiceMod.
+`VoiceService` (server) → `CompanionDialoguePacket` → `ClientVoiceController` (owner text + optional Minecraft sound cues). Optional LLM/MCP **text** chat: [COMPANION_AI.md](COMPANION_AI.md). Optional **Simple Voice Chat** soft-detect (`voicechat`, ref `voicechat-neoforge-1.21.1-2.6.21.jar`) + VoiceMod awareness — no TTS bridge: [COMPAT.md](COMPAT.md#proximity-voice-simple-voice-chat--voicemod).

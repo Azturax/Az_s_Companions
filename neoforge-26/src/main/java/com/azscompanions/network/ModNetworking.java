@@ -6,6 +6,8 @@ import com.azscompanions.network.packet.CompanionAiThinkingPacket;
 import com.azscompanions.network.packet.CompanionBehaviorPacket;
 import com.azscompanions.network.packet.CompanionCommandPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
+import com.azscompanions.network.packet.CompanionContextSkinsPacket;
+import com.azscompanions.network.packet.CompanionOrbSettingsPacket;
 import com.azscompanions.network.packet.CompanionSettingsPacket;
 import com.azscompanions.network.packet.AdminActionPacket;
 import com.azscompanions.network.packet.AdminAiSavePacket;
@@ -17,6 +19,7 @@ import com.azscompanions.network.packet.OpenCompanionPersonaPacket;
 import com.azscompanions.network.packet.OpenCompanionStatsPacket;
 import com.azscompanions.network.packet.RecruitCompanionPacket;
 import com.azscompanions.network.packet.TeamFightHudPacket;
+import com.azscompanions.network.packet.ToggleWigglyDogPacket;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -31,10 +34,13 @@ public final class ModNetworking {
         registrar.playToServer(RecruitCompanionPacket.TYPE, RecruitCompanionPacket.STREAM_CODEC, RecruitCompanionPacket::handle);
         registrar.playToServer(CompanionCommandPacket.TYPE, CompanionCommandPacket.STREAM_CODEC, CompanionCommandPacket::handle);
         registrar.playToServer(CompanionSettingsPacket.TYPE, CompanionSettingsPacket.STREAM_CODEC, CompanionSettingsPacket::handle);
+        registrar.playToServer(CompanionContextSkinsPacket.TYPE, CompanionContextSkinsPacket.STREAM_CODEC, CompanionContextSkinsPacket::handle);
+        registrar.playToServer(CompanionOrbSettingsPacket.TYPE, CompanionOrbSettingsPacket.STREAM_CODEC, CompanionOrbSettingsPacket::handle);
         registrar.playToServer(CompanionBehaviorPacket.TYPE, CompanionBehaviorPacket.STREAM_CODEC, CompanionBehaviorPacket::handle);
         registrar.playToServer(CompanionPersonaPacket.TYPE, CompanionPersonaPacket.STREAM_CODEC, CompanionPersonaPacket::handle);
         registrar.playToServer(AdminAiSavePacket.TYPE, AdminAiSavePacket.STREAM_CODEC, AdminAiSavePacket::handle);
         registrar.playToServer(AdminActionPacket.TYPE, AdminActionPacket.STREAM_CODEC, AdminActionPacket::handle);
+        registrar.playToServer(ToggleWigglyDogPacket.TYPE, ToggleWigglyDogPacket.STREAM_CODEC, ToggleWigglyDogPacket::handle);
 
         // Codecs must register on both sides. Client GUI/voice handlers must never be classloaded
         // on the dedicated server (OpenCompanionCreatorPacket used to import CompanionCreatorScreen).

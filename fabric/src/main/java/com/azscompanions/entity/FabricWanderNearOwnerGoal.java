@@ -1,5 +1,6 @@
 package com.azscompanions.entity;
 
+import com.azscompanions.perk.SpecialPlayerPerks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
@@ -11,6 +12,7 @@ import java.util.EnumSet;
 
 /**
  * Happy Ghast–inspired leisurely wander (Fabric): slow strolls, pauses, walk-back only.
+ * While the owner is flying (special-perk flight), wanders in the air on a personal-space ring.
  */
 public final class FabricWanderNearOwnerGoal extends Goal {
     private static final int START_CHANCE = 80;
@@ -40,7 +42,7 @@ public final class FabricWanderNearOwnerGoal extends Goal {
             return false;
         }
         if (isBeyondWanderRadius()) {
-            wanted = wanderCenter();
+            wanted = isAirWander() ? preferredAirHold() : wanderCenter();
             return wanted != null;
         }
         if (companion.getRandom().nextInt(START_CHANCE) != 0) {
@@ -61,15 +63,22 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         if (pauseTicks > 0) {
             return true;
         }
-        return wanted != null
-                && !companion.getNavigation().isDone()
+        if (wanted == null) {
+            return false;
+        }
+        if (isAirWander()) {
+            return companion.distanceToSqr(wanted.x, wanted.y, wanted.z)
+                    > CompanionFlightFollowSupport.ARRIVE_EPSILON
+                    * CompanionFlightFollowSupport.ARRIVE_EPSILON;
+        }
+        return !companion.getNavigation().isDone()
                 && companion.distanceToSqr(wanted.x, wanted.y, wanted.z) > 1.25d;
     }
 
     @Override
     public void start() {
         pauseTicks = 0;
-        if (wanted != null) {
+        if (wanted != null && !isAirWander()) {
             companion.getNavigation().moveTo(wanted.x, wanted.y, wanted.z, SPEED);
         }
     }
@@ -84,6 +93,11 @@ public final class FabricWanderNearOwnerGoal extends Goal {
 
     @Override
     public void tick() {
+        if (isAirWander()) {
+            tickAirWander();
+            return;
+        }
+
         if (companion.getRandom().nextInt(20) == 0) {
             Vec3 look = wanted != null ? wanted : wanderCenter();
             if (look != null) {
@@ -112,12 +126,97 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         }
     }
 
+    private void tickAirWander() {
+        companion.getNavigation().stop();
+        companion.setNoGravity(true);
+
+        Player owner = companion.getOwner();
+        double personal = companion.getPersonalSpace();
+        if (owner != null && CompanionFollowDistances.tooClose(companion.distanceTo(owner), personal)) {
+            pauseTicks = 0;
+            wanted = preferredAirHold();
+        }
+
+        if (companion.getRandom().nextInt(20) == 0) {
+            Vec3 look = wanted != null ? wanted : wanderCenter();
+            if (look != null) {
+                companion.getLookControl().setLookAt(look.x, look.y + 1.0d, look.z, 8.0f, companion.getMaxHeadXRot());
+            }
+        }
+
+        if (isBeyondWanderRadius()) {
+            pauseTicks = 0;
+            wanted = preferredAirHold();
+        }
+
+        if (pauseTicks > 0) {
+            pauseTicks--;
+            Vec3 motion = companion.getDeltaMovement();
+            double holdY = owner != null
+                    ? owner.getY() + CompanionFlightFollowSupport.HOVER_Y
+                    : companion.getY();
+            double[] hold = CompanionFlightFollowSupport.holdVelocity(
+                    motion.x, motion.y, motion.z, holdY, companion.getY());
+            companion.setDeltaMovement(hold[0], hold[1], hold[2]);
+            companion.hasImpulse = true;
+            return;
+        }
+
+        if (wanted == null) {
+            wanted = pickWanderTarget();
+            if (wanted == null) {
+                return;
+            }
+        }
+
+        double distToWanted = companion.distanceToSqr(wanted.x, wanted.y, wanted.z);
+        if (distToWanted <= CompanionFlightFollowSupport.ARRIVE_EPSILON
+                * CompanionFlightFollowSupport.ARRIVE_EPSILON) {
+            pauseTicks = PAUSE_MIN + companion.getRandom().nextInt(PAUSE_MAX - PAUSE_MIN + 1);
+            wanted = null;
+            return;
+        }
+
+        double[] vel = CompanionFlightFollowSupport.velocityToward(
+                companion.getX(), companion.getY(), companion.getZ(),
+                wanted.x, wanted.y, wanted.z,
+                CompanionFlightFollowSupport.WANDER_SPEED);
+        companion.setDeltaMovement(vel[0], vel[1], vel[2]);
+        companion.hasImpulse = true;
+    }
+
+    private boolean isAirWander() {
+        Player owner = companion.getOwner();
+        return owner != null
+                && SpecialPlayerPerks.isSpecial(owner)
+                && SpecialPlayerPerks.isOwnerActivelyFlying(owner);
+    }
+
+    private Vec3 preferredAirHold() {
+        Vec3 center = wanderCenter();
+        if (center == null) {
+            return null;
+        }
+        double preferred = CompanionFollowDistances.preferredDistance(companion.getPersonalSpace());
+        double[] t = CompanionFlightFollowSupport.preferredFlightTarget(
+                center.x, center.y, center.z,
+                companion.getX(), companion.getZ(),
+                preferred);
+        return new Vec3(t[0], t[1], t[2]);
+    }
+
     private boolean isBeyondWanderRadius() {
         Vec3 center = wanderCenter();
         if (center == null) {
             return false;
         }
         double maxR = wanderMaxRadius();
+        if (isAirWander()) {
+            return CompanionFlightFollowSupport.beyondAirWanderRadius(
+                    companion.getX(), companion.getY(), companion.getZ(),
+                    center.x, center.y, center.z,
+                    maxR);
+        }
         return companion.distanceToSqr(center.x, companion.getY(), center.z) > (maxR + 1.5d) * (maxR + 1.5d);
     }
 
@@ -179,6 +278,28 @@ public final class FabricWanderNearOwnerGoal extends Goal {
         } else {
             minR = CompanionFollowDistances.IDLE_WANDER_MIN;
             maxR = companion.getWanderRadius();
+        }
+
+        if (isAirWander()) {
+            for (int attempt = 0; attempt < 12; attempt++) {
+                double angle = companion.getRandom().nextDouble() * Math.PI * 2.0d;
+                double[] t = CompanionFlightFollowSupport.pickAirWanderTarget(
+                        center.x, center.y, center.z,
+                        companion.getPersonalSpace(),
+                        minR, maxR,
+                        angle,
+                        companion.getRandom().nextDouble(),
+                        companion.getRandom().nextDouble());
+                BlockPos pos = BlockPos.containing(t[0], t[1], t[2]);
+                if (!isChunkLoaded(level, pos)) {
+                    continue;
+                }
+                if (!level.getBlockState(pos).isAir() || !level.getBlockState(pos.above()).isAir()) {
+                    continue;
+                }
+                return new Vec3(t[0], t[1], t[2]);
+            }
+            return preferredAirHold();
         }
 
         Vec3 soft = DefaultRandomPos.getPos(companion, 8, 4);

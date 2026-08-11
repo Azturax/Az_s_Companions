@@ -4,9 +4,13 @@ import com.azscompanions.client.ClientAppearanceDraft;
 import com.azscompanions.client.CompanionSkinTextures;
 import com.azscompanions.client.PlayerSkinLookup;
 import com.azscompanions.entity.CompanionBodyProportions;
+import com.azscompanions.entity.CompanionContextSkinSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
+import com.azscompanions.entity.CompanionOrbSettings;
+import com.azscompanions.network.packet.CompanionContextSkinsPacket;
+import com.azscompanions.network.packet.CompanionOrbSettingsPacket;
 import com.azscompanions.network.packet.CompanionSettingsPacket;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -33,6 +37,10 @@ import java.util.function.Supplier;
  * Layout: left category nav | centered preview | scrollable right-side controls.
  */
 public final class CompanionCreatorScreen extends Screen {
+    public enum TopTab {
+        APPEARANCE, ACTIVITY
+    }
+
     public enum Category {
         NAME, FORM, SKIN, BODY
     }
@@ -45,14 +53,21 @@ public final class CompanionCreatorScreen extends Screen {
     private static final int GAP = 8;
     private static final int SCROLLBAR_W = 6;
     private static final int FOOTER_H = 30;
-    private static final int HEADER_H = 34;
+    private static final int HEADER_H = 52;
 
     private final CompanionEntity companion;
     @Nullable
     private final Screen parent;
     private final ClientAppearanceDraft draft;
+    private TopTab topTab = TopTab.APPEARANCE;
     private Category category = Category.BODY;
     private EditBox nameBox;
+    private EditBox sleepLocalBox;
+    private EditBox sleepUrlBox;
+    private EditBox bathLocalBox;
+    private EditBox bathUrlBox;
+    private EditBox adventureLocalBox;
+    private EditBox adventureUrlBox;
     private Button slimButton;
     private int panelX;
     private int panelY;
@@ -117,18 +132,40 @@ public final class CompanionCreatorScreen extends Screen {
         clearWidgets();
         nameBox = null;
         slimButton = null;
+        sleepLocalBox = sleepUrlBox = bathLocalBox = bathUrlBox = adventureLocalBox = adventureUrlBox = null;
 
-        int catY = panelY + HEADER_H + 2;
-        for (Category cat : Category.values()) {
-            final Category c = cat;
-            String label = (category == c ? "> " : "  ") + catLabel(cat);
-            addRenderableWidget(Button.builder(Component.literal(label), b -> {
-                syncEditBoxesToDraft();
-                category = c;
-                rightScroll = 0;
-                init();
-            }).bounds(panelX + 6, catY, NAV_W - 2, 20).build());
-            catY += 24;
+        int tabY = panelY + 6;
+        int tabW = 110;
+        addRenderableWidget(Button.builder(
+                Component.literal(topTab == TopTab.APPEARANCE ? "[Appearance]" : "Appearance"),
+                b -> {
+                    syncEditBoxesToDraft();
+                    topTab = TopTab.APPEARANCE;
+                    rightScroll = 0;
+                    init();
+                }).bounds(panelX + panelW - tabW * 2 - 14, tabY, tabW, 18).build());
+        addRenderableWidget(Button.builder(
+                Component.literal(topTab == TopTab.ACTIVITY ? "[Activity]" : "Activity"),
+                b -> {
+                    syncEditBoxesToDraft();
+                    topTab = TopTab.ACTIVITY;
+                    rightScroll = 0;
+                    init();
+                }).bounds(panelX + panelW - tabW - 8, tabY, tabW, 18).build());
+
+        if (topTab == TopTab.APPEARANCE) {
+            int catY = panelY + HEADER_H + 2;
+            for (Category cat : Category.values()) {
+                final Category c = cat;
+                String label = (category == c ? "> " : "  ") + catLabel(cat);
+                addRenderableWidget(Button.builder(Component.literal(label), b -> {
+                    syncEditBoxesToDraft();
+                    category = c;
+                    rightScroll = 0;
+                    init();
+                }).bounds(panelX + 6, catY, NAV_W - 2, 20).build());
+                catY += 24;
+            }
         }
 
         addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> cancelAndClose())
@@ -137,7 +174,9 @@ public final class CompanionCreatorScreen extends Screen {
                 .bounds(panelX + panelW - 72, panelY + panelH - 24, 60, 18).build());
 
         int y = 0;
-        if (category == Category.NAME) {
+        if (topTab == TopTab.ACTIVITY) {
+            y = buildActivityTab(y);
+        } else if (category == Category.NAME) {
             addRightLabel(y, "Display name", 0xA0A0A0);
             y += 14;
             nameBox = new EditBox(font, rightX, 0, rightW, 18, Component.literal("Name"));
@@ -190,6 +229,10 @@ public final class CompanionCreatorScreen extends Screen {
             y = addFormGroupButtons(y, "Player", CompanionForm.FormGroup.PLAYER);
             y = addFormGroupButtons(y, "Animals", CompanionForm.FormGroup.ANIMAL);
             y = addFormGroupButtons(y, "Hostiles", CompanionForm.FormGroup.HOSTILE);
+            y = addFormGroupButtons(y, "Special", CompanionForm.FormGroup.SPECIAL);
+            if (draft.form != null && draft.form.isOrb()) {
+                y = addOrbSettingsSection(y);
+            }
             y = addRightWrapped(y,
                     "Forms keep ownership, charm, Follow/Stay/Wander, and CCI actions. Creeper excluded.",
                     0xA0A0A0);
@@ -373,6 +416,18 @@ public final class CompanionCreatorScreen extends Screen {
         if (nameBox != null) {
             draft.name = nameBox.getValue();
         }
+        if (sleepLocalBox != null && sleepUrlBox != null
+                && (!sleepLocalBox.getValue().isBlank() || !sleepUrlBox.getValue().isBlank())) {
+            draft.sleepingSkinPath = preferContextPath(sleepLocalBox.getValue(), sleepUrlBox.getValue());
+        }
+        if (bathLocalBox != null && bathUrlBox != null
+                && (!bathLocalBox.getValue().isBlank() || !bathUrlBox.getValue().isBlank())) {
+            draft.bathingSkinPath = preferContextPath(bathLocalBox.getValue(), bathUrlBox.getValue());
+        }
+        if (adventureLocalBox != null && adventureUrlBox != null
+                && (!adventureLocalBox.getValue().isBlank() || !adventureUrlBox.getValue().isBlank())) {
+            draft.adventuringSkinPath = preferContextPath(adventureLocalBox.getValue(), adventureUrlBox.getValue());
+        }
     }
 
     private void onNameEdited(String value) {
@@ -473,6 +528,235 @@ public final class CompanionCreatorScreen extends Screen {
         }
     }
 
+    private int buildActivityTab(int y) {
+        boolean playerForm = draft.form != null && draft.form.isPlayer();
+        addRightLabel(y, "Activity outfits", 0xA0A0A0);
+        y += 14;
+        y = addRightWrapped(y,
+                "Player form only. Priority: context outfit → custom skin → default.",
+                playerForm ? 0xA0A0A0 : 0xFFAA66);
+        y += 6;
+        if (!playerForm) {
+            y = addRightWrapped(y,
+                    "Switch Form → Player to apply these skins in-game. Settings still save.",
+                    0xFFAA66);
+            y += 8;
+        }
+        y = addContextSkinSection(y, "Sleeping", draft.sleepingSkinPath,
+                (local, url) -> {
+                    draft.sleepingSkinPath = preferContextPath(local, url);
+                    pushContextSkins();
+                },
+                () -> {
+                    draft.sleepingSkinPath = "";
+                    pushContextSkins();
+                    init();
+                },
+                boxes -> {
+                    sleepLocalBox = boxes[0];
+                    sleepUrlBox = boxes[1];
+                });
+        y = addContextSkinSection(y, "Bathing", draft.bathingSkinPath,
+                (local, url) -> {
+                    draft.bathingSkinPath = preferContextPath(local, url);
+                    pushContextSkins();
+                },
+                () -> {
+                    draft.bathingSkinPath = "";
+                    pushContextSkins();
+                    init();
+                },
+                boxes -> {
+                    bathLocalBox = boxes[0];
+                    bathUrlBox = boxes[1];
+                });
+        y = addContextSkinSection(y, "Adventuring", draft.adventuringSkinPath,
+                (local, url) -> {
+                    draft.adventuringSkinPath = preferContextPath(local, url);
+                    pushContextSkins();
+                },
+                () -> {
+                    draft.adventuringSkinPath = "";
+                    pushContextSkins();
+                    init();
+                },
+                boxes -> {
+                    adventureLocalBox = boxes[0];
+                    adventureUrlBox = boxes[1];
+                });
+        y = addRightWrapped(y,
+                "Local: config/azscompanions/skins/ · URL: https://…",
+                0x808080);
+        return y;
+    }
+
+    @FunctionalInterface
+    private interface ContextApply {
+        void apply(String local, String url);
+    }
+
+    private int addContextSkinSection(
+            int y, String title, String current, ContextApply onApply, Runnable onClear, Consumer<EditBox[]> boxSink) {
+        addRightLabel(y, title, 0xFFFFFF);
+        y += 12;
+        String shown = current == null || current.isBlank() ? "(none — uses custom/default)" : current;
+        y = addRightWrapped(y, shown, 0xC0C0C0);
+        y += 4;
+        addRightLabel(y, "Local path", 0xA0A0A0);
+        y += 12;
+        EditBox local = new EditBox(font, rightX, 0, rightW, 18, Component.literal(title + " local"));
+        local.setMaxLength(CompanionContextSkinSupport.MAX_PATH_LENGTH);
+        if (CompanionContextSkinSupport.isLocalSkin(current)) {
+            local.setValue(current);
+        }
+        addRightWidget(local, y, 18);
+        y += 22;
+        addRightLabel(y, "URL", 0xA0A0A0);
+        y += 12;
+        EditBox url = new EditBox(font, rightX, 0, rightW, 18, Component.literal(title + " url"));
+        url.setMaxLength(CompanionContextSkinSupport.MAX_PATH_LENGTH);
+        if (CompanionContextSkinSupport.isUrlSkin(current)) {
+            url.setValue(current.startsWith("url:") ? current.substring(4) : current);
+        }
+        addRightWidget(url, y, 18);
+        y += 22;
+        boxSink.accept(new EditBox[]{local, url});
+        int half = (rightW - 6) / 2;
+        Button apply = Button.builder(Component.literal("Apply"), b -> {
+            syncEditBoxesToDraft();
+            onApply.apply(local.getValue(), url.getValue());
+            init();
+        }).bounds(rightX, 0, half, 18).build();
+        Button clear = Button.builder(Component.literal("Clear"), b -> onClear.run())
+                .bounds(rightX + half + 6, 0, half, 18).build();
+        addRightWidget(apply, y, 18);
+        addRightWidget(clear, y, 18);
+        return y + 28;
+    }
+
+    private static String preferContextPath(String local, String url) {
+        String u = url == null ? "" : url.trim();
+        if (!u.isEmpty()) {
+            return CompanionContextSkinSupport.sanitize(u);
+        }
+        String l = local == null ? "" : local.trim();
+        if (l.isEmpty()) {
+            return "";
+        }
+        if (!l.toLowerCase(Locale.ROOT).startsWith("local:")) {
+            l = "local:" + l;
+        }
+        return CompanionContextSkinSupport.sanitize(l);
+    }
+
+    private void pushContextSkins() {
+        ClientPacketDistributor.sendToServer(new CompanionContextSkinsPacket(
+                companion.getId(),
+                draft.sleepingSkinPath == null ? "" : draft.sleepingSkinPath,
+                draft.bathingSkinPath == null ? "" : draft.bathingSkinPath,
+                draft.adventuringSkinPath == null ? "" : draft.adventuringSkinPath
+        ));
+    }
+
+    private int addOrbSettingsSection(int y) {
+        addRightLabel(y, "Glowing Orb", 0xA0A0A0);
+        y += 14;
+        y = addRightSlider(y, "Red",
+                () -> (float) CompanionOrbSettings.red(draft.orbColorRgb),
+                v -> {
+                    draft.orbColorRgb = CompanionOrbSettings.rgb(
+                            Math.round(v),
+                            CompanionOrbSettings.green(draft.orbColorRgb),
+                            CompanionOrbSettings.blue(draft.orbColorRgb));
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
+        y = addRightSlider(y, "Green",
+                () -> (float) CompanionOrbSettings.green(draft.orbColorRgb),
+                v -> {
+                    draft.orbColorRgb = CompanionOrbSettings.rgb(
+                            CompanionOrbSettings.red(draft.orbColorRgb),
+                            Math.round(v),
+                            CompanionOrbSettings.blue(draft.orbColorRgb));
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
+        y = addRightSlider(y, "Blue",
+                () -> (float) CompanionOrbSettings.blue(draft.orbColorRgb),
+                v -> {
+                    draft.orbColorRgb = CompanionOrbSettings.rgb(
+                            CompanionOrbSettings.red(draft.orbColorRgb),
+                            CompanionOrbSettings.green(draft.orbColorRgb),
+                            Math.round(v));
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
+        y = addRightSlider(y, "Brightness",
+                () -> (float) draft.orbBrightness,
+                v -> {
+                    draft.orbBrightness = Math.round(v);
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_BRIGHTNESS, CompanionOrbSettings.MAX_BRIGHTNESS);
+        y = addRightSlider(y, "Float height",
+                () -> draft.orbFloatHeight,
+                v -> {
+                    draft.orbFloatHeight = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_FLOAT_HEIGHT, CompanionOrbSettings.MAX_FLOAT_HEIGHT);
+        y = addRightSlider(y, "Float bob",
+                () -> draft.orbFloatAmplitude,
+                v -> {
+                    draft.orbFloatAmplitude = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_FLOAT_AMPLITUDE, CompanionOrbSettings.MAX_FLOAT_AMPLITUDE);
+        y = addRightSlider(y, "Float speed",
+                () -> draft.orbFloatSpeed,
+                v -> {
+                    draft.orbFloatSpeed = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_FLOAT_SPEED, CompanionOrbSettings.MAX_FLOAT_SPEED);
+        y = addRightSlider(y, "Offset X",
+                () -> draft.orbOffsetX,
+                v -> {
+                    draft.orbOffsetX = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
+        y = addRightSlider(y, "Offset Y",
+                () -> draft.orbOffsetY,
+                v -> {
+                    draft.orbOffsetY = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
+        y = addRightSlider(y, "Offset Z",
+                () -> draft.orbOffsetZ,
+                v -> {
+                    draft.orbOffsetZ = v;
+                    pushOrbSettings();
+                },
+                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
+        return y + 4;
+    }
+
+    private void pushOrbSettings() {
+        ClientPacketDistributor.sendToServer(new CompanionOrbSettingsPacket(
+                companion.getId(),
+                draft.orbColorRgb,
+                draft.orbBrightness,
+                draft.orbFloatAmplitude,
+                draft.orbFloatSpeed,
+                draft.orbFloatHeight,
+                draft.orbOffsetX,
+                draft.orbOffsetY,
+                draft.orbOffsetZ
+        ));
+    }
+
     private int addFormGroupButtons(int y, String title, CompanionForm.FormGroup group) {
         addRightLabel(y, title, 0xA0A0A0);
         y += 14;
@@ -552,6 +836,7 @@ public final class CompanionCreatorScreen extends Screen {
                 draft.showArmor,
                 flags
         ));
+        pushContextSkins();
         ClientAppearanceDraft.ACTIVE = null;
         onClose();
     }
@@ -596,7 +881,9 @@ public final class CompanionCreatorScreen extends Screen {
         graphics.fill(previewX + PREVIEW_W + 2, panelY + HEADER_H, previewX + PREVIEW_W + 3, panelY + panelH - FOOTER_H, 0x40FFFFFF);
 
         graphics.text(font, "Companion Customization", panelX + 10, panelY + 8, TEXT_LABEL, false);
-        graphics.text(font, companion.getDisplayName().getString(), panelX + 10, panelY + 20, 0xA0A0A0, false);
+        graphics.text(font,
+                topTab == TopTab.ACTIVITY ? "Activity outfits" : companion.getDisplayName().getString(),
+                panelX + 10, panelY + 28, 0xA0A0A0, false);
 
         graphics.fill(previewX - 2, previewY - 2, previewX + PREVIEW_W + 2, previewY + previewH + 2, 0x66000000);
         try {

@@ -58,7 +58,7 @@ public final class CompanionMobFormRenderer {
 
     public void render(FabricCompanionEntity entity, CompanionForm form, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        if (form == null || form.isPlayer()) {
+        if (form == null || form.isPlayer() || form.isOrb()) {
             return;
         }
         Level level = entity.level();
@@ -171,6 +171,24 @@ public final class CompanionMobFormRenderer {
             fox.setSitting(sitting);
             fox.setIsCrouching(source.isShiftKeyDown());
         }
+        if (visual instanceof net.minecraft.world.entity.animal.Wolf wolf) {
+            applyWolfCoat(wolf, source.getChatDisplayName());
+        }
+    }
+
+    /** Chestnut = brown coat for Wolfy; pale for other wolf-form companions. */
+    private static void applyWolfCoat(net.minecraft.world.entity.animal.Wolf wolf, String displayName) {
+        String want = com.azscompanions.perk.WolfyPerkSupport.isWolfyName(displayName)
+                ? com.azscompanions.perk.WolfyPerkSupport.BROWN_WOLF_VARIANT_ID
+                : "minecraft:pale";
+        var nbt = new net.minecraft.nbt.CompoundTag();
+        wolf.saveWithoutId(nbt);
+        String current = nbt.contains("variant") ? nbt.getString("variant") : "";
+        if (want.equals(current)) {
+            return;
+        }
+        nbt.putString("variant", want);
+        wolf.load(nbt);
     }
 
     private static boolean isArmorVisibleForRender(FabricCompanionEntity source) {

@@ -1,5 +1,6 @@
 package com.azscompanions;
 
+import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
@@ -26,6 +27,7 @@ public final class AzsCompanionsClient {
         modBus.addListener(this::onRegisterRenderers);
         modBus.addListener(this::onRegisterLayers);
         modBus.addListener(this::onRegisterScreens);
+        modBus.addListener(ModKeyMappings::register);
     }
 
     private void onClientSetup(FMLClientSetupEvent event) {

@@ -1,6 +1,7 @@
 package com.azscompanions.compat.cci;
 
 import com.azscompanions.cci.CciCompanionParams;
+import com.azscompanions.cci.CciMessages;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.CompanionAttitude;
 import com.azscompanions.entity.CompanionChildLimits;
@@ -42,8 +43,13 @@ public final class TeamFightCciHandler {
             case TEAMFIGHT_ENABLE -> setEnabled(player, session, true);
             case TEAMFIGHT_DISABLE -> setEnabled(player, session, false);
             case TEAMFIGHT_TOGGLE -> setEnabled(player, session, !session.isEnabled());
-            case TEAMFIGHT_STATUS -> toast(player, "Team fight",
-                    session.isEnabled() ? "ON (HUD " + (session.isHudVisible() ? "shown" : "hidden") + ")" : "OFF");
+            case TEAMFIGHT_STATUS -> toast(player, CciMsg.title(CciMessages.TITLE_TEAMFIGHT),
+                    session.isEnabled()
+                            ? CciMsg.t(CciMessages.TEAMFIGHT_STATUS_ON,
+                            session.isHudVisible()
+                                    ? CciMsg.plain(CciMessages.SCOREBOARD_SHOWN)
+                                    : CciMsg.plain(CciMessages.SCOREBOARD_HIDDEN))
+                            : CciMsg.t(CciMessages.TEAMFIGHT_STATUS_OFF));
             case TEAMFIGHT_SCOREBOARD -> scoreboard(player, session, params, message);
             case TEAMFIGHT_SCORE -> score(player, session, params);
             case TEAMFIGHT_TOP -> top(player, session);
@@ -71,12 +77,13 @@ public final class TeamFightCciHandler {
         syncHud(player);
         player.displayClientMessage(Component.translatable(
                 enabled ? "message.azscompanions.teamfight_on" : "message.azscompanions.teamfight_off"), true);
-        toast(player, "Team fight", enabled ? "ENABLED" : "DISABLED");
+        toast(player, CciMsg.title(CciMessages.TITLE_TEAMFIGHT),
+                enabled ? CciMsg.t(CciMessages.TEAMFIGHT_ENABLED) : CciMsg.t(CciMessages.TEAMFIGHT_DISABLED));
     }
 
     private static void scoreboard(ServerPlayer player, TeamFightSession session, CciCompanionParams params, String raw) {
         if (!session.isEnabled()) {
-            toast(player, "Scoreboard", "Enable team fights first.");
+            toast(player, CciMsg.title(CciMessages.TITLE_SCOREBOARD), CciMsg.t(CciMessages.SCOREBOARD_NEED_ON));
             return;
         }
         String mode = params.first("mode", "action", "raw");
@@ -95,12 +102,16 @@ public final class TeamFightCciHandler {
                     params.getOr("team2", params.getOr("right", session.teamRight())));
         }
         syncHud(player);
-        toast(player, "Scoreboard", session.isHudVisible() ? "shown" : "hidden");
+        toast(player, CciMsg.title(CciMessages.TITLE_SCOREBOARD),
+                session.isHudVisible()
+                        ? CciMsg.t(CciMessages.SCOREBOARD_SHOWN)
+                        : CciMsg.t(CciMessages.SCOREBOARD_HIDDEN));
     }
 
     private static void score(ServerPlayer player, TeamFightSession session, CciCompanionParams params) {
         if (!session.isEnabled()) {
-            toast(player, "Score", Component.translatable("message.azscompanions.teamfight_disabled").getString());
+            toast(player, CciMsg.title(CciMessages.TITLE_SCORE),
+                    CciMsg.t(CciMessages.TEAMFIGHT_DISABLED_FULL));
             return;
         }
         if (params.has("killer") || params.has("kill")) {
@@ -117,25 +128,28 @@ public final class TeamFightCciHandler {
             session.addScore(team, points);
         }
         syncHud(player);
-        toast(player, "Score", session.teamLeft() + "=" + session.scoreLeft()
-                + " | " + session.teamRight() + "=" + session.scoreRight());
+        toast(player, CciMsg.title(CciMessages.TITLE_SCORE),
+                CciMsg.t(CciMessages.SCORE_UPDATE,
+                        session.teamLeft(), session.scoreLeft(),
+                        session.teamRight(), session.scoreRight()));
     }
 
     private static void top(ServerPlayer player, TeamFightSession session) {
-        player.displayClientMessage(Component.literal("Top bits: " + blankDash(session.snapshot().topBits())), false);
-        player.displayClientMessage(Component.literal("Top kills: " + blankDash(session.snapshot().topKills())), false);
-        toast(player, "Leaderboards", BitGearTiers.priceTableText());
+        player.displayClientMessage(CciMsg.t(CciMessages.TOP_BITS, blankDash(session.snapshot().topBits())), false);
+        player.displayClientMessage(CciMsg.t(CciMessages.TOP_KILLS, blankDash(session.snapshot().topKills())), false);
+        toast(player, CciMsg.title(CciMessages.TITLE_LEADERBOARDS), Component.literal(BitGearTiers.priceTableText()));
     }
 
     private static void spawnLeader(ServerPlayer player, TeamFightSession session, CciCompanionParams params) {
         if (!session.isEnabled()) {
-            toast(player, "Spawn leader", Component.translatable("message.azscompanions.teamfight_disabled").getString());
+            toast(player, CciMsg.title(CciMessages.TITLE_SPAWN_LEADER),
+                    CciMsg.t(CciMessages.TEAMFIGHT_DISABLED_FULL));
             return;
         }
         // No amount gate — streamer CCI decides when to spawn a leader.
         CompanionEntity leader = CompanionRecruitment.spawnFightLeader(player);
         if (leader == null) {
-            toast(player, "Spawn leader", "Spawn failed.");
+            toast(player, CciMsg.title(CciMessages.TITLE_SPAWN_LEADER), CciMsg.t(CciMessages.SPAWN_LEADER_FAILED));
             return;
         }
         String team = params.teamOr(session.teamLeft());
@@ -155,24 +169,27 @@ public final class TeamFightCciHandler {
         session.recordFighter(leader.getChatDisplayName(), team, 0);
         session.noteFight("Leader " + leader.getChatDisplayName() + " → " + team);
         syncHud(player);
-        toast(player, leader.getChatDisplayName(), "Leader on team " + team);
+        toast(player, CciMsg.named(leader.getChatDisplayName()), CciMsg.t(CciMessages.LEADER_ON_TEAM, team));
     }
 
     private static void spawnChild(ServerPlayer player, TeamFightSession session, CciCompanionParams params) {
         int amount = params.supportAmountOr(0);
         // Amount-based interaction requires teamfight ON; explicit count= works either way.
         if (!session.isEnabled() && amount > 0) {
-            toast(player, "Interaction spawn", Component.translatable("message.azscompanions.teamfight_disabled").getString());
+            toast(player, CciMsg.title(CciMessages.TITLE_INTERACTION),
+                    CciMsg.t(CciMessages.TEAMFIGHT_DISABLED_FULL));
             return;
         }
         CompanionEntity near = findLeader(player, params);
         if (near == null) {
-            toast(player, "Interaction spawn", "No leader nearby — use companion_spawn_leader first.");
+            toast(player, CciMsg.title(CciMessages.TITLE_INTERACTION),
+                    CciMsg.t(CciMessages.INTERACTION_NO_LEADER_NEAR));
             return;
         }
         CompanionEntity leader = CompanionRecruitment.resolveLeader(player, near);
         if (leader == null) {
-            toast(player, "Interaction spawn", "No leader available.");
+            toast(player, CciMsg.title(CciMessages.TITLE_INTERACTION),
+                    CciMsg.t(CciMessages.INTERACTION_NO_LEADER));
             return;
         }
         Integer maxChildren = params.maxChildrenOrNull();
@@ -185,7 +202,8 @@ public final class TeamFightCciHandler {
         int remaining = CompanionChildLimits.remainingSlots(existing, leader.getMaxChildren());
         int toSpawn = Math.min(requested, remaining);
         if (toSpawn <= 0) {
-            toast(player, leader.getChatDisplayName(), "Child limit reached.");
+            toast(player, CciMsg.named(leader.getChatDisplayName()),
+                    CciMsg.t(CciMessages.CHILD_LIMIT));
             return;
         }
         String baseName = params.displayName();
@@ -225,29 +243,32 @@ public final class TeamFightCciHandler {
         }
         syncHud(player);
         BitGearTiers.GearLoadout gear = BitGearTiers.forBits(amount);
-        toast(player, leader.getChatDisplayName(),
-                "Spawned " + spawned + (amount > 0 ? " (" + amount + " " + unit + " / " + gear.label() + ")" : ""));
+        toast(player, CciMsg.named(leader.getChatDisplayName()),
+                amount > 0
+                        ? CciMsg.t(CciMessages.SPAWNED_AMOUNT, spawned, amount, unit, gear.label())
+                        : CciMsg.t(CciMessages.SPAWNED, spawned));
     }
 
     /** Store living Bits onto the parent (world → stored; callable later). */
     private static void dismissChild(ServerPlayer player, CciCompanionParams params) {
         CompanionEntity near = findLeader(player, params);
         if (near == null) {
-            toast(player, "Dismiss Bit", "No companion nearby.");
+            toast(player, CciMsg.title(CciMessages.TITLE_DISMISS), CciMsg.t(CciMessages.DISMISS_NO_COMPANION));
             return;
         }
         if (near.isChildCompanion()) {
             CompanionEntity parent = CompanionRecruitment.resolveLeader(player, near);
             if (parent != null && parent.storeChild(near)) {
-                toast(player, parent.getChatDisplayName(), "Stored 1 Bit (callable: " + parent.getStoredChildCount() + ")");
+                toast(player, CciMsg.named(parent.getChatDisplayName()),
+                        CciMsg.t(CciMessages.DISMISS_STORED_ONE, parent.getStoredChildCount()));
             } else {
-                toast(player, "Dismiss Bit", "Could not store Bit.");
+                toast(player, CciMsg.title(CciMessages.TITLE_DISMISS), CciMsg.t(CciMessages.DISMISS_FAILED));
             }
             return;
         }
         CompanionEntity leader = CompanionRecruitment.resolveLeader(player, near);
         if (leader == null) {
-            toast(player, "Dismiss Bit", "No leader available.");
+            toast(player, CciMsg.title(CciMessages.TITLE_DISMISS), CciMsg.t(CciMessages.DISMISS_NO_LEADER));
             return;
         }
         int requested = params.spawnCountOr(1);
@@ -259,11 +280,11 @@ public final class TeamFightCciHandler {
             stored++;
         }
         if (stored <= 0) {
-            toast(player, leader.getChatDisplayName(), "No Bits in the world to store.");
+            toast(player, CciMsg.named(leader.getChatDisplayName()), CciMsg.t(CciMessages.DISMISS_NONE));
             return;
         }
-        toast(player, leader.getChatDisplayName(),
-                "Stored " + stored + " Bit(s) (callable: " + leader.getStoredChildCount() + ")");
+        toast(player, CciMsg.named(leader.getChatDisplayName()),
+                CciMsg.t(CciMessages.DISMISS_STORED, stored, leader.getStoredChildCount()));
     }
 
     private static void applyGear(CompanionEntity entity, CciCompanionParams params, int bits) {
@@ -342,7 +363,7 @@ public final class TeamFightCciHandler {
         return s == null || s.isBlank() ? "-" : s;
     }
 
-    private static void toast(ServerPlayer player, String title, String body) {
-        player.displayClientMessage(Component.literal(title + " — " + body), true);
+    private static void toast(ServerPlayer player, Component title, Component body) {
+        player.displayClientMessage(CciMsg.actionBar(title, body), true);
     }
 }

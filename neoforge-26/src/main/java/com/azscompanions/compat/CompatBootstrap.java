@@ -27,7 +27,8 @@ public final class CompatBootstrap {
         maybeLoad("mekanism", TechCompatModule::bootstrap);
         maybeLoad("create", TechCompatModule::bootstrap);
         maybeLoad("farmersdelight", FarmingCompatModule::bootstrap);
-        maybeLoad("voicechat", VoiceChatCompatModule::bootstrap);
+        // Always probe: Simple Voice Chat (`voicechat`) and optional `voicemod` awareness.
+        VoiceChatCompatModule.bootstrap();
         FtbCompatModule.bootstrap();
 
         // Always register vanilla furnace fuel helper as a machine handler example.

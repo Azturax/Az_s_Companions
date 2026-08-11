@@ -134,7 +134,7 @@ No hard dependency — the mod loads if none of these are installed.
 ### What already worked out of the box
 
 - Companion **recruit / ownership by UUID** when Microsoft accounts stay consistent (typical Essential sessions).
-- **AI ask / name-mention / chat listen** run on the host integrated server; joining clients do not need LM Studio or API keys when `serverLlmOnly=true` (default).
+- **AI ask** runs on the host integrated server; when `serverLlmOnly=true` (opt-in), joining clients use that shared host endpoint and do not need LM Studio or API keys.
 - **Packets / screens** are owner-gated by `ServerPlayer` UUID — guests manage their own companions; strangers can name-mention with limited social actions.
 - **CCI** (CCI edition jar): IMC is polled on the **host client** and applied server-side to the streamer's owned companions. Friends joining do not need CCI unless they stream their own companions.
 
@@ -142,7 +142,7 @@ No hard dependency — the mod loads if none of these are installed.
 
 | Issue | Fix |
 |-------|-----|
-| Integrated host with friends looked like “solo SP” for shared-LLM status when `serverLlmOnly=false` | `integratedMultiplayerSharedLlm` (default **true**) forces host LLM authority whenever Essential/e4mc/World Host is present, LAN is published, or remote players are online |
+| Integrated host with friends looked like “solo SP” for shared-LLM status when `serverLlmOnly=false` | Optional `integratedMultiplayerSharedLlm` (default **false**) can force shared-host status when Essential/e4mc/World Host/LAN is active — turn on only if you want that |
 | Offline↔online **UUID remap** (LAN hybrid / some tunnel hosts) breaking `isOwnedBy` | Persist `OwnerName`; optional `ownerNameFallback` (default **true**, **never on dedicated**) matches profile name and heals owner UUID on login |
 | No visibility that hosted MP is active | Soft-detect host mods; log once; AI status shows `[hosted MP]` |
 
@@ -152,16 +152,16 @@ Stored with companion AI config:
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `integratedMultiplayerSharedLlm` | `true` | Essential/e4mc/LAN integrated MP → host LLM authoritative even if `serverLlmOnly=false`. Ignored on dedicated. |
+| `integratedMultiplayerSharedLlm` | `false` | Essential/e4mc/LAN integrated MP → treat host LLM as shared even if `serverLlmOnly=false`. Ignored on dedicated. |
 | `ownerNameFallback` | `true` | On integrated hosted MP only, matching player names count as owner if UUIDs diverge; heal UUID on join. Always off on dedicated. |
-| `serverLlmOnly` | `true` | Existing: host/dedicated AI config for all companions |
+| `serverLlmOnly` | `false` | Opt-in: shared host/dedicated AI endpoint for companions |
 
 Fabric JSON example:
 
 ```json
 {
-  "serverLlmOnly": true,
-  "integratedMultiplayerSharedLlm": true,
+  "serverLlmOnly": false,
+  "integratedMultiplayerSharedLlm": false,
   "ownerNameFallback": true
 }
 ```
@@ -239,11 +239,22 @@ EMF looks for modded models roughly at:
 - Fresh Moves: ETF → Allow skin transparency → All skins; EMF → Prevent first person hand animation On.
 - Without EMF/ETF, companions render with cutout skins (visible by default). Turn `translucentPlayerSkins=false` if you have ETF but prefer cutout.
 
+### Glowing Orb form (Sodium + Iris / Oculus)
+
+**Glowing Orb** (`CompanionForm.GLOWING_ORB`) is a choosable Special form. Render uses:
+
+| Pass | RenderType | Why |
+|------|------------|-----|
+| Soft halo + hot core | `RenderType.eyes` | Emissive / shader-friendly (Iris Fabulous, Oculus deferred) |
+| Solid disc | `RenderType.entityCutoutNoCull` + fullbright light | Same Sodium-safe cutout strategy as player skins — never invisible |
+
+Avoids `entityTranslucent` / `entityTranslucentEmissive` for orbs (those paths can vanish under Sodium without ETF or under Iris Fabulous). World light from orbs still goes through **dynamic lights** soft-compat (`DynamicLightsLegacyHooks` luminance = orb brightness 0–15) when LambDynamicLights / RyoamicLights / similar is present.
+
 ### Code entry points
 
 - Common: `FancyAnimCompat`, `FancyAnimSettings`, `FancyAnimConfigIO`
-- NeoForge: `FancyAnimCompatModule`, `FancyAnimClientBridge`; renderers `CompanionRenderer` / `CompanionMobFormRenderer`
-- Fabric: `FabricFancyAnimCompat`; renderers `FabricCompanionRenderer` / `CompanionMobFormRenderer`
+- NeoForge: `FancyAnimCompatModule`, `FancyAnimClientBridge`; renderers `CompanionRenderer` / `CompanionMobFormRenderer` / `CompanionOrbRenderer`
+- Fabric: `FabricFancyAnimCompat`; renderers `FabricCompanionRenderer` / `CompanionMobFormRenderer` / `CompanionOrbRenderer`
 
 ---
 
@@ -293,3 +304,34 @@ Companions are `LivingEntity` / `PathfinderMob` and expose main-hand + off-hand 
 - Common: `DynamicLightsCompat`, `DynamicLightsSettings`, `DynamicLightsConfigIO`, `DynamicLightsMods`, `DynamicLightsLegacyHooks`
 - NeoForge: `DynamicLightsCompatModule`, `DynamicLightsClientBridge` via `CompatBootstrap`
 - Fabric: `FabricDynamicLightsCompat` from `AzsCompanionsFabricClient`
+
+---
+
+## Proximity voice (Simple Voice Chat / VoiceMod)
+
+Package: `com.azscompanions.compat.voicechat`. Soft-deps only — the mod loads with no voice mods installed.
+
+Companion dialogue is **text-first** (owner chat + optional vanilla Minecraft sound cues via `ClientVoiceController`). This section covers optional **player proximity voice** mods sitting alongside that path — not companion TTS.
+
+### Hooked / detected mods (1.21.1 Fabric + NeoForge)
+
+| Mod | Mod ID(s) | Reference jar / pin | How it relates to companions |
+|-----|-----------|---------------------|------------------------------|
+| **Simple Voice Chat** (henkelmax) | `voicechat` (`voicechat_api` stub when present) | NeoForge: `voicechat-neoforge-1.21.1-2.6.21.jar` (pin **2.6.21**). Fabric: `voicechat-fabric-1.21.1-2.6.21.jar` | Soft-detect + log; optional soft-dep in `neoforge.mods.toml` / Fabric `suggests`. Players still use SVC for mic proximity. Companion → SVC entity audio emission is **not** registered yet (API class is probed via reflection when the jar is present). |
+| **VoiceMod** (desktop / bridge) | `voicemod` when a Minecraft bridge mod uses that id | — | Detected for awareness only. Desktop VoiceMod Control API / TTS bridge is **not shipped** (text dialogue only). |
+
+No hard dependency — works if neither is installed.
+
+### Runtime behavior today
+
+- On bootstrap, NeoForge `VoiceChatCompatModule` / Fabric `FabricVoiceChatCompat` call `VoiceChatCompat.detectAndStore`.
+- If `voicechat` (or `voicechat_api`) is loaded → info log naming the Simple Voice Chat soft-compat and the 2.6.21 reference jar.
+- If `de.maxhenkel.voicechat.api.VoicechatApi` is on the classpath → log notes API class present (still no entity channel registration).
+- If `voicemod` is loaded → log that TTS bridge is not shipped.
+- Dialogue / `/ask` / idle chat are unchanged (text + vanilla sounds).
+
+### Code entry points
+
+- Common: `VoiceChatCompat`, `VoiceChatMods`
+- NeoForge: `compat.optional.VoiceChatCompatModule` via `CompatBootstrap` (always probed)
+- Fabric: `FabricVoiceChatCompat` from `AzsCompanionsFabric`

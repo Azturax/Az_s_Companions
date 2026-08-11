@@ -46,7 +46,9 @@
     "xaeroworldmap": "*",
     "ftbchunks": "*",
     "lambdynlights": "*",
-    "ryoamiclights": "*"
+    "ryoamiclights": "*",
+    "voicechat": "*",
+    "voicemod": "*"
   },
   "custom": {
     "azscompanions:support": {

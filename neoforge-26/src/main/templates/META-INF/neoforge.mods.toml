@@ -29,3 +29,18 @@ type="required"
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+# Optional proximity voice (Simple Voice Chat) — soft-dep
+[[dependencies.${mod_id}]]
+modId="voicechat"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="voicemod"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"

@@ -34,18 +34,21 @@ public final class CompanionAiSettings {
     private int queueMaxDepth = CompanionAiInput.DEFAULT_QUEUE_MAX_DEPTH;
     private boolean enableChatMessages = true;
     /**
-     * When true (default), all companions share this process's AI config — the dedicated
-     * server or LAN/integrated host. Joining clients do not need local LM Studio / API keys;
-     * their {@code azscompanions-ai.*} is ignored for LLM calls (ask runs server-side).
-     * Endpoint is shared; minds are not — see {@link #perCompanionMemory}.
+     * When true, this host's AI config is the shared / authoritative LLM endpoint for companions
+     * (LAN friends and dedicated joiners use the host process — no per-client keys).
+     * Default <strong>false</strong> (opt-in): singleplayer / integrated hosts configure a
+     * personal local or remote LLM without favoring "server LLM" mode. Endpoint sharing does
+     * not merge minds — see {@link #perCompanionMemory}.
      */
-    private boolean serverLlmOnly = true;
+    private boolean serverLlmOnly = false;
     /**
-     * When true (default), Essential / e4mc / World Host / Open-to-LAN integrated multiplayer
-     * also forces the host LLM to be authoritative even if {@link #serverLlmOnly} is false.
-     * No effect on dedicated servers (always shared there).
+     * When true, Essential / e4mc / World Host / Open-to-LAN integrated multiplayer
+     * also forces the host LLM to be treated as shared even if {@link #serverLlmOnly} is false.
+     * Default <strong>false</strong> so friends joining does not silently favor server LLM —
+     * turn <em>Use server LLM</em> on (or this flag) when you want host-authoritative sharing.
+     * No effect on dedicated servers.
      */
-    private boolean integratedMultiplayerSharedLlm = true;
+    private boolean integratedMultiplayerSharedLlm = false;
     /**
      * When true (default), on integrated hosted multiplayer only, treat matching player
      * profile names as the companion owner if UUIDs diverge (offline↔online remap).

@@ -3,6 +3,7 @@ package com.azscompanions.network;
 import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.ai.CompanionPersona;
 import com.azscompanions.ai.CompanionStatsText;
+import com.azscompanions.entity.CompanionContextSkinSupport;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionGender;
@@ -30,6 +31,8 @@ public final class FabricNetworking {
     public static void register() {
         PayloadTypeRegistry.playC2S().register(RecruitPayload.TYPE, RecruitPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ContextSkinsPayload.TYPE, ContextSkinsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(OrbSettingsPayload.TYPE, OrbSettingsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(BehaviorPayload.TYPE, BehaviorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PersonaPayload.TYPE, PersonaPayload.CODEC);
@@ -45,6 +48,7 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playC2S().register(DepositExitPayload.TYPE, DepositExitPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AiJoinOfferPayload.TYPE, AiJoinOfferPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AiJoinConsentPayload.TYPE, AiJoinConsentPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ToggleWigglyDogPayload.TYPE, ToggleWigglyDogPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -81,6 +85,10 @@ public final class FabricNetworking {
                         case "STAY" -> {
                             companion.setMode(FabricCompanionMode.STAY);
                             toastMode(player, companion, "message.azscompanions.mode_stay");
+                        }
+                        case "SIT" -> {
+                            companion.setMode(FabricCompanionMode.SIT);
+                            toastMode(player, companion, "message.azscompanions.mode_sit");
                         }
                         case "WANDER" -> {
                             companion.setMode(FabricCompanionMode.WANDER);
@@ -184,6 +192,43 @@ public final class FabricNetworking {
                     }
                 }));
 
+        ServerPlayNetworking.registerGlobalReceiver(ContextSkinsPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    Entity entity = player.level().getEntity(payload.entityId());
+                    if (!(entity instanceof FabricCompanionEntity companion)
+                            || (!companion.isOwnedBy(player) && !companion.isTrusted(player))) {
+                        return;
+                    }
+                    if (companion.distanceTo(player) > 16.0d) {
+                        return;
+                    }
+                    companion.setContextSkins(
+                            payload.sleepingSkin(), payload.bathingSkin(), payload.adventuringSkin());
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(OrbSettingsPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    Entity entity = player.level().getEntity(payload.entityId());
+                    if (!(entity instanceof FabricCompanionEntity companion)
+                            || (!companion.isOwnedBy(player) && !companion.isTrusted(player))) {
+                        return;
+                    }
+                    if (companion.distanceTo(player) > 16.0d) {
+                        return;
+                    }
+                    companion.setOrbSettings(
+                            payload.colorRgb(),
+                            payload.brightness(),
+                            payload.floatAmplitude(),
+                            payload.floatSpeed(),
+                            payload.floatHeight(),
+                            payload.offsetX(),
+                            payload.offsetY(),
+                            payload.offsetZ());
+                }));
+
         ServerPlayNetworking.registerGlobalReceiver(BehaviorPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
                     ServerPlayer player = context.player();
@@ -253,6 +298,17 @@ public final class FabricNetworking {
                                 payload.accepted(),
                                 payload.suggestProfile(),
                                 payload.applyProfile())));
+
+        ServerPlayNetworking.registerGlobalReceiver(ToggleWigglyDogPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!com.azscompanions.perk.WigglyDogPerkSupport.isEligible(player.getUUID())) {
+                        player.displayClientMessage(
+                                Component.translatable("message.azscompanions.wiggly_dog_denied"), true);
+                        return;
+                    }
+                    com.azscompanions.perk.WigglyDogPerk.toggle(player);
+                }));
     }
 
     public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
@@ -709,6 +765,18 @@ public final class FabricNetworking {
         }
     }
 
+    public record ToggleWigglyDogPayload() implements CustomPacketPayload {
+        public static final Type<ToggleWigglyDogPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "toggle_wiggly_dog"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ToggleWigglyDogPayload> CODEC =
+                StreamCodec.unit(new ToggleWigglyDogPayload());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public record MenuActionPayload(int entityId, String action) implements CustomPacketPayload {
         public static final Type<MenuActionPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "menu_action"));
@@ -794,6 +862,86 @@ public final class FabricNetworking {
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
                     buf.readUtf(32), buf.readBoolean(), buf.readBoolean(),
                     buf.readVarInt());
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ContextSkinsPayload(
+            int entityId,
+            String sleepingSkin,
+            String bathingSkin,
+            String adventuringSkin
+    ) implements CustomPacketPayload {
+        public static final Type<ContextSkinsPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_context_skins"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, ContextSkinsPayload> CODEC =
+                StreamCodec.of(ContextSkinsPayload::write, ContextSkinsPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, ContextSkinsPayload p) {
+            int max = CompanionContextSkinSupport.MAX_PATH_LENGTH;
+            buf.writeVarInt(p.entityId);
+            buf.writeUtf(p.sleepingSkin == null ? "" : p.sleepingSkin, max);
+            buf.writeUtf(p.bathingSkin == null ? "" : p.bathingSkin, max);
+            buf.writeUtf(p.adventuringSkin == null ? "" : p.adventuringSkin, max);
+        }
+
+        private static ContextSkinsPayload read(RegistryFriendlyByteBuf buf) {
+            int max = CompanionContextSkinSupport.MAX_PATH_LENGTH;
+            return new ContextSkinsPayload(
+                    buf.readVarInt(), buf.readUtf(max), buf.readUtf(max), buf.readUtf(max));
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record OrbSettingsPayload(
+            int entityId,
+            int colorRgb,
+            int brightness,
+            float floatAmplitude,
+            float floatSpeed,
+            float floatHeight,
+            float offsetX,
+            float offsetY,
+            float offsetZ
+    ) implements CustomPacketPayload {
+        public static final Type<OrbSettingsPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_orb_settings"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, OrbSettingsPayload> CODEC =
+                StreamCodec.of(OrbSettingsPayload::write, OrbSettingsPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, OrbSettingsPayload p) {
+            buf.writeVarInt(p.entityId);
+            buf.writeInt(p.colorRgb);
+            buf.writeVarInt(p.brightness);
+            buf.writeFloat(p.floatAmplitude);
+            buf.writeFloat(p.floatSpeed);
+            buf.writeFloat(p.floatHeight);
+            buf.writeFloat(p.offsetX);
+            buf.writeFloat(p.offsetY);
+            buf.writeFloat(p.offsetZ);
+        }
+
+        private static OrbSettingsPayload read(RegistryFriendlyByteBuf buf) {
+            return new OrbSettingsPayload(
+                    buf.readVarInt(),
+                    buf.readInt(),
+                    buf.readVarInt(),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    buf.readFloat());
         }
 
         @Override

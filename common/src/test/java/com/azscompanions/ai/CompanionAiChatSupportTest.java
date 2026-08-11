@@ -68,8 +68,8 @@ class CompanionAiChatSupportTest {
         assertEquals(45, loaded.callPlayerAfterSeconds());
         assertEquals(32.0d, loaded.callPlayerDistance(), 0.01);
         assertFalse(loaded.serverLlmOnly());
-        assertTrue(new CompanionAiSettings().serverLlmOnly());
-        assertTrue(new CompanionAiSettings().integratedMultiplayerSharedLlm());
+        assertFalse(new CompanionAiSettings().serverLlmOnly());
+        assertFalse(new CompanionAiSettings().integratedMultiplayerSharedLlm());
         assertTrue(new CompanionAiSettings().ownerNameFallback());
     }
 
@@ -86,12 +86,15 @@ class CompanionAiChatSupportTest {
     }
 
     @Test
-    void sharedServerLlmFlagOnDedicatedHost() {
+    void sharedServerLlmFlagOptInOnly() {
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
         runtime.clearServerContext();
         runtime.applySettings(new CompanionAiSettings().setServerLlmOnly(false));
         assertFalse(runtime.usesSharedServerLlm());
         runtime.markServerContext(true);
+        // Dedicated alone no longer forces shared — Use server LLM must be ON
+        assertFalse(runtime.usesSharedServerLlm());
+        runtime.applySettings(new CompanionAiSettings().setServerLlmOnly(true));
         assertTrue(runtime.usesSharedServerLlm());
         assertTrue(runtime.statusLine().contains("[server LLM shared]"));
         runtime.clearServerContext();
