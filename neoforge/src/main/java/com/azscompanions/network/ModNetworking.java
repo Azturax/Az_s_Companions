@@ -3,6 +3,8 @@ package com.azscompanions.network;
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.client.network.ClientNetworkHandlers;
 import com.azscompanions.network.packet.CompanionAiThinkingPacket;
+import com.azscompanions.network.packet.CompanionAiJoinConsentPacket;
+import com.azscompanions.network.packet.CompanionAiJoinOfferPacket;
 import com.azscompanions.network.packet.CompanionBehaviorPacket;
 import com.azscompanions.network.packet.CompanionCommandPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
@@ -40,6 +42,7 @@ public final class ModNetworking {
         registrar.playToServer(AdminAiSavePacket.TYPE, AdminAiSavePacket.STREAM_CODEC, AdminAiSavePacket::handle);
         registrar.playToServer(AdminActionPacket.TYPE, AdminActionPacket.STREAM_CODEC, AdminActionPacket::handle);
         registrar.playToServer(DepositExitModePacket.TYPE, DepositExitModePacket.STREAM_CODEC, DepositExitModePacket::handle);
+        registrar.playToServer(CompanionAiJoinConsentPacket.TYPE, CompanionAiJoinConsentPacket.STREAM_CODEC, CompanionAiJoinConsentPacket::handle);
 
         // Codecs must register on both sides. Client GUI/voice handlers must never be classloaded
         // on the dedicated server (OpenCompanionCreatorPacket used to import CompanionCreatorScreen).
@@ -55,6 +58,7 @@ public final class ModNetworking {
             registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(CompanionAiThinkingPacket.TYPE, CompanionAiThinkingPacket.STREAM_CODEC, (packet, context) -> {});
             registrar.playToClient(DepositSelectionSyncPacket.TYPE, DepositSelectionSyncPacket.STREAM_CODEC, (packet, context) -> {});
+            registrar.playToClient(CompanionAiJoinOfferPacket.TYPE, CompanionAiJoinOfferPacket.STREAM_CODEC, (packet, context) -> {});
         }
     }
 }

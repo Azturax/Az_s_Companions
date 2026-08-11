@@ -7,8 +7,12 @@ import com.google.gson.JsonParser;
 
 /**
  * Editable subset of companion AI settings for the in-game admin panel.
- * Save writes to disk only — runtime LLM client is not hot-reloaded.
+ * Save writes server config and applies to {@link com.azscompanions.ai.CompanionAiRuntime}.
  * Ask-only: no chatListen / nameListen / enableAiActions (use {@code /ask}).
+ *
+ * <p>API key security: S2C wire JSON never includes the plaintext key — only
+ * {@code apiKeyStatus} ({@code config}/{@code env}/{@code none}). C2S may include
+ * {@code apiKeyUpdate} when the admin typed a new key or cleared it; omit to leave unchanged.
  */
 public final class AdminAiConfigSnapshot {
     public static final int MAX_URL = 256;
@@ -17,12 +21,26 @@ public final class AdminAiConfigSnapshot {
     public static final int MAX_ENV = 64;
     public static final int MAX_PROVIDER = 32;
     public static final int MAX_PROFILE = 32;
+    public static final int MAX_API_KEY = 512;
+    /** Max UTF length for admin AI JSON packets (includes optional apiKeyUpdate). */
+    public static final int MAX_WIRE_JSON = 8192;
+
+    public static final String API_KEY_STATUS_NONE = "none";
+    public static final String API_KEY_STATUS_CONFIG = "config";
+    public static final String API_KEY_STATUS_ENV = "env";
 
     private String profileId = LlmProviderProfile.CUSTOM.name().toLowerCase();
     private String provider = "disabled";
     private String baseUrl = CompanionAiSettings.DEFAULT_BASE_URL;
     private String model = CompanionAiSettings.DEFAULT_MODEL;
     private String apiKeyEnv = CompanionAiSettings.DEFAULT_API_KEY_ENV;
+    /** S2C-only status; never a secret. */
+    private String apiKeyStatus = API_KEY_STATUS_NONE;
+    /**
+     * C2S-only: {@code null} = leave {@code apiKey} unchanged on merge;
+     * non-null (including empty) = write that value to config.
+     */
+    private String apiKeyUpdate = null;
     private String inputLanguage = "en";
     private boolean serverLlmOnly = true;
     private boolean enableChatMessages = true;
@@ -32,12 +50,15 @@ public final class AdminAiConfigSnapshot {
         AdminAiConfigSnapshot snap = new AdminAiConfigSnapshot();
         if (s == null) {
             snap.setProfileId(LlmProviderProfile.DISABLED.name().toLowerCase());
+            snap.apiKeyStatus = API_KEY_STATUS_NONE;
             return snap;
         }
         snap.provider = s.provider().name().toLowerCase();
         snap.baseUrl = s.baseUrl();
         snap.model = s.model();
         snap.apiKeyEnv = s.apiKeyEnv();
+        snap.apiKeyStatus = resolveApiKeyStatus(s);
+        snap.apiKeyUpdate = null;
         snap.inputLanguage = s.inputLanguage();
         snap.serverLlmOnly = s.serverLlmOnly();
         snap.enableChatMessages = s.enableChatMessages();
@@ -53,6 +74,9 @@ public final class AdminAiConfigSnapshot {
         out.setBaseUrl(trimOr(baseUrl, CompanionAiSettings.DEFAULT_BASE_URL));
         out.setModel(trimOr(model, CompanionAiSettings.DEFAULT_MODEL));
         out.setApiKeyEnv(trimOr(apiKeyEnv, CompanionAiSettings.DEFAULT_API_KEY_ENV));
+        if (apiKeyUpdate != null) {
+            out.setApiKey(apiKeyUpdate);
+        }
         out.setInputLanguage(trimOr(inputLanguage, "en"));
         out.setServerLlmOnly(serverLlmOnly);
         out.setEnableChatMessages(enableChatMessages);
@@ -92,6 +116,9 @@ public final class AdminAiConfigSnapshot {
         }
         if (apiKeyEnv != null && apiKeyEnv.length() > MAX_ENV) {
             return "apiKeyEnv too long";
+        }
+        if (apiKeyUpdate != null && apiKeyUpdate.length() > MAX_API_KEY) {
+            return "apiKey too long";
         }
         return null;
     }
@@ -152,6 +179,51 @@ public final class AdminAiConfigSnapshot {
         return this;
     }
 
+    /** {@link #API_KEY_STATUS_CONFIG}, {@link #API_KEY_STATUS_ENV}, or {@link #API_KEY_STATUS_NONE}. */
+    public String apiKeyStatus() {
+        return apiKeyStatus == null || apiKeyStatus.isBlank() ? API_KEY_STATUS_NONE : apiKeyStatus;
+    }
+
+    public AdminAiConfigSnapshot setApiKeyStatus(String apiKeyStatus) {
+        if (API_KEY_STATUS_CONFIG.equals(apiKeyStatus) || API_KEY_STATUS_ENV.equals(apiKeyStatus)) {
+            this.apiKeyStatus = apiKeyStatus;
+        } else {
+            this.apiKeyStatus = API_KEY_STATUS_NONE;
+        }
+        return this;
+    }
+
+    /** Human-readable status for the admin UI (no secret). */
+    public String apiKeyStatusLabel() {
+        return switch (apiKeyStatus()) {
+            case API_KEY_STATUS_CONFIG -> "API key: set (config — wins over env)";
+            case API_KEY_STATUS_ENV -> "API key: set (env)";
+            default -> "API key: not set";
+        };
+    }
+
+    /**
+     * Pending C2S key write, or {@code null} if unchanged.
+     * Empty string means clear the stored config key.
+     */
+    public String apiKeyUpdate() {
+        return apiKeyUpdate;
+    }
+
+    public boolean hasApiKeyUpdate() {
+        return apiKeyUpdate != null;
+    }
+
+    public AdminAiConfigSnapshot setApiKeyUpdate(String apiKeyUpdate) {
+        this.apiKeyUpdate = apiKeyUpdate == null ? "" : apiKeyUpdate.trim();
+        return this;
+    }
+
+    public AdminAiConfigSnapshot clearApiKeyUpdate() {
+        this.apiKeyUpdate = null;
+        return this;
+    }
+
     public String inputLanguage() {
         return inputLanguage;
     }
@@ -188,7 +260,7 @@ public final class AdminAiConfigSnapshot {
         return this;
     }
 
-    /** Compact JSON for S2C/C2S admin packets (max ~2k). */
+    /** Compact JSON for S2C/C2S admin packets. Never includes stored plaintext key on open. */
     public String toWireJson() {
         JsonObject o = new JsonObject();
         o.addProperty("profileId", profileId);
@@ -196,6 +268,10 @@ public final class AdminAiConfigSnapshot {
         o.addProperty("baseUrl", baseUrl);
         o.addProperty("model", model);
         o.addProperty("apiKeyEnv", apiKeyEnv);
+        o.addProperty("apiKeyStatus", apiKeyStatus());
+        if (apiKeyUpdate != null) {
+            o.addProperty("apiKeyUpdate", apiKeyUpdate);
+        }
         o.addProperty("inputLanguage", inputLanguage);
         o.addProperty("serverLlmOnly", serverLlmOnly);
         o.addProperty("enableChatMessages", enableChatMessages);
@@ -225,6 +301,12 @@ public final class AdminAiConfigSnapshot {
             if (o.has("apiKeyEnv")) {
                 snap.setApiKeyEnv(o.get("apiKeyEnv").getAsString());
             }
+            if (o.has("apiKeyStatus")) {
+                snap.setApiKeyStatus(o.get("apiKeyStatus").getAsString());
+            }
+            if (o.has("apiKeyUpdate")) {
+                snap.setApiKeyUpdate(o.get("apiKeyUpdate").getAsString());
+            }
             if (o.has("inputLanguage")) {
                 snap.setInputLanguage(o.get("inputLanguage").getAsString());
             }
@@ -241,6 +323,19 @@ public final class AdminAiConfigSnapshot {
             // keep defaults
         }
         return snap;
+    }
+
+    static String resolveApiKeyStatus(CompanionAiSettings s) {
+        if (s == null) {
+            return API_KEY_STATUS_NONE;
+        }
+        if (s.apiKey() != null && !s.apiKey().isBlank()) {
+            return API_KEY_STATUS_CONFIG;
+        }
+        if (!s.resolveApiKey().isBlank()) {
+            return API_KEY_STATUS_ENV;
+        }
+        return API_KEY_STATUS_NONE;
     }
 
     private static String blankTo(String value, String fallback) {

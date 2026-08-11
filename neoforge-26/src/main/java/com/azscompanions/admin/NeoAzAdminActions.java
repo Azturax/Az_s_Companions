@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Server-side NeoForge admin actions + AI config disk save (no hot-reload). */
+/** Server-side NeoForge admin actions + AI config disk save with runtime apply. */
 public final class NeoAzAdminActions {
     private NeoAzAdminActions() {
     }
@@ -32,7 +32,8 @@ public final class NeoAzAdminActions {
             player.sendOverlayMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)));
             return;
         }
-        AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(AiConfig.toAiSettings());
+        // Prefer live runtime so a prior admin save (incl. apiKey) is reflected without restart.
+        AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(CompanionAiRuntime.get().settings());
         TeamFightSession session = TeamFightSession.of(player.getUUID());
         PacketDistributor.sendToPlayer(player, new OpenAzAdminPacket(
                 snap.toWireJson(),
@@ -57,9 +58,10 @@ public final class NeoAzAdminActions {
             return false;
         }
         try {
-            CompanionAiSettings merged = snap.mergeInto(AiConfig.toAiSettings());
+            CompanionAiSettings merged = snap.mergeInto(CompanionAiRuntime.get().settings());
             AiConfig.saveSettingsToDiskWithoutReload(merged);
-            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_SAVED_RESTART));
+            CompanionAiRuntime.get().applySettings(merged);
+            player.sendSystemMessage(Component.literal(AzAdminMessages.AI_SAVED_APPLIED));
             return true;
         } catch (Exception e) {
             player.sendSystemMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED));

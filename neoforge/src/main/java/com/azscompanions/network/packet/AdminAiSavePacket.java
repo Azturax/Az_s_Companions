@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-/** C2S: save AI config snapshot to disk (restart required). */
+/** C2S: save AI config snapshot to disk and apply to server runtime. */
 public record AdminAiSavePacket(String json) implements CustomPacketPayload {
     public static final Type<AdminAiSavePacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "admin_ai_save"));
@@ -19,11 +19,11 @@ public record AdminAiSavePacket(String json) implements CustomPacketPayload {
             StreamCodec.of(AdminAiSavePacket::write, AdminAiSavePacket::read);
 
     private static void write(RegistryFriendlyByteBuf buf, AdminAiSavePacket p) {
-        buf.writeUtf(p.json == null ? "{}" : p.json, 4096);
+        buf.writeUtf(p.json == null ? "{}" : p.json, AdminAiConfigSnapshot.MAX_WIRE_JSON);
     }
 
     private static AdminAiSavePacket read(RegistryFriendlyByteBuf buf) {
-        return new AdminAiSavePacket(buf.readUtf(4096));
+        return new AdminAiSavePacket(buf.readUtf(AdminAiConfigSnapshot.MAX_WIRE_JSON));
     }
 
     public static void handle(AdminAiSavePacket packet, IPayloadContext context) {

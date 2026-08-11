@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Server-side admin actions + AI config disk save (no hot-reload).
+ * Server-side admin actions + AI config disk save with runtime apply.
  */
 public final class FabricAzAdminActions {
     private FabricAzAdminActions() {
@@ -58,8 +58,9 @@ public final class FabricAzAdminActions {
         try {
             CompanionAiSettings merged = snap.mergeInto(FabricServerConfig.aiSettings());
             CompanionAiConfigIO.save(FabricServerConfig.aiConfigPath(), merged);
-            // Intentionally do NOT applySettings — restart required.
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVED_RESTART), false);
+            FabricServerConfig.replaceAiSettings(merged);
+            CompanionAiRuntime.get().applySettings(merged);
+            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVED_APPLIED), false);
             return true;
         } catch (Exception e) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED), false);

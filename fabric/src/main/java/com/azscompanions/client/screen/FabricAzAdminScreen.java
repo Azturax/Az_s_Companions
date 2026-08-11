@@ -8,14 +8,17 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 
 /**
- * Server-gated Az admin panel: overview actions + in-game LLM config (save → disk, restart required).
+ * Server-gated Az admin panel: overview actions + in-game LLM config (save → disk + runtime apply).
  * Profiles fill defaults; all fields stay editable. Chat is ask-only ({@code /ask} / {@code /az ask}).
  */
 public final class FabricAzAdminScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
+    private static final int PANEL_H = 268;
 
     private enum Tab { OVERVIEW, AI }
 
@@ -30,12 +33,14 @@ public final class FabricAzAdminScreen extends Screen {
     private EditBox baseUrlBox;
     private EditBox modelBox;
     private EditBox apiKeyEnvBox;
+    private EditBox apiKeyBox;
     private EditBox languageBox;
     private EditBox providerBox;
     private EditBox mcpUrlBox;
     private Button profileButton;
     private Button serverLlmButton;
     private boolean syncingFields;
+    private boolean clearApiKeyOnSave;
 
     public FabricAzAdminScreen(AdminAiConfigSnapshot snap, String aiStatus, boolean chunkLoading,
                                boolean teamfight, String companionSummary) {
@@ -56,7 +61,7 @@ public final class FabricAzAdminScreen extends Screen {
     protected void init() {
         clearWidgets();
         int panelW = Math.min(360, width - 20);
-        int panelH = Math.min(240, height - 20);
+        int panelH = Math.min(PANEL_H, height - 20);
         int px = (width - panelW) / 2;
         int py = (height - panelH) / 2;
         int bx = px + 12;
@@ -156,6 +161,29 @@ public final class FabricAzAdminScreen extends Screen {
         addRenderableWidget(apiKeyEnvBox);
         y += 20;
 
+        int clearW = 52;
+        apiKeyBox = new EditBox(font, bx, y, bw - clearW - 6, 16, Component.literal("apiKey"));
+        apiKeyBox.setMaxLength(AdminAiConfigSnapshot.MAX_API_KEY);
+        apiKeyBox.setValue("");
+        apiKeyBox.setEditable(true);
+        apiKeyBox.setHint(Component.literal("apiKey (blank=keep)"));
+        apiKeyBox.setFormatter((text, pos) -> FormattedCharSequence.forward(
+                "*".repeat(Math.max(0, text.length())), Style.EMPTY));
+        apiKeyBox.setResponder(v -> {
+            if (!syncingFields && v != null && !v.isBlank()) {
+                clearApiKeyOnSave = false;
+            }
+        });
+        addRenderableWidget(apiKeyBox);
+        addRenderableWidget(Button.builder(Component.literal("Clear"), b -> {
+            clearApiKeyOnSave = true;
+            if (apiKeyBox != null) {
+                apiKeyBox.setValue("");
+            }
+        }).bounds(bx + bw - clearW, y - 1, clearW, 18).build());
+        y += 20;
+        syncingFields = false;
+
         languageBox = new EditBox(font, bx, y, (bw - 6) / 2, 16, Component.literal("lang"));
         languageBox.setMaxLength(AdminAiConfigSnapshot.MAX_LANG);
         languageBox.setValue(snap.inputLanguage());
@@ -171,16 +199,15 @@ public final class FabricAzAdminScreen extends Screen {
         mcpUrlBox.setResponder(v -> onAiFieldEdited());
         addRenderableWidget(mcpUrlBox);
         y += 20;
-        syncingFields = false;
 
-        serverLlmButton = Button.builder(Component.literal("serverLlmOnly: " + onOff(snap.serverLlmOnly())),
+        serverLlmButton = Button.builder(Component.literal(serverLlmLabel(snap.serverLlmOnly())),
                 b -> {
                     snap.setServerLlmOnly(!snap.serverLlmOnly());
-                    serverLlmButton.setMessage(Component.literal("serverLlmOnly: " + onOff(snap.serverLlmOnly())));
+                    serverLlmButton.setMessage(Component.literal(serverLlmLabel(snap.serverLlmOnly())));
                 }).bounds(bx, y, bw, 18).build();
         addRenderableWidget(serverLlmButton);
 
-        addRenderableWidget(Button.builder(Component.literal("Save (restart required)"), b -> save())
+        addRenderableWidget(Button.builder(Component.literal("Save & apply"), b -> save())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
     }
 
@@ -235,20 +262,43 @@ public final class FabricAzAdminScreen extends Screen {
         if (mcpUrlBox != null) {
             snap.setMcpUrl(mcpUrlBox.getValue());
         }
+        applyApiKeyUpdateFromUi();
         profile = LlmProviderProfile.detect(snap);
         snap.setProfileId(profile.name().toLowerCase());
         FabricNetworkingClient.sendAdminAiSave(snap);
         onClose();
     }
 
-    private static String onOff(boolean v) {
-        return v ? "ON" : "OFF";
+    private void applyApiKeyUpdateFromUi() {
+        String typed = apiKeyBox == null ? "" : apiKeyBox.getValue();
+        if (clearApiKeyOnSave) {
+            snap.setApiKeyUpdate("");
+        } else if (typed != null && !typed.isBlank()) {
+            snap.setApiKeyUpdate(typed);
+        } else {
+            snap.clearApiKeyUpdate();
+        }
+    }
+
+    private String liveApiKeyStatusLabel() {
+        if (clearApiKeyOnSave) {
+            return "API key: clear on save";
+        }
+        if (apiKeyBox != null && apiKeyBox.getValue() != null && !apiKeyBox.getValue().isBlank()) {
+            return "API key: new value (masked)";
+        }
+        return snap.apiKeyStatusLabel();
+    }
+
+    /** Maps to config {@code serverLlmOnly} — host LLM is authoritative for all companions. */
+    private static String serverLlmLabel(boolean on) {
+        return "Use server LLM: " + (on ? "ON" : "OFF");
     }
 
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int panelW = Math.min(360, width - 20);
-        int panelH = Math.min(240, height - 20);
+        int panelH = Math.min(PANEL_H, height - 20);
         int px = (width - panelW) / 2;
         int py = (height - panelH) / 2;
         graphics.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, PANEL_EDGE);
@@ -256,25 +306,28 @@ public final class FabricAzAdminScreen extends Screen {
         if (tab == Tab.OVERVIEW) {
             graphics.drawString(font, "Az Admin", px + 12, py - 12, 0xFFFFFF, false);
         } else {
-            graphics.drawString(font, "AI config → disk (restart) · /ask only", px + 12, py - 12, 0xFFFFFF, false);
+            graphics.drawString(font, "AI config → server (Save & apply) · /ask only", px + 12, py - 12, 0xFFFFFF, false);
         }
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
+        int panelW = Math.min(360, width - 20);
+        int px = (width - panelW) / 2;
+        int py = (height - panelHSafe()) / 2;
         if (tab == Tab.OVERVIEW) {
-            int panelW = Math.min(360, width - 20);
-            int px = (width - panelW) / 2;
-            int py = (height - Math.min(240, height - 20)) / 2;
             graphics.drawString(font, truncate(aiStatus, 48), px + 12, py + panelHSafe() - 48, 0xA0A0A0, false);
             graphics.drawString(font, "chunks=" + chunkLoading + "  " + truncate(companionSummary, 40),
                     px + 12, py + panelHSafe() - 36, 0xA0A0A0, false);
+        } else {
+            graphics.drawString(font, truncate(liveApiKeyStatusLabel(), 48),
+                    px + 12, py + panelHSafe() - 48, 0xA0A0A0, false);
         }
     }
 
     private int panelHSafe() {
-        return Math.min(240, height - 20);
+        return Math.min(PANEL_H, height - 20);
     }
 
     private static String truncate(String s, int max) {

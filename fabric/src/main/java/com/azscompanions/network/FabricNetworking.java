@@ -43,6 +43,8 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playS2C().register(AiThinkingPayload.TYPE, AiThinkingPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(DepositSelectionPayload.TYPE, DepositSelectionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(DepositExitPayload.TYPE, DepositExitPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(AiJoinOfferPayload.TYPE, AiJoinOfferPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(AiJoinConsentPayload.TYPE, AiJoinConsentPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(RecruitPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -243,6 +245,14 @@ public final class FabricNetworking {
                     player.displayClientMessage(Component.translatable(
                             "message.azscompanions.deposit_done", sel.size()), true);
                 }));
+
+        ServerPlayNetworking.registerGlobalReceiver(AiJoinConsentPayload.TYPE, (payload, context) ->
+                context.server().execute(() ->
+                        com.azscompanions.ai.FabricAiJoinOfferEvents.handleConsent(
+                                context.player(),
+                                payload.accepted(),
+                                payload.suggestProfile(),
+                                payload.applyProfile())));
     }
 
     public static void openMenu(ServerPlayer player, FabricCompanionEntity companion) {
@@ -330,6 +340,20 @@ public final class FabricNetworking {
                 companionName == null ? "" : companionName,
                 timeoutSeconds,
                 progress));
+    }
+
+    public static void sendAiJoinOffer(ServerPlayer player, com.azscompanions.ai.AiJoinOffer offer) {
+        com.azscompanions.ai.AiJoinOffer o = offer == null
+                ? com.azscompanions.ai.AiJoinOffer.none()
+                : offer;
+        ServerPlayNetworking.send(player, new AiJoinOfferPayload(
+                o.available(),
+                o.source(),
+                o.providerLabel(),
+                o.endpointHint(),
+                o.suggestProfile(),
+                o.allowApply(),
+                o.allowLocalProbe()));
     }
 
     private static void toastMode(ServerPlayer player, FabricCompanionEntity companion, String key) {
@@ -453,7 +477,7 @@ public final class FabricNetworking {
                 StreamCodec.of(OpenAdminPayload::write, OpenAdminPayload::read);
 
         private static void write(RegistryFriendlyByteBuf buf, OpenAdminPayload p) {
-            buf.writeUtf(p.aiJson == null ? "{}" : p.aiJson, 4096);
+            buf.writeUtf(p.aiJson == null ? "{}" : p.aiJson, com.azscompanions.admin.AdminAiConfigSnapshot.MAX_WIRE_JSON);
             buf.writeUtf(p.aiStatus == null ? "" : p.aiStatus, 512);
             buf.writeBoolean(p.chunkLoading);
             buf.writeBoolean(p.teamfight);
@@ -462,7 +486,7 @@ public final class FabricNetworking {
 
         private static OpenAdminPayload read(RegistryFriendlyByteBuf buf) {
             return new OpenAdminPayload(
-                    buf.readUtf(4096),
+                    buf.readUtf(com.azscompanions.admin.AdminAiConfigSnapshot.MAX_WIRE_JSON),
                     buf.readUtf(512),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -482,11 +506,11 @@ public final class FabricNetworking {
                 StreamCodec.of(AdminAiSavePayload::write, AdminAiSavePayload::read);
 
         private static void write(RegistryFriendlyByteBuf buf, AdminAiSavePayload p) {
-            buf.writeUtf(p.json == null ? "{}" : p.json, 4096);
+            buf.writeUtf(p.json == null ? "{}" : p.json, com.azscompanions.admin.AdminAiConfigSnapshot.MAX_WIRE_JSON);
         }
 
         private static AdminAiSavePayload read(RegistryFriendlyByteBuf buf) {
-            return new AdminAiSavePayload(buf.readUtf(4096));
+            return new AdminAiSavePayload(buf.readUtf(com.azscompanions.admin.AdminAiConfigSnapshot.MAX_WIRE_JSON));
         }
 
         @Override
@@ -582,6 +606,78 @@ public final class FabricNetworking {
                         ByteBufCodecs.VAR_INT, AiThinkingPayload::timeoutSeconds,
                         ByteBufCodecs.FLOAT, AiThinkingPayload::progress,
                         AiThinkingPayload::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AiJoinOfferPayload(
+            boolean available,
+            String source,
+            String providerLabel,
+            String endpointHint,
+            String suggestProfile,
+            boolean allowApply,
+            boolean allowLocalProbe
+    ) implements CustomPacketPayload {
+        public static final Type<AiJoinOfferPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "ai_join_offer"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AiJoinOfferPayload> CODEC =
+                StreamCodec.of(AiJoinOfferPayload::write, AiJoinOfferPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, AiJoinOfferPayload p) {
+            buf.writeBoolean(p.available);
+            buf.writeUtf(p.source == null ? "" : p.source, 16);
+            buf.writeUtf(p.providerLabel == null ? "" : p.providerLabel, 64);
+            buf.writeUtf(p.endpointHint == null ? "" : p.endpointHint, 128);
+            buf.writeUtf(p.suggestProfile == null ? "" : p.suggestProfile, 32);
+            buf.writeBoolean(p.allowApply);
+            buf.writeBoolean(p.allowLocalProbe);
+        }
+
+        private static AiJoinOfferPayload read(RegistryFriendlyByteBuf buf) {
+            return new AiJoinOfferPayload(
+                    buf.readBoolean(),
+                    buf.readUtf(16),
+                    buf.readUtf(64),
+                    buf.readUtf(128),
+                    buf.readUtf(32),
+                    buf.readBoolean(),
+                    buf.readBoolean());
+        }
+
+        public com.azscompanions.ai.AiJoinOffer toOffer() {
+            return new com.azscompanions.ai.AiJoinOffer(
+                    available, source, providerLabel, endpointHint, suggestProfile, allowApply, allowLocalProbe);
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AiJoinConsentPayload(
+            boolean accepted,
+            String suggestProfile,
+            boolean applyProfile
+    ) implements CustomPacketPayload {
+        public static final Type<AiJoinConsentPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "ai_join_consent"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AiJoinConsentPayload> CODEC =
+                StreamCodec.of(AiJoinConsentPayload::write, AiJoinConsentPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, AiJoinConsentPayload p) {
+            buf.writeBoolean(p.accepted);
+            buf.writeUtf(p.suggestProfile == null ? "" : p.suggestProfile, 32);
+            buf.writeBoolean(p.applyProfile);
+        }
+
+        private static AiJoinConsentPayload read(RegistryFriendlyByteBuf buf) {
+            return new AiJoinConsentPayload(buf.readBoolean(), buf.readUtf(32), buf.readBoolean());
+        }
 
         @Override
         public Type<? extends CustomPacketPayload> type() {

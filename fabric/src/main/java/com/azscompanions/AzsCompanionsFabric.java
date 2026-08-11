@@ -55,6 +55,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricTeamFightEvents.register();
         FabricCompanionAiChatEvents.register();
         com.azscompanions.deposit.FabricDepositEvents.register();
+        com.azscompanions.ai.FabricAiJoinOfferEvents.register();
         FabricTaskRegistry.bootstrap();
         FabricBuiltinCompanions.registerDefaults();
         com.azscompanions.compat.FabricFtbCompat.bootstrap();

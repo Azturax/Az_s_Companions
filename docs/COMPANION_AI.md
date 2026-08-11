@@ -31,9 +31,30 @@ Restart the game / server (or reload NeoForge config if your tooling supports it
 Ops / host / whitelist can open **`/az admin`** (or **`/az ai config`**) → **AI Config** tab:
 
 1. Pick a **Profile** (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled) or **Custom...** — presets fill defaults; **all fields stay editable**
-2. Edit `provider` / `baseUrl` / `model` / `apiKeyEnv` / `mcpUrl` / `serverLlmOnly` as needed (tweaks that leave a preset → **Custom...**)
-3. **Save** writes `azscompanions-ai.json` / `.toml` on the **server**
-4. Chat confirms save; **restart** the server/game for the LLM client to pick up changes (no hot-reload in this slice)
+2. Edit `provider` / `baseUrl` / `model` / `apiKeyEnv` / **`apiKey`** (masked) / `mcpUrl` as needed (tweaks that leave a preset → **Custom...**)
+3. Toggle **Use server LLM** (`serverLlmOnly`, default ON) so companions use this host’s endpoint — see below
+4. Status shows whether a key is set (`config` / `env` / not set) without revealing the secret. Leave the apiKey box blank to keep the current key; **Clear** removes the stored config key. A typed key writes `apiKey` (file wins over env). Keys always stay on the server.
+5. **Save & apply** writes `azscompanions-ai.json` / `.toml` on the **server** and applies to the live LLM runtime (no restart required for these admin fields)
+
+#### Use server LLM (admin toggle)
+
+Maps to config `serverLlmOnly` (default **true**).
+
+- **ON:** Shared **server** LLM endpoint — all companions use the host’s provider/baseUrl/model/MCP. Joining clients do not need LM Studio, Ollama, or API keys. Dedicated servers always behave as shared regardless of this flag.
+- **OFF:** Only meaningful on solo integrated singleplayer (or a host not forced into shared mode). Does **not** merge companion minds; `perCompanionMemory` still keeps separate histories.
+- **API keys:** Always resolved on the server (`apiKey` in the AI file, or `apiKeyEnv` / `AZS_LLM_API_KEY`). The GUI shows status only over the wire; clients never receive the plaintext key.
+
+#### Join-time consent prompt
+
+After joining a world, if Companion AI is available the client may open a yes/no screen (**Use the server LLM?**):
+
+| Detection | When |
+|-----------|------|
+| **Server sync** | Host `provider` ≠ `disabled` — S2C offer on login (dedicated + integrated). |
+| **Local probe** | Integrated/SP only when AI is still disabled: TCP probe LiteLLM `:4000`, Ollama `:11434`, LM Studio `:1234` (and loopback configured `baseUrl`). |
+
+- **Yes** — accept for this server key (client session). Hosts/admins turn **Use server LLM** on and may apply a matching local profile when AI was disabled; chat tip mentions `/ask`.
+- **No** — dismiss for this server key until you reconnect under a new session key; AI is not enabled; nothing auto-connects without consent.
 
 **Ask-only:** use **`/ask`** or **`/az ask`**. Auto chat listen, name-mention listen, and LLM world actions are removed (0.3.12+).
 
@@ -467,7 +488,7 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 | `maxInputChars` | int | `2000` | Max characters of **one** player chat/ask message kept for the LLM. **Full multi-sentence text is preserved** (no first-sentence trim). Clamped **64–8000** |
 | `queueMaxDepth` | int | `4` | While AI is busy, queue up to this many extra requests instead of dropping them (`0` = reject while busy) |
 | `enableChatMessages` | bool | `true` | Show LLM/MCP replies as owner chat lines (all forms) |
-| `serverLlmOnly` | bool | `true` | Server-authoritative LLM **endpoint**: all companions use this host’s provider/baseUrl/model/MCP. Joining clients’ AI configs are ignored for LLM calls (default **true**; always effectively on for dedicated servers). Singleplayer uses the same local file via the integrated server. Does **not** merge companion minds. |
+| `serverLlmOnly` | bool | `true` | **Use server LLM** in `/az admin` → AI Config. Server-authoritative LLM **endpoint**: all companions use this host’s provider/baseUrl/model/MCP/keys. Joining clients’ AI configs are ignored for LLM calls (default **true**; always effectively on for dedicated servers). Singleplayer uses the same local file via the integrated server. Does **not** merge companion minds. |
 | `perCompanionMemory` | bool | `true` | Separate rolling chat/history buffers keyed by companion **entity UUID**. Idle / name-mention / ask for companion A never inject companion B’s transcript. Children have their own buffers (may know parent name in the system prompt only). |
 | `memoryMaxMessages` | int | `16` | Max prior user+assistant messages kept per companion when `perCompanionMemory` is on; clamped **2–64** |
 
@@ -748,7 +769,7 @@ Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speech
 
 **Configure AI once on the server** — not on each player's client.
 
-- **Shared server LLM (`serverLlmOnly`, default true):** The dedicated server or LAN host loads `config/azscompanions-ai.json` / `.toml` (and env `AZS_LLM_API_KEY`). Every companion on that world uses that **same provider/baseUrl/model/MCP endpoint**. Players joining remotely do **not** need LM Studio, Ollama, or API keys.
+- **Shared server LLM (`serverLlmOnly` / admin **Use server LLM**, default true):** The dedicated server or LAN host loads `config/azscompanions-ai.json` / `.toml` (and env `AZS_LLM_API_KEY` / optional file `apiKey`). Every companion on that world uses that **same provider/baseUrl/model/MCP endpoint**. Players joining remotely do **not** need LM Studio, Ollama, or API keys.
 - **Separate minds (`perCompanionMemory`, default true):** Shared endpoint ≠ shared brain. Each companion has its own rolling chat history keyed by **entity UUID**, plus a system prompt built from **that** companion’s name, form, attitude, and child/parent flags — never another companion’s recent chat. Idle / name-mention / ask for A cannot inject B’s transcript. `memoryMaxMessages` (default 16) caps the buffer. Child Bits get their **own** history (parent name may appear in the prompt only).
 - **Singleplayer / offline:** The integrated server reads the same config file in your instance — local setup still works as before.
 - **Where LLM runs:** `/ask`, name-mention, chat listen, idle/call-away, and CCI AI subjects execute on the **server** process only (`CompanionAiRuntime`). Clients never call the LLM for companions.

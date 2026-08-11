@@ -73,4 +73,9 @@ public final class FabricServerConfig {
     public static CompanionAiSettings aiSettings() {
         return aiSettings;
     }
+
+    /** Replace cached AI settings after an admin save (does not write disk by itself). */
+    public static void replaceAiSettings(CompanionAiSettings next) {
+        aiSettings = next == null ? new CompanionAiSettings() : next.copy();
+    }
 }

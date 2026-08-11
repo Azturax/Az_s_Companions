@@ -1,6 +1,7 @@
 package com.azscompanions.network.packet;
 
 import com.azscompanions.AzsCompanions;
+import com.azscompanions.admin.AdminAiConfigSnapshot;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -21,7 +22,7 @@ public record OpenAzAdminPacket(
             StreamCodec.of(OpenAzAdminPacket::write, OpenAzAdminPacket::read);
 
     private static void write(RegistryFriendlyByteBuf buf, OpenAzAdminPacket p) {
-        buf.writeUtf(p.aiJson == null ? "{}" : p.aiJson, 4096);
+        buf.writeUtf(p.aiJson == null ? "{}" : p.aiJson, AdminAiConfigSnapshot.MAX_WIRE_JSON);
         buf.writeUtf(p.aiStatus == null ? "" : p.aiStatus, 512);
         buf.writeBoolean(p.chunkLoading);
         buf.writeBoolean(p.teamfight);
@@ -30,7 +31,8 @@ public record OpenAzAdminPacket(
 
     private static OpenAzAdminPacket read(RegistryFriendlyByteBuf buf) {
         return new OpenAzAdminPacket(
-                buf.readUtf(4096), buf.readUtf(512), buf.readBoolean(), buf.readBoolean(), buf.readUtf(1024));
+                buf.readUtf(AdminAiConfigSnapshot.MAX_WIRE_JSON), buf.readUtf(512),
+                buf.readBoolean(), buf.readBoolean(), buf.readUtf(1024));
     }
 
     @Override

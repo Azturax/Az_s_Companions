@@ -81,6 +81,7 @@ public final class AzsCompanions {
         NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
         NeoForge.EVENT_BUS.register(DepositSelectionEvents.class);
+        com.azscompanions.ai.NeoAiJoinOfferEvents.bootstrap();
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         container.registerConfig(ModConfig.Type.COMMON, AiConfig.SPEC, AiConfig.FILE_NAME);

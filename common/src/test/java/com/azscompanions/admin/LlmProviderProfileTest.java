@@ -84,6 +84,36 @@ class LlmProviderProfileTest {
     }
 
     @Test
+    void apiKeyStatusAndWireNeverLeaksSecret() {
+        CompanionAiSettings withFileKey = new CompanionAiSettings().setApiKey("super-secret-key");
+        AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(withFileKey);
+        assertEquals(AdminAiConfigSnapshot.API_KEY_STATUS_CONFIG, snap.apiKeyStatus());
+        String openJson = snap.toWireJson();
+        assertFalse(openJson.contains("super-secret-key"));
+        assertTrue(openJson.contains("\"apiKeyStatus\":\"config\""));
+        assertFalse(openJson.contains("apiKeyUpdate"));
+
+        AdminAiConfigSnapshot fromOpen = AdminAiConfigSnapshot.fromWireJson(openJson);
+        assertEquals(AdminAiConfigSnapshot.API_KEY_STATUS_CONFIG, fromOpen.apiKeyStatus());
+        assertFalse(fromOpen.hasApiKeyUpdate());
+
+        CompanionAiSettings preserved = fromOpen.mergeInto(withFileKey);
+        assertEquals("super-secret-key", preserved.apiKey());
+
+        fromOpen.setApiKeyUpdate("new-key");
+        CompanionAiSettings updated = fromOpen.mergeInto(withFileKey);
+        assertEquals("new-key", updated.apiKey());
+
+        fromOpen.setApiKeyUpdate("");
+        CompanionAiSettings cleared = fromOpen.mergeInto(withFileKey);
+        assertEquals("", cleared.apiKey());
+
+        String saveJson = fromOpen.toWireJson();
+        assertTrue(saveJson.contains("\"apiKeyUpdate\":\"\""));
+        assertFalse(saveJson.contains("super-secret-key"));
+    }
+
+    @Test
     void whitelistMatchesUuidAndName() {
         UUID id = UUID.fromString("11111111-2222-3333-4444-555555555555");
         assertTrue(AzAdminWhitelist.matches(List.of(id.toString()), id, "Steve"));

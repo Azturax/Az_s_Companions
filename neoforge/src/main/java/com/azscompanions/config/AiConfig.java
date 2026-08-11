@@ -288,14 +288,14 @@ public final class AiConfig {
     }
 
     /**
-     * Persist AI settings to {@link #FILE_NAME} on disk without applying them to the live runtime.
-     * Restart required for LLM client changes.
+     * Persist AI settings to {@link #FILE_NAME} on disk. Caller should also
+     * {@link com.azscompanions.ai.CompanionAiRuntime#applySettings} so the live LLM picks up changes.
      */
     public static void saveSettingsToDiskWithoutReload(CompanionAiSettings s) throws java.io.IOException {
         java.nio.file.Path path = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve(FILE_NAME);
         java.nio.file.Files.createDirectories(path.getParent());
         StringBuilder toml = new StringBuilder();
-        toml.append("# Az's Companions — companion AI (written by /az admin). Restart to apply.\n");
+        toml.append("# Az's Companions — companion AI (written by /az admin).\n");
         toml.append("provider = \"").append(esc(s.provider().name().toLowerCase())).append("\"\n");
         toml.append("baseUrl = \"").append(esc(s.baseUrl())).append("\"\n");
         toml.append("model = \"").append(esc(s.model())).append("\"\n");

@@ -83,6 +83,9 @@ public final class FabricNetworkingClient {
                             payload.teamfight(),
                             payload.companionSummary()));
                 }));
+        ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.AiJoinOfferPayload.TYPE, (payload, context) ->
+                context.client().execute(() ->
+                        com.azscompanions.client.FabricAiJoinOfferClient.onOffer(payload.toOffer())));
     }
 
     public static void sendRecruit(String definitionId) {
@@ -112,5 +115,12 @@ public final class FabricNetworkingClient {
 
     public static void sendAdminAction(String action) {
         ClientPlayNetworking.send(new FabricNetworking.AdminActionPayload(action == null ? "" : action));
+    }
+
+    public static void sendAiJoinConsent(boolean accepted, String suggestProfile, boolean applyProfile) {
+        ClientPlayNetworking.send(new FabricNetworking.AiJoinConsentPayload(
+                accepted,
+                suggestProfile == null ? "" : suggestProfile,
+                applyProfile));
     }
 }

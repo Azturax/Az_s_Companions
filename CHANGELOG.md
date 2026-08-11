@@ -1,6 +1,28 @@
 # Changelog
 
+## 0.3.15
+
+### Admin AI Config — Use server LLM + API key
+- **Use server LLM: ON/OFF** toggle in `/az admin` → AI Config (maps to `serverLlmOnly`; default ON). Host LLM endpoint is authoritative for companions; joining clients do not need their own provider or keys. Dedicated servers always use the server endpoint.
+- Masked **`apiKey`** field: status only over S2C (`config` / `env` / not set); blank keeps current; **Clear** clears the config key. **Save & apply** writes the AI file and hot-applies to the live LLM runtime (no restart for these fields). Non-blank `apiKey` still wins over `apiKeyEnv`.
+- Docs: [ADMIN.md](docs/ADMIN.md), [COMPANION_AI.md](docs/COMPANION_AI.md).
+
+### Join-time LLM consent
+- On world/server join, if the **server has AI configured** (S2C offer) or (integrated/SP) a **local LLM** answers a short TCP probe on LiteLLM `:4000` / Ollama `:11434` / LM Studio `:1234`, the client shows a yes/no prompt: **Use the server LLM?**
+- **Yes** — remembers accept for this server key for the client session; hosts/admins enable **Use server LLM** and may apply a local LiteLLM/Ollama/LM Studio profile when AI was disabled; tip points to `/ask`.
+- **No** — dismisses for this server key (no re-prompt until reconnect to a different key / new JVM); does not enable AI; never auto-connects without consent.
+- Dedicated servers only offer when the server AI config is already enabled (no client-side remote probe).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.15+1.21.1.jar` | `azscompanions-fabric-0.3.15+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.15+1.21.1.jar` | `azscompanions-fabric-cci-0.3.15+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.14
+
+Release: [v0.3.14](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.14) · Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### LiteLLM / openai_compatible API key
 - `/ask` no longer fails with **Missing LLM API key** solely because `apiKey` / `AZS_LLM_API_KEY` is empty. Open local proxies (LiteLLM without `master_key`, etc.) work without a Bearer header.

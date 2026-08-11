@@ -46,11 +46,11 @@ Edit key LLM settings and **Save** to the dedicated AI file:
 | Fabric | `config/azscompanions-ai.json` |
 | NeoForge | `config/azscompanions-ai.toml` |
 
-**No hot-reload** — the live LLM client is unchanged until restart.
+**Save & apply** — writes the AI file and applies settings to the live server LLM runtime (no restart required for admin-editable fields).
 
 Chat after a successful save:
 
-> Companion AI settings saved. Restart the server/game for them to apply.
+> Companion AI settings saved and applied on the server.
 
 #### Provider profiles
 
@@ -68,7 +68,27 @@ Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Al
 | MCP (HTTP) | `mcp` | mcp url `http://127.0.0.1:3001/mcp` |
 | Custom... | (yours) | (yours) |
 
-Also editable: `model`, `apiKeyEnv`, `inputLanguage`, `serverLlmOnly`, `mcpUrl`. Prefer env API keys over putting secrets in the file.
+Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the wire; blank keeps current; Clear clears config key), `inputLanguage`, **Use server LLM** (`serverLlmOnly`), `mcpUrl`. Non-blank `apiKey` in the file wins over `apiKeyEnv` / `AZS_LLM_API_KEY`. Env remains fine for hosts that prefer not to store the key in the config file.
+
+#### Use server LLM
+
+Toggle label **Use server LLM: ON/OFF** writes `serverLlmOnly` (default **ON**).
+
+| Mode | Effect |
+|------|--------|
+| **ON** (recommended for multiplayer) | This host’s AI config (`provider` / `baseUrl` / `model` / MCP / keys) is authoritative for every companion. Joining clients do not run their own LLM. |
+| **OFF** | Only relevant on an integrated singleplayer/LAN host that is not already treated as shared (dedicated servers always use the server endpoint). |
+
+API keys always live on the **server** process (config file or env). The admin GUI never sends the stored key to clients — only a status (`config` / `env` / not set). Clients never need their own key when Use server LLM is ON.
+
+#### Join-time “use server LLM?” prompt
+
+On join, players may see a yes/no confirm when Companion AI is available:
+
+- **Dedicated / configured host:** server syncs that AI is enabled (`provider` ≠ `disabled`).
+- **Singleplayer / integrated:** if AI is still disabled, the client briefly probes local LiteLLM (`127.0.0.1:4000`), Ollama (`11434`), and LM Studio (`1234`).
+
+**Yes** enables Use server LLM for hosts/admins (and may apply a local profile when AI was off). **No** remembers dismissal for that server address for the client session — no spam, no auto-connect.
 
 **Ask-only (0.3.12+):** companions reply via **`/ask`** / **`/az ask`** only. Admin toggles for `chatListenMode`, `enableAiActions`, and `nameListen` are removed; legacy config keys are ignored.
 
