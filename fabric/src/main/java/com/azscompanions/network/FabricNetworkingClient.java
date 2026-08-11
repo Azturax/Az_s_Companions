@@ -100,10 +100,6 @@ public final class FabricNetworkingClient {
         ClientPlayNetworking.send(payload);
     }
 
-    public static void sendOrbSettings(FabricNetworking.OrbSettingsPayload payload) {
-        ClientPlayNetworking.send(payload);
-    }
-
     public static void sendMenuAction(int entityId, String action) {
         ClientPlayNetworking.send(new FabricNetworking.MenuActionPayload(entityId, action));
     }

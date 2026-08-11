@@ -23,8 +23,8 @@ public final class JindujunSupport {
     /** Rider sits atop the fluff. */
     public static final double RIDER_Y_OFFSET = 0.48d;
 
-    /** Archaeology brush chance in Trail Ruins (taiga only). */
-    public static final float TRAIL_RUINS_LOOT_CHANCE = 0.02f;
+    /** Archaeology brush chance in Trail Ruins (taiga only). Was 2%; kept very rare. */
+    public static final float TRAIL_RUINS_LOOT_CHANCE = 0.005f;
 
     private JindujunSupport() {
     }

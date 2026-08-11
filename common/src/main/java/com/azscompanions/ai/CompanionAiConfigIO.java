@@ -70,6 +70,9 @@ public final class CompanionAiConfigIO {
         if (root.has("timeoutSeconds")) {
             s.setTimeoutSeconds(root.get("timeoutSeconds").getAsInt());
         }
+        if (root.has("connectTimeoutSeconds")) {
+            s.setConnectTimeoutSeconds(root.get("connectTimeoutSeconds").getAsInt());
+        }
         if (root.has("maxTokens")) {
             s.setMaxTokens(root.get("maxTokens").getAsInt());
         }
@@ -78,6 +81,9 @@ public final class CompanionAiConfigIO {
         }
         if (root.has("queueMaxDepth")) {
             s.setQueueMaxDepth(root.get("queueMaxDepth").getAsInt());
+        }
+        if (root.has("maxParallelRequests")) {
+            s.setMaxParallelRequests(root.get("maxParallelRequests").getAsInt());
         }
         if (root.has("enableChatMessages")) {
             s.setEnableChatMessages(root.get("enableChatMessages").getAsBoolean());
@@ -246,9 +252,11 @@ public final class CompanionAiConfigIO {
         root.addProperty("systemPrompt", s.systemPrompt());
         root.addProperty("inputLanguage", s.inputLanguage());
         root.addProperty("timeoutSeconds", s.timeoutSeconds());
+        root.addProperty("connectTimeoutSeconds", s.connectTimeoutSeconds());
         root.addProperty("maxTokens", s.maxTokens());
         root.addProperty("maxInputChars", s.maxInputChars());
         root.addProperty("queueMaxDepth", s.queueMaxDepth());
+        root.addProperty("maxParallelRequests", s.maxParallelRequests());
         root.addProperty("enableChatMessages", s.enableChatMessages());
         root.addProperty("serverLlmOnly", s.serverLlmOnly());
         root.addProperty("integratedMultiplayerSharedLlm", s.integratedMultiplayerSharedLlm());

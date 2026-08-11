@@ -27,11 +27,15 @@ public final class CompanionAiSettings {
     private String systemPrompt = DEFAULT_SYSTEM_PROMPT;
     private String inputLanguage = "en";
     private int timeoutSeconds = 30;
+    /** TCP connect fail-fast; full generation still uses {@link #timeoutSeconds}. */
+    private int connectTimeoutSeconds = CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS;
     private int maxTokens = 256;
     /** Max characters of a single player message kept for the LLM (multi-sentence OK). */
     private int maxInputChars = CompanionAiInput.DEFAULT_MAX_INPUT_CHARS;
-    /** When AI is busy, queue up to this many extra requests (0 = reject while busy). */
+    /** When AI is at parallel capacity, queue up to this many extra requests (0 = reject while busy). */
     private int queueMaxDepth = CompanionAiInput.DEFAULT_QUEUE_MAX_DEPTH;
+    /** Concurrent LLM HTTP/MCP calls; ask can overlap idle. */
+    private int maxParallelRequests = CompanionAiInput.DEFAULT_MAX_PARALLEL_REQUESTS;
     private boolean enableChatMessages = true;
     /**
      * When true, this host's AI config is the shared / authoritative LLM endpoint for companions
@@ -60,8 +64,8 @@ public final class CompanionAiSettings {
      * Companion A never receives companion B's transcript. Children have separate buffers.
      */
     private boolean perCompanionMemory = true;
-    /** Max prior messages (user+assistant) kept per companion when memory is on. Default 16. */
-    private int memoryMaxMessages = 16;
+    /** Max prior messages (user+assistant) kept per companion when memory is on. Default 12. */
+    private int memoryMaxMessages = 12;
     /** Censor common profanity in AI input + companion spoken lines. Default on. */
     private boolean censorChat = true;
     private List<String> censorExtraWords = new ArrayList<>();
@@ -217,6 +221,15 @@ public final class CompanionAiSettings {
         return this;
     }
 
+    public int connectTimeoutSeconds() {
+        return connectTimeoutSeconds;
+    }
+
+    public CompanionAiSettings setConnectTimeoutSeconds(int connectTimeoutSeconds) {
+        this.connectTimeoutSeconds = CompanionAiInput.clampConnectTimeoutSeconds(connectTimeoutSeconds);
+        return this;
+    }
+
     public int maxTokens() {
         return maxTokens;
     }
@@ -241,6 +254,15 @@ public final class CompanionAiSettings {
 
     public CompanionAiSettings setQueueMaxDepth(int queueMaxDepth) {
         this.queueMaxDepth = CompanionAiInput.clampQueueDepth(queueMaxDepth);
+        return this;
+    }
+
+    public int maxParallelRequests() {
+        return maxParallelRequests;
+    }
+
+    public CompanionAiSettings setMaxParallelRequests(int maxParallelRequests) {
+        this.maxParallelRequests = CompanionAiInput.clampParallelRequests(maxParallelRequests);
         return this;
     }
 
@@ -719,9 +741,11 @@ public final class CompanionAiSettings {
                 .setSystemPrompt(systemPrompt)
                 .setInputLanguage(inputLanguage)
                 .setTimeoutSeconds(timeoutSeconds)
+                .setConnectTimeoutSeconds(connectTimeoutSeconds)
                 .setMaxTokens(maxTokens)
                 .setMaxInputChars(maxInputChars)
                 .setQueueMaxDepth(queueMaxDepth)
+                .setMaxParallelRequests(maxParallelRequests)
                 .setEnableChatMessages(enableChatMessages)
                 .setServerLlmOnly(serverLlmOnly)
                 .setIntegratedMultiplayerSharedLlm(integratedMultiplayerSharedLlm)

@@ -54,6 +54,7 @@ public final class WolfyCompanionPerk {
             return null;
         }
         companion.setForm(CompanionForm.WOLF);
+        companion.setFormVariant(WolfyPerkSupport.BROWN_WOLF_VARIANT_ID);
         companion.setCustomDisplayName(AzsCompanionsConstants.WOLFY_COMPANION_NAME);
         companion.setSkinPath("");
         companion.setNameTagVisible(true);

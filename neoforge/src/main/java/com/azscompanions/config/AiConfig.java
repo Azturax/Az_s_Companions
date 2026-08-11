@@ -27,9 +27,11 @@ public final class AiConfig {
     public static final ModConfigSpec.ConfigValue<String> SYSTEM_PROMPT;
     public static final ModConfigSpec.ConfigValue<String> INPUT_LANGUAGE;
     public static final ModConfigSpec.IntValue TIMEOUT_SECONDS;
+    public static final ModConfigSpec.IntValue CONNECT_TIMEOUT_SECONDS;
     public static final ModConfigSpec.IntValue MAX_TOKENS;
     public static final ModConfigSpec.IntValue MAX_INPUT_CHARS;
     public static final ModConfigSpec.IntValue QUEUE_MAX_DEPTH;
+    public static final ModConfigSpec.IntValue MAX_PARALLEL_REQUESTS;
     public static final ModConfigSpec.BooleanValue ENABLE_CHAT_MESSAGES;
     public static final ModConfigSpec.BooleanValue SERVER_LLM_ONLY;
     public static final ModConfigSpec.BooleanValue INTEGRATED_MULTIPLAYER_SHARED_LLM;
@@ -96,16 +98,27 @@ public final class AiConfig {
         SYSTEM_PROMPT = builder.comment("Placeholders: {name} {form} {language} {attitude}")
                 .define("systemPrompt", CompanionAiSettings.DEFAULT_SYSTEM_PROMPT);
         INPUT_LANGUAGE = builder.define("inputLanguage", "en");
-        TIMEOUT_SECONDS = builder.defineInRange("timeoutSeconds", 30, 5, 120);
+        TIMEOUT_SECONDS = builder.comment(
+                        "Full HTTP/MCP request timeout (slow local LLMs). Clamped 5–120.",
+                        "Also drives the soft Thinking HUD progress bar.")
+                .defineInRange("timeoutSeconds", 30, 5, 120);
+        CONNECT_TIMEOUT_SECONDS = builder.comment(
+                        "TCP connect fail-fast before waiting on generation.",
+                        "Dead endpoints fail sooner; raise if your proxy is slow to accept. Clamped 2–60.")
+                .defineInRange("connectTimeoutSeconds", CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS, 2, 60);
         MAX_TOKENS = builder.defineInRange("maxTokens", 256, 32, 2048);
         MAX_INPUT_CHARS = builder.comment(
                         "Max characters of one player chat/ask message kept for the LLM.",
                         "Full multi-sentence messages are preserved (no first-sentence trim).")
                 .defineInRange("maxInputChars", CompanionAiInput.DEFAULT_MAX_INPUT_CHARS, 64, 8000);
         QUEUE_MAX_DEPTH = builder.comment(
-                        "When AI is busy, queue up to this many extra requests instead of dropping them.",
-                        "0 = reject while busy. Name-mention / ask can stack briefly.")
+                        "When AI is at parallel capacity, queue up to this many extra requests instead of dropping them.",
+                        "0 = reject while busy. Interactive /ask jumps ahead of idle/ambient in the queue.")
                 .defineInRange("queueMaxDepth", CompanionAiInput.DEFAULT_QUEUE_MAX_DEPTH, 0, 16);
+        MAX_PARALLEL_REQUESTS = builder.comment(
+                        "Concurrent LLM calls (default 2). Lets /ask start while an idle line is still generating.",
+                        "Clamped 1–4. Local single-GPU hosts may prefer 1.")
+                .defineInRange("maxParallelRequests", CompanionAiInput.DEFAULT_MAX_PARALLEL_REQUESTS, 1, 4);
         ENABLE_CHAT_MESSAGES = builder.comment("Show LLM replies as owner chat lines.")
                 .define("enableChatMessages", true);
         SERVER_LLM_ONLY = builder.comment(
@@ -133,8 +146,8 @@ public final class AiConfig {
                 .define("perCompanionMemory", true);
         MEMORY_MAX_MESSAGES = builder.comment(
                         "Max prior user+assistant messages kept per companion when perCompanionMemory is on.",
-                        "Clamped 2–64.")
-                .defineInRange("memoryMaxMessages", 16, 2, 64);
+                        "Clamped 2–64. Lower = snappier prompts.")
+                .defineInRange("memoryMaxMessages", 12, 2, 64);
         CENSOR_CHAT = builder.comment(
                         "Star-out common swears in AI prompts and companion speak lines. Default true.",
                         "Fabric JSON alias: filterProfanity.")
@@ -237,9 +250,11 @@ public final class AiConfig {
                 .setSystemPrompt(SYSTEM_PROMPT.get())
                 .setInputLanguage(INPUT_LANGUAGE.get())
                 .setTimeoutSeconds(TIMEOUT_SECONDS.get())
+                .setConnectTimeoutSeconds(CONNECT_TIMEOUT_SECONDS.get())
                 .setMaxTokens(MAX_TOKENS.get())
                 .setMaxInputChars(MAX_INPUT_CHARS.get())
                 .setQueueMaxDepth(QUEUE_MAX_DEPTH.get())
+                .setMaxParallelRequests(MAX_PARALLEL_REQUESTS.get())
                 .setEnableChatMessages(ENABLE_CHAT_MESSAGES.get())
                 .setServerLlmOnly(SERVER_LLM_ONLY.get())
                 .setIntegratedMultiplayerSharedLlm(INTEGRATED_MULTIPLAYER_SHARED_LLM.get())
@@ -305,9 +320,11 @@ public final class AiConfig {
         toml.append("systemPrompt = \"").append(esc(s.systemPrompt())).append("\"\n");
         toml.append("inputLanguage = \"").append(esc(s.inputLanguage())).append("\"\n");
         toml.append("timeoutSeconds = ").append(s.timeoutSeconds()).append("\n");
+        toml.append("connectTimeoutSeconds = ").append(s.connectTimeoutSeconds()).append("\n");
         toml.append("maxTokens = ").append(s.maxTokens()).append("\n");
         toml.append("maxInputChars = ").append(s.maxInputChars()).append("\n");
         toml.append("queueMaxDepth = ").append(s.queueMaxDepth()).append("\n");
+        toml.append("maxParallelRequests = ").append(s.maxParallelRequests()).append("\n");
         toml.append("enableChatMessages = ").append(s.enableChatMessages()).append("\n");
         toml.append("serverLlmOnly = ").append(s.serverLlmOnly()).append("\n");
         toml.append("integratedMultiplayerSharedLlm = ").append(s.integratedMultiplayerSharedLlm()).append("\n");

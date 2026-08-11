@@ -7,8 +7,8 @@ import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.CompanionContextSkinSupport;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.CompanionFormVariants;
 import com.azscompanions.entity.CompanionGender;
-import com.azscompanions.entity.CompanionOrbSettings;
 import com.azscompanions.network.FabricNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -223,10 +223,6 @@ public final class FabricCompanionCreatorScreen extends Screen {
             y = addFormGroupButtons(y, "Player", CompanionForm.FormGroup.PLAYER);
             y = addFormGroupButtons(y, "Animals", CompanionForm.FormGroup.ANIMAL);
             y = addFormGroupButtons(y, "Hostiles", CompanionForm.FormGroup.HOSTILE);
-            y = addFormGroupButtons(y, "Special", CompanionForm.FormGroup.SPECIAL);
-            if (draft.form != null && draft.form.isOrb()) {
-                y = addOrbSettingsSection(y);
-            }
             y = addRightWrapped(y,
                     "Forms keep ownership, charm, Follow/Stay/Wander, and CCI actions. Creeper excluded.",
                     0xA0A0A0);
@@ -673,141 +669,43 @@ public final class FabricCompanionCreatorScreen extends Screen {
         ));
     }
 
-    private int addOrbSettingsSection(int y) {
-        addRightLabel(y, "Glowing Orb", 0xA0A0A0);
-        y += 14;
-        addRightLabel(y, "Position", 0xA0A0A0);
-        y += 14;
-        int half = (rightW - 6) / 2;
-        Button frontBtn = Button.builder(
-                Component.literal(draft.orbFront ? "[Front]" : "Front"),
-                b -> {
-                    draft.orbFront = true;
-                    pushOrbSettings();
-                    init();
-                }).bounds(rightX, 0, half, 18).build();
-        Button backBtn = Button.builder(
-                Component.literal(!draft.orbFront ? "[Back]" : "Back"),
-                b -> {
-                    draft.orbFront = false;
-                    pushOrbSettings();
-                    init();
-                }).bounds(rightX + half + 6, 0, half, 18).build();
-        addRightWidget(frontBtn, y, 18);
-        addRightWidget(backBtn, y, 18);
-        y += 22;
-        y = addRightSlider(y, "Red",
-                () -> (float) CompanionOrbSettings.red(draft.orbColorRgb),
-                v -> {
-                    draft.orbColorRgb = CompanionOrbSettings.rgb(
-                            Math.round(v),
-                            CompanionOrbSettings.green(draft.orbColorRgb),
-                            CompanionOrbSettings.blue(draft.orbColorRgb));
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
-        y = addRightSlider(y, "Green",
-                () -> (float) CompanionOrbSettings.green(draft.orbColorRgb),
-                v -> {
-                    draft.orbColorRgb = CompanionOrbSettings.rgb(
-                            CompanionOrbSettings.red(draft.orbColorRgb),
-                            Math.round(v),
-                            CompanionOrbSettings.blue(draft.orbColorRgb));
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
-        y = addRightSlider(y, "Blue",
-                () -> (float) CompanionOrbSettings.blue(draft.orbColorRgb),
-                v -> {
-                    draft.orbColorRgb = CompanionOrbSettings.rgb(
-                            CompanionOrbSettings.red(draft.orbColorRgb),
-                            CompanionOrbSettings.green(draft.orbColorRgb),
-                            Math.round(v));
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_CHANNEL, CompanionOrbSettings.MAX_CHANNEL);
-        y = addRightSlider(y, "Brightness",
-                () -> (float) draft.orbBrightness,
-                v -> {
-                    draft.orbBrightness = Math.round(v);
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_BRIGHTNESS, CompanionOrbSettings.MAX_BRIGHTNESS);
-        y = addRightSlider(y, "Float height",
-                () -> draft.orbFloatHeight,
-                v -> {
-                    draft.orbFloatHeight = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_FLOAT_HEIGHT, CompanionOrbSettings.MAX_FLOAT_HEIGHT);
-        y = addRightSlider(y, "Float bob",
-                () -> draft.orbFloatAmplitude,
-                v -> {
-                    draft.orbFloatAmplitude = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_FLOAT_AMPLITUDE, CompanionOrbSettings.MAX_FLOAT_AMPLITUDE);
-        y = addRightSlider(y, "Float speed",
-                () -> draft.orbFloatSpeed,
-                v -> {
-                    draft.orbFloatSpeed = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_FLOAT_SPEED, CompanionOrbSettings.MAX_FLOAT_SPEED);
-        y = addRightSlider(y, "Offset X",
-                () -> draft.orbOffsetX,
-                v -> {
-                    draft.orbOffsetX = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
-        y = addRightSlider(y, "Offset Y",
-                () -> draft.orbOffsetY,
-                v -> {
-                    draft.orbOffsetY = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
-        y = addRightSlider(y, "Offset Z",
-                () -> draft.orbOffsetZ,
-                v -> {
-                    draft.orbOffsetZ = v;
-                    pushOrbSettings();
-                },
-                CompanionOrbSettings.MIN_OFFSET, CompanionOrbSettings.MAX_OFFSET);
-        return y + 4;
-    }
-
-    private void pushOrbSettings() {
-        com.azscompanions.network.FabricNetworkingClient.sendOrbSettings(new FabricNetworking.OrbSettingsPayload(
-                companion.getId(),
-                draft.orbColorRgb,
-                draft.orbBrightness,
-                draft.orbFloatAmplitude,
-                draft.orbFloatSpeed,
-                draft.orbFloatHeight,
-                draft.orbOffsetX,
-                draft.orbOffsetY,
-                draft.orbOffsetZ,
-                draft.orbFront
-        ));
-    }
-
     private int addFormGroupButtons(int y, String title, CompanionForm.FormGroup group) {
         addRightLabel(y, title, 0xA0A0A0);
         y += 14;
         int col = 0;
         int half = (rightW - 6) / 2;
+        int arrowW = 14;
+        int gap = 1;
         for (CompanionForm form : CompanionForm.byGroup(group)) {
             boolean selected = draft.form == form;
-            Button btn = Button.builder(
-                    Component.literal(selected ? "[" + form.displayLabel() + "]" : form.displayLabel()),
-                    b -> {
-                        draft.form = form;
-                        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_FORM);
-                        init();
-                    }).bounds(rightX + (col % 2) * (half + 6), 0, half, 18).build();
-            addRightWidget(btn, y, 18);
+            boolean hasVariants = CompanionFormVariants.hasVariants(form);
+            int cellX = rightX + (col % 2) * (half + 6);
+            String label = form.displayLabel();
+            if (selected) {
+                String vLabel = hasVariants
+                        ? CompanionFormVariants.displayLabel(
+                        CompanionFormVariants.normalize(form, draft.formVariant))
+                        : "";
+                label = vLabel.isEmpty()
+                        ? "[" + form.displayLabel() + "]"
+                        : "[" + form.displayLabel() + ": " + vLabel + "]";
+            }
+            if (hasVariants) {
+                int midW = half - 2 * arrowW - 2 * gap;
+                Button left = Button.builder(Component.literal("<"), b -> cycleFormVariant(form, -1))
+                        .bounds(cellX, 0, arrowW, 18).build();
+                Button mid = Button.builder(Component.literal(label), b -> selectForm(form))
+                        .bounds(cellX + arrowW + gap, 0, Math.max(24, midW), 18).build();
+                Button right = Button.builder(Component.literal(">"), b -> cycleFormVariant(form, 1))
+                        .bounds(cellX + half - arrowW, 0, arrowW, 18).build();
+                addRightWidget(left, y, 18);
+                addRightWidget(mid, y, 18);
+                addRightWidget(right, y, 18);
+            } else {
+                Button btn = Button.builder(Component.literal(label), b -> selectForm(form))
+                        .bounds(cellX, 0, half, 18).build();
+                addRightWidget(btn, y, 18);
+            }
             col++;
             if (col % 2 == 0) {
                 y += 22;
@@ -817,6 +715,22 @@ public final class FabricCompanionCreatorScreen extends Screen {
             y += 22;
         }
         return y + 6;
+    }
+
+    private void selectForm(CompanionForm form) {
+        draft.form = form;
+        draft.formVariant = CompanionFormVariants.normalize(form, draft.formVariant);
+        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_FORM
+                | FabricNetworking.SettingsPayload.FLAG_FORM_VARIANT);
+        init();
+    }
+
+    private void cycleFormVariant(CompanionForm form, int delta) {
+        draft.form = form;
+        draft.formVariant = CompanionFormVariants.cycle(form, draft.formVariant, delta);
+        pushLiveAppearance(FabricNetworking.SettingsPayload.FLAG_FORM
+                | FabricNetworking.SettingsPayload.FLAG_FORM_VARIANT);
+        init();
     }
 
     private void pushLiveAppearance(int flags) {
@@ -835,6 +749,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.form.serializedName(),
                 draft.showNameTag,
                 draft.showArmor,
+                draft.formVariant == null ? "" : draft.formVariant,
                 flags
         ));
     }
@@ -853,7 +768,8 @@ public final class FabricCompanionCreatorScreen extends Screen {
         int flags = FabricNetworking.SettingsPayload.FLAG_NAME | FabricNetworking.SettingsPayload.FLAG_SCALE
                 | FabricNetworking.SettingsPayload.FLAG_SKIN | FabricNetworking.SettingsPayload.FLAG_SLIM
                 | FabricNetworking.SettingsPayload.FLAG_PROPORTIONS | FabricNetworking.SettingsPayload.FLAG_GENDER
-                | FabricNetworking.SettingsPayload.FLAG_FORM | FabricNetworking.SettingsPayload.FLAG_SHOW_NAME
+                | FabricNetworking.SettingsPayload.FLAG_FORM | FabricNetworking.SettingsPayload.FLAG_FORM_VARIANT
+                | FabricNetworking.SettingsPayload.FLAG_SHOW_NAME
                 | FabricNetworking.SettingsPayload.FLAG_SHOW_ARMOR;
         com.azscompanions.network.FabricNetworkingClient.sendSettings(new FabricNetworking.SettingsPayload(
                 companion.getId(),
@@ -870,6 +786,7 @@ public final class FabricCompanionCreatorScreen extends Screen {
                 draft.form.serializedName(),
                 draft.showNameTag,
                 draft.showArmor,
+                draft.formVariant == null ? "" : draft.formVariant,
                 flags
         ));
         pushContextSkins();

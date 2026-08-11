@@ -31,10 +31,29 @@ import java.util.concurrent.atomic.AtomicInteger;
  * and returns text content. The MCP server may wrap any local or remote model behind that tool.
  */
 public final class McpCompanionClient implements CompanionAiClient {
-    private final HttpClient http = HttpClient.newBuilder()
+    private volatile HttpClient http = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS))
             .build();
+    private volatile int appliedConnectTimeout = CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS;
     private final AtomicInteger nextId = new AtomicInteger(1);
+
+    private HttpClient httpClient(CompanionAiSettings settings) {
+        int connectSec = settings.connectTimeoutSeconds();
+        if (connectSec == appliedConnectTimeout) {
+            return http;
+        }
+        synchronized (this) {
+            if (connectSec != appliedConnectTimeout) {
+                appliedConnectTimeout = connectSec;
+                http = HttpClient.newBuilder()
+                        .followRedirects(HttpClient.Redirect.NORMAL)
+                        .connectTimeout(Duration.ofSeconds(connectSec))
+                        .build();
+            }
+            return http;
+        }
+    }
 
     @Override
     public Optional<String> chat(CompanionAiSettings settings, CompanionChatContext context) throws Exception {
@@ -65,7 +84,7 @@ public final class McpCompanionClient implements CompanionAiClient {
         clientInfo.addProperty("version", "0.3.10");
         initParams.add("clientInfo", clientInfo);
 
-        HttpResponse<String> initResponse = postJsonRpc(endpoint, timeout, null, settings.mcpProtocolVersion(),
+        HttpResponse<String> initResponse = postJsonRpc(settings, endpoint, timeout, null, settings.mcpProtocolVersion(),
                 apiKey, rpcRequest("initialize", initParams));
         if (initResponse.statusCode() < 200 || initResponse.statusCode() >= 300) {
             throw new IllegalStateException(
@@ -77,7 +96,7 @@ public final class McpCompanionClient implements CompanionAiClient {
 
         // Best-effort initialized notification (ignore failures).
         try {
-            postJsonRpc(endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
+            postJsonRpc(settings, endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
                     apiKey, rpcNotification("notifications/initialized", new JsonObject()));
         } catch (Exception ignored) {
             // Older or sessionless servers may not accept notifications.
@@ -87,7 +106,7 @@ public final class McpCompanionClient implements CompanionAiClient {
         callParams.addProperty("name", tool);
         callParams.add("arguments", toolArguments(settings, context));
 
-        HttpResponse<String> callResponse = postJsonRpc(endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
+        HttpResponse<String> callResponse = postJsonRpc(settings, endpoint, timeout, sessionId, settings.mcpProtocolVersion(),
                 apiKey, rpcRequest("tools/call", callParams));
         if (callResponse.statusCode() < 200 || callResponse.statusCode() >= 300) {
             throw new IllegalStateException("MCP HTTP " + callResponse.statusCode() + ": " + truncate(callResponse.body()));
@@ -181,8 +200,8 @@ public final class McpCompanionClient implements CompanionAiClient {
         return args;
     }
 
-    private HttpResponse<String> postJsonRpc(String endpoint, Duration timeout, String sessionId,
-                                             String protocolVersion, String apiKey, JsonObject body)
+    private HttpResponse<String> postJsonRpc(CompanionAiSettings settings, String endpoint, Duration timeout,
+                                             String sessionId, String protocolVersion, String apiKey, JsonObject body)
             throws Exception {
         URI uri;
         try {
@@ -211,11 +230,12 @@ public final class McpCompanionClient implements CompanionAiClient {
             }
         }
         try {
-            return http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            return httpClient(settings).send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (java.net.ConnectException e) {
             throw new IllegalStateException("MCP connection refused at " + endpoint + " — is the proxy/server running?", e);
         } catch (java.net.http.HttpTimeoutException e) {
-            throw new IllegalStateException("MCP request timed out", e);
+            throw new IllegalStateException("MCP request timed out after " + timeout.toSeconds()
+                    + "s (connectTimeout=" + settings.connectTimeoutSeconds() + "s)", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("MCP request interrupted", e);

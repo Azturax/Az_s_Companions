@@ -139,7 +139,8 @@ Unless noted, needs an owned companion within **~96 blocks**.
 
 **Summon/modify keys:** `form`, `skin`/`player`, `name`, `attitude`, `team`, `showArmor`/`show_armor`/`armor_visible`, `followRadius`/`teleportDistance`, `personalSpace`, `wanderRadius`, `chunkLoading` (per-companion ticket opt-out; server `companionChunkLoading` must be on), persona keys below, equipment slots, optional `size`/`scale`.
 
-**Forms:** `player`, `chicken`, `wolf`, `cat`, `cow`, `pig`, `sheep`, `fox`, `rabbit`, `bee`, `zombie`, `skeleton`, `spider`, `enderman`, `husk`, `stray`, …
+**Forms:** `player`, `chicken`, `wolf`, `cat`, `cow`, `pig`, `sheep`, `fox`, `rabbit`, `bee`, `zombie`, `skeleton`, `spider`, `enderman`, `husk`, `stray`, …  
+Mob **form variants** (Customization `<`/`>`): wolf coats, cat breeds, fox `red`/`snow`, rabbit types, sheep wool — NBT `CompanionFormVariant`.
 
 **Failures:** companion limit; invalid item id; no companion nearby for modify.
 

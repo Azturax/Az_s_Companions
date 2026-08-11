@@ -88,27 +88,6 @@ public final class CompanionRenderer extends MobRenderer<CompanionEntity, Femini
         if (ClientAppearanceDraft.matches(entity) && ClientAppearanceDraft.ACTIVE.form != null) {
             form = ClientAppearanceDraft.ACTIVE.form;
         }
-        if (form.isOrb()) {
-            this.shadowRadius = 0.15f * entity.getBodyScale();
-            int color = entity.getOrbColorRgb();
-            int brightness = entity.getOrbBrightness();
-            float amp = entity.getOrbFloatAmplitude();
-            float speed = entity.getOrbFloatSpeed();
-            float scale = entity.getBodyScale();
-            if (ClientAppearanceDraft.matches(entity)) {
-                color = ClientAppearanceDraft.ACTIVE.orbColorRgb;
-                brightness = ClientAppearanceDraft.ACTIVE.orbBrightness;
-                amp = ClientAppearanceDraft.ACTIVE.orbFloatAmplitude;
-                speed = ClientAppearanceDraft.ACTIVE.orbFloatSpeed;
-                scale = ClientAppearanceDraft.ACTIVE.scale;
-            }
-            CompanionOrbRenderer.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight,
-                    color, brightness, amp, speed, scale);
-            if (this.shouldShowName(entity)) {
-                this.renderNameTag(entity, entity.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
-            }
-            return;
-        }
         if (!form.isPlayer()) {
             this.shadowRadius = 0.4f * entity.getBodyScale();
             formRenderer.render(entity, form, entityYaw, partialTicks, poseStack, buffer, packedLight);

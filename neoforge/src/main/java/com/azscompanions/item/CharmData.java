@@ -13,6 +13,8 @@ public final class CharmData {
     public static final String TAG_BOUND = "BoundCompanion";
     public static final String TAG_STORED = "StoredCompanion";
     public static final String TAG_BED_GRANTED = "KonBedGranted";
+    /** @see com.azscompanions.entity.CompanionLogoutPersistence#CHARM_LOGOUT_PARKED */
+    public static final String TAG_LOGOUT_PARKED = com.azscompanions.entity.CompanionLogoutPersistence.CHARM_LOGOUT_PARKED;
 
     private CharmData() {
     }
@@ -60,6 +62,29 @@ public final class CharmData {
         CompoundTag tag = getTag(stack);
         tag.putUUID(TAG_BOUND, companionUuid);
         tag.put(TAG_STORED, entityTag);
+        tag.remove(TAG_LOGOUT_PARKED);
+        setTag(stack, tag);
+    }
+
+    /** Logout parking: store entity NBT and mark for auto-restore on the next join. */
+    public static void storeCompanionForLogout(ItemStack stack, CompoundTag entityTag, UUID companionUuid) {
+        CompoundTag tag = getTag(stack);
+        tag.putUUID(TAG_BOUND, companionUuid);
+        tag.put(TAG_STORED, entityTag);
+        tag.putBoolean(TAG_LOGOUT_PARKED, true);
+        setTag(stack, tag);
+    }
+
+    public static boolean isLogoutParked(ItemStack stack) {
+        return getTag(stack).getBoolean(TAG_LOGOUT_PARKED);
+    }
+
+    public static void clearLogoutParked(ItemStack stack) {
+        CompoundTag tag = getTag(stack);
+        if (!tag.contains(TAG_LOGOUT_PARKED)) {
+            return;
+        }
+        tag.remove(TAG_LOGOUT_PARKED);
         setTag(stack, tag);
     }
 
@@ -76,6 +101,7 @@ public final class CharmData {
     public static void clearStoredCompanion(ItemStack stack) {
         CompoundTag tag = getTag(stack);
         tag.remove(TAG_STORED);
+        tag.remove(TAG_LOGOUT_PARKED);
         setTag(stack, tag);
     }
 

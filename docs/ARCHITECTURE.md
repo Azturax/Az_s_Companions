@@ -24,13 +24,21 @@ Az's Companions (mod id `azscompanions`). Public repo: [Azturax/Az_s_Companions]
 
 ## Companion chunk tickets
 
-While summoned, each companion entity (primary and child Bits) holds a loader chunk ticket for its current chunk so AI/follow/sleep keep ticking when the player is away. NeoForge uses `TicketController`; Fabric uses a non-expiring `TicketType`. Config: `companionChunkLoading` / `maxForcedChunksPerPlayer`. Distinct from FTB chunk claims.
+While summoned, each companion entity (primary and child Bits) holds a loader chunk ticket for its current chunk so AI/follow/sleep keep ticking when the player is away (same dimension). NeoForge uses `TicketController`; Fabric uses a non-expiring `TicketType`. Config: `companionChunkLoading` / `maxForcedChunksPerPlayer`. Distinct from FTB chunk claims. On owner **logout**, companions are parked (despawned + NBT saved) and tickets released; they restore near the player on **login**.
+
+## Companion logout persistence
+
+Owned living companions (non-child roots; Bits folded via `StoredChildren`) are removed from the world when the owner disconnects and restored on join near the player. Storage: NeoForge `Player#getPersistentData` list `azscompanions.LogoutCompanions`; Fabric overworld SavedData `azscompanions_logout_companions`. Charm-bound companions also get `StoredCompanion` + `LogoutParked` so a missing bound entity does not trigger recruit-replacement. Manual charm dismiss (no `LogoutParked`) stays stored until the player summons.
+
+**Dimension travel is not logout.** On `PlayerChangedDimension` / Fabric `AFTER_PLAYER_CHANGE_WORLD` (any `ResourceKey`, vanilla or modded), companions are teleported into the destination near the owner — they do not park. Persona/model are global per world save; first-create onboarding is not re-opened.
+
+## Companion AI recent-action chatter
+
+Owned companions with **Idle chat** ON can react to a short-lived per-owner event buffer (explosions, darkness, notable finds, craft-ready, crafts, damage). Loaders record events; entity ambient ticks consume reactive ones early (~25s speak cooldown) and always ground idle prompts in recent context. See [COMPANION_AI.md](COMPANION_AI.md#idle-ambient-chat).
 
 ## Compatibility
 
 Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps. FTB Teams/Chunks/Ranks: reflection soft-deps — [COMPAT.md](COMPAT.md).
-
-**Glowing Orb** form (`CompanionForm.GLOWING_ORB`): settings in `CompanionOrbSettings` (NBT + synched, incl. Front/Back); always-air follow via `CompanionOrbFollow` + `CompanionOrbFlightSupport`; client particles via `CompanionOrbRenderer` (Sodium/Iris-safe, no billboard); dynamic-light luminance via `DynamicLightsLegacyHooks` (default torch 14); evil-mode lightning via `CompanionOrbEvilLightningSupport`.
 
 ## Pathfinding / home blocks
 

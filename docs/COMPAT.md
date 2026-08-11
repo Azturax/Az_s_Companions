@@ -239,23 +239,11 @@ EMF looks for modded models roughly at:
 - Fresh Moves: ETF → Allow skin transparency → All skins; EMF → Prevent first person hand animation On.
 - Without EMF/ETF, companions render with cutout skins (visible by default). Turn `translucentPlayerSkins=false` if you have ETF but prefer cutout.
 
-### Glowing Orb form (Sodium + Iris / Oculus)
-
-**Glowing Orb** (`CompanionForm.GLOWING_ORB`) is a choosable Special form. Visuals are **particles-only** (no textured billboard):
-
-| Effect | Approach | Why |
-|--------|----------|-----|
-| Soft spherical shell | Client `DustParticleOptions` tinted by orb RGB | Short-lived, volumetric ball of light |
-| Hot core sparks | `ParticleTypes.GLOW` / occasional `END_ROD` | Torch-like brightness without translucent quads |
-| World light | Dynamic-lights luminance = orb brightness (default **14**, torch) | LambDynamicLights / RyoamicLights soft-compat |
-
-Particles spawn around the orb entity only (near-zero velocity, capped per tick). Avoids `entityTranslucent` / billboard paths that looked flat or broke under Sodium/Iris. Follow position: **Front / Back** stand-off along owner look + XYZ offsets. Playful evil on orbs summons rate-limited nearby lightning (rare owner-near strike after grace).
-
 ### Code entry points
 
 - Common: `FancyAnimCompat`, `FancyAnimSettings`, `FancyAnimConfigIO`
-- NeoForge: `FancyAnimCompatModule`, `FancyAnimClientBridge`; renderers `CompanionRenderer` / `CompanionMobFormRenderer` / `CompanionOrbRenderer`
-- Fabric: `FabricFancyAnimCompat`; renderers `FabricCompanionRenderer` / `CompanionMobFormRenderer` / `CompanionOrbRenderer`
+- NeoForge: `FancyAnimCompatModule`, `FancyAnimClientBridge`; renderers `CompanionRenderer` / `CompanionMobFormRenderer`
+- Fabric: `FabricFancyAnimCompat`; renderers `FabricCompanionRenderer` / `CompanionMobFormRenderer`
 
 ---
 
@@ -336,3 +324,29 @@ No hard dependency — works if neither is installed.
 - Common: `VoiceChatCompat`, `VoiceChatMods`
 - NeoForge: `compat.optional.VoiceChatCompatModule` via `CompatBootstrap` (always probed)
 - Fabric: `FabricVoiceChatCompat` from `AzsCompanionsFabric`
+
+---
+
+## Dimension mods (soft note)
+
+No hard deps and **no mod-id allowlist**. Companions follow the owner on **any** `ResourceKey` / dimension registry change (vanilla Overworld↔Nether↔End and modded worlds such as Ad Astra, RFTools Dimensions, Twilight Forest, Mystcraft-like packs, etc.). Travel uses live entity teleport APIs — not logout parking — so persona/model stay continuous for that world save.
+
+---
+
+## Treasure loot injections
+
+Structure / archaeology loot from this mod (not soft-deps — always registered unless disabled):
+
+| Injection | Where | Chance |
+|-----------|--------|--------|
+| Companion Charm | Desert pyramid chests | 5% |
+| Jindujun Whistle | Trail Ruins rare archaeology | 0.5% (NeoForge GLM also scopes taiga) |
+
+### Config
+
+| Loader | File | Key | Default |
+|--------|------|-----|---------|
+| NeoForge | `config/azscompanions-common.toml` | `[world] enableLoot` | `true` |
+| Fabric | `config/azscompanions-common.json` | `world.enableLoot` | `true` |
+
+Set **`enableLoot=false`** to stop all of these injectors (and any future mod treasure loot appends gated the same way). Creative-tab items remain craftable/available; wake-bed gift loot is unrelated and unchanged.

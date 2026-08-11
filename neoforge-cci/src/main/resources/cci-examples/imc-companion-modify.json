@@ -2,5 +2,5 @@
   "type": "imc",
   "modId": "azscompanions",
   "subject": "companion_modify",
-  "message": "form=wolf;name=Fluffy;attitude=passive;showArmor=true;followRadius=64;personalSpace=3;wanderRadius=12;chunkLoading=true;whoAmI=Loyal wolf;whatAmIDoing=Following the stream;howWillIBe=Playful;mainhand=minecraft:bone"
+  "message": "form=wolf;name=Fluffy;attitude=passive;showArmor=true;followRadius=64;personalSpace=3;wanderRadius=64;chunkLoading=true;whoAmI=Loyal wolf;whatAmIDoing=Following the stream;howWillIBe=Playful;mainhand=minecraft:bone"
 }

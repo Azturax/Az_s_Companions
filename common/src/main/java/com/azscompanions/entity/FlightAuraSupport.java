@@ -61,19 +61,19 @@ public final class FlightAuraSupport {
     }
 
     /**
-     * Prefer orb tint, else team nametag tint, else default ki.
+     * Prefer explicit tint, else team nametag tint, else default ki.
      *
-     * @param orbRgb   packed RGB or {@code -1} if none
-     * @param teamId   optional team id
+     * @param preferredRgb packed RGB or {@code -1} if none
+     * @param teamId       optional team id
      */
-    public static int resolveColorRgb(int orbRgb, String teamId) {
-        if (orbRgb >= 0) {
-            return CompanionOrbSupport.clampRgb(orbRgb);
+    public static int resolveColorRgb(int preferredRgb, String teamId) {
+        if (preferredRgb >= 0) {
+            return clampRgb(preferredRgb);
         }
         if (teamId != null && !teamId.isBlank()) {
             int team = CompanionTeamColors.nametagRgb(teamId);
             if (team != 0xFFFFFF) {
-                return CompanionOrbSupport.clampRgb(team);
+                return clampRgb(team);
             }
         }
         return DEFAULT_KI_RGB;
@@ -83,7 +83,7 @@ public final class FlightAuraSupport {
         if (teamId != null && !teamId.isBlank()) {
             int team = CompanionTeamColors.nametagRgb(teamId);
             if (team != 0xFFFFFF) {
-                return warmTowardGold(CompanionOrbSupport.clampRgb(team));
+                return warmTowardGold(clampRgb(team));
             }
         }
         return DEFAULT_NIMBUS_RGB;
@@ -91,13 +91,37 @@ public final class FlightAuraSupport {
 
     /** Blend a team tint toward gold so trails stay ki-like. */
     public static int warmTowardGold(int rgb) {
-        int r = CompanionOrbSupport.red(rgb);
-        int g = CompanionOrbSupport.green(rgb);
-        int b = CompanionOrbSupport.blue(rgb);
-        int gr = CompanionOrbSupport.red(DEFAULT_NIMBUS_RGB);
-        int gg = CompanionOrbSupport.green(DEFAULT_NIMBUS_RGB);
-        int gb = CompanionOrbSupport.blue(DEFAULT_NIMBUS_RGB);
-        return CompanionOrbSupport.rgb((r + gr) / 2, (g + gg) / 2, (b + gb) / 2);
+        int r = red(rgb);
+        int g = green(rgb);
+        int b = blue(rgb);
+        int gr = red(DEFAULT_NIMBUS_RGB);
+        int gg = green(DEFAULT_NIMBUS_RGB);
+        int gb = blue(DEFAULT_NIMBUS_RGB);
+        return packRgb((r + gr) / 2, (g + gg) / 2, (b + gb) / 2);
+    }
+
+    public static int clampChannel(int v) {
+        return Math.max(0, Math.min(255, v));
+    }
+
+    public static int clampRgb(int rgb) {
+        return packRgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    }
+
+    public static int packRgb(int r, int g, int b) {
+        return (clampChannel(r) << 16) | (clampChannel(g) << 8) | clampChannel(b);
+    }
+
+    public static int red(int rgb) {
+        return (rgb >> 16) & 0xFF;
+    }
+
+    public static int green(int rgb) {
+        return (rgb >> 8) & 0xFF;
+    }
+
+    public static int blue(int rgb) {
+        return rgb & 0xFF;
     }
 
     /** Subtle pulse while ascending (boost) — scale multiplier ~1.0–1.08. */

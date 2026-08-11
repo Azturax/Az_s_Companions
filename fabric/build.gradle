@@ -28,6 +28,7 @@ dependencies {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/azscompanions.accesswidener")
     runs {
         client {
             client()

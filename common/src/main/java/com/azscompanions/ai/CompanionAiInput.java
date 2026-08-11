@@ -7,6 +7,13 @@ package com.azscompanions.ai;
 public final class CompanionAiInput {
     public static final int DEFAULT_MAX_INPUT_CHARS = 2000;
     public static final int DEFAULT_QUEUE_MAX_DEPTH = 4;
+    /** Concurrent LLM calls (ask can run while idle finishes). Clamped 1–4. */
+    public static final int DEFAULT_MAX_PARALLEL_REQUESTS = 2;
+    public static final int MAX_PARALLEL_REQUESTS = 4;
+    /** TCP connect / first-hop fail-fast; full request still uses {@code timeoutSeconds}. */
+    public static final int DEFAULT_CONNECT_TIMEOUT_SECONDS = 8;
+    /** Cap ambient/idle/call completions so short lines finish sooner. */
+    public static final int BACKGROUND_MAX_TOKENS_CAP = 128;
 
     private CompanionAiInput() {
     }
@@ -43,6 +50,29 @@ public final class CompanionAiInput {
 
     public static int clampQueueDepth(int value) {
         return Math.max(0, Math.min(16, value));
+    }
+
+    public static int clampParallelRequests(int value) {
+        return Math.max(1, Math.min(MAX_PARALLEL_REQUESTS, value <= 0 ? DEFAULT_MAX_PARALLEL_REQUESTS : value));
+    }
+
+    public static int clampConnectTimeoutSeconds(int value) {
+        return Math.max(2, Math.min(60, value <= 0 ? DEFAULT_CONNECT_TIMEOUT_SECONDS : value));
+    }
+
+    /**
+     * Effective completion budget: ambient/idle/call use a lower cap so short lines finish faster.
+     * Gemma thinking models still get at least 512 when the configured budget would force it.
+     */
+    public static int effectiveMaxTokens(int configuredMaxTokens, boolean backgroundPrompt, boolean gemmaLike) {
+        int max = Math.max(32, Math.min(2048, configuredMaxTokens <= 0 ? 256 : configuredMaxTokens));
+        if (backgroundPrompt) {
+            max = Math.min(max, BACKGROUND_MAX_TOKENS_CAP);
+        }
+        if (gemmaLike && max < 512 && !backgroundPrompt) {
+            max = 512;
+        }
+        return max;
     }
 
     /**

@@ -60,7 +60,7 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (owner == null || owner.isSleeping()) {
             return false;
         }
-        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
         if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
@@ -89,7 +89,7 @@ public final class FabricFollowOwnerGoal extends Goal {
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
         if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
@@ -112,9 +112,6 @@ public final class FabricFollowOwnerGoal extends Goal {
             return;
         }
         double teleportLeash = Math.max(TELEPORT_DISTANCE, followRadius());
-        if (CompanionOrbFollow.tick(companion, owner)) {
-            return;
-        }
         if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash, personalSpace())) {
             return;
         }

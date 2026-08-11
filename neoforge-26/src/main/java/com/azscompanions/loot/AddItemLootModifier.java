@@ -32,6 +32,9 @@ public final class AddItemLootModifier implements IGlobalLootModifier {
                 return generatedLoot;
             }
         }
+        if (!CompanionLootSupport.isLootInjectionEnabled()) {
+            return generatedLoot;
+        }
         generatedLoot.add(new ItemStack(item));
         return generatedLoot;
     }

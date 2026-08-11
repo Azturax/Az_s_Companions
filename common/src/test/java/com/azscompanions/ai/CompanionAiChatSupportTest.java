@@ -36,8 +36,8 @@ class CompanionAiChatSupportTest {
     void idleIntervalWithinRange() {
         Random r = new Random(1L);
         for (int i = 0; i < 20; i++) {
-            int v = CompanionAiChatSupport.nextIdleIntervalSeconds(90, 240, r);
-            assertTrue(v >= 90 && v <= 240);
+            int v = CompanionAiChatSupport.nextIdleIntervalSeconds(75, 180, r);
+            assertTrue(v >= 75 && v <= 180);
         }
     }
 
@@ -83,6 +83,32 @@ class CompanionAiChatSupportTest {
     @Test
     void idleChatDefaultsOn() {
         assertTrue(new CompanionAiSettings().idleChat());
+        assertEquals(75, new CompanionAiSettings().idleChatSecondsMin());
+        assertEquals(180, new CompanionAiSettings().idleChatSecondsMax());
+        assertEquals(12, new CompanionAiSettings().chatReactCooldownSeconds());
+        assertEquals(2, new CompanionAiSettings().maxParallelRequests());
+        assertEquals(8, new CompanionAiSettings().connectTimeoutSeconds());
+    }
+
+    @Test
+    void backgroundPromptDetection() {
+        assertTrue(CompanionAiChatSupport.isBackgroundPrompt("[ambient] hello"));
+        assertTrue(CompanionAiChatSupport.isBackgroundPrompt("[react] boom"));
+        assertTrue(CompanionAiChatSupport.isBackgroundPrompt("[call] where"));
+        assertFalse(CompanionAiChatSupport.isBackgroundPrompt("How are you?"));
+    }
+
+    @Test
+    void latencyConfigRoundTrip() {
+        CompanionAiSettings s = new CompanionAiSettings()
+                .setConnectTimeoutSeconds(5)
+                .setMaxParallelRequests(3);
+        JsonObject json = CompanionAiConfigIO.toJson(s);
+        CompanionAiSettings loaded = CompanionAiConfigIO.fromJson(json);
+        assertEquals(5, loaded.connectTimeoutSeconds());
+        assertEquals(3, loaded.maxParallelRequests());
+        assertEquals(5, json.get("connectTimeoutSeconds").getAsInt());
+        assertEquals(3, json.get("maxParallelRequests").getAsInt());
     }
 
     @Test

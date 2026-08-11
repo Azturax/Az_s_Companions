@@ -45,7 +45,7 @@ public final class DynamicLightsCompatModule {
         }
         if (DynamicLightsLegacyHooks.tryRegisterLivingEntityHandler(
                 () -> ModEntities.COMPANION.get(),
-                com.azscompanions.entity.CompanionOrbSupport::lightLuminanceReflective)) {
+                entity -> 0)) {
             AzsCompanions.LOGGER.info("Registered companion with legacy DynamicLightHandlers API");
         }
     }

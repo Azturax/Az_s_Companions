@@ -495,14 +495,16 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 | `apiKeyEnv` | string | `AZS_LLM_API_KEY` | Env var name when `apiKey` is empty |
 | `systemPrompt` | string | (wholesome companion template) | Placeholders: `{name}`, `{form}`, `{language}`, `{attitude}` |
 | `inputLanguage` | string | `en` | Preferred player / reply language (`en`, `de`, `ja`, …) |
-| `timeoutSeconds` | int | `30` | HTTP/MCP timeout; clamped **5–120**. Also drives the soft Thinking HUD progress bar |
-| `maxTokens` | int | `256` | Completion cap; clamped **32–2048** |
+| `timeoutSeconds` | int | `30` | Full HTTP/MCP request timeout (slow local LLMs); clamped **5–120**. Also drives the soft Thinking HUD progress bar |
+| `connectTimeoutSeconds` | int | `8` | TCP connect fail-fast before waiting on generation; clamped **2–60**. Raise if your proxy is slow to accept sockets |
+| `maxTokens` | int | `256` | Completion cap for `/ask` and chat; clamped **32–2048**. Idle/ambient/call-away are capped at **128** so short lines finish sooner |
 | `maxInputChars` | int | `2000` | Max characters of **one** player chat/ask message kept for the LLM. **Full multi-sentence text is preserved** (no first-sentence trim). Clamped **64–8000** |
-| `queueMaxDepth` | int | `4` | While AI is busy, queue up to this many extra requests instead of dropping them (`0` = reject while busy) |
+| `queueMaxDepth` | int | `4` | When at parallel capacity, queue up to this many extra requests instead of dropping them (`0` = reject while busy). Interactive `/ask` jumps ahead of idle/ambient |
+| `maxParallelRequests` | int | `2` | Concurrent LLM calls; lets `/ask` start while an idle line is still generating. Clamped **1–4** (use `1` on single-GPU local hosts if contested) |
 | `enableChatMessages` | bool | `true` | Show LLM/MCP replies as owner chat lines (all forms) |
 | `serverLlmOnly` | bool | `false` | **Use server LLM** in `/az admin` → AI Config. **Opt-in** shared host LLM endpoint. **OFF (default):** personal host config (SP/integrated → your local or remote LLM). **ON:** all companions on this world use the host’s provider/baseUrl/model/MCP/keys. Dedicated joiners have no per-client LLM path — ask runs on the server process when the provider is enabled. Does **not** merge companion minds. |
 | `perCompanionMemory` | bool | `true` | Separate rolling chat/history buffers keyed by companion **entity UUID**. Idle / name-mention / ask for companion A never inject companion B’s transcript. Children have their own buffers (may know parent name in the system prompt only). |
-| `memoryMaxMessages` | int | `16` | Max prior user+assistant messages kept per companion when `perCompanionMemory` is on; clamped **2–64** |
+| `memoryMaxMessages` | int | `12` | Max prior user+assistant messages kept per companion when `perCompanionMemory` is on; clamped **2–64** |
 
 ### Chat listen / auto-react
 
@@ -512,7 +514,7 @@ Types and defaults match `CompanionAiSettings` / loaders. Fabric nests MCP under
 | `nameListen` | bool | `true` | **Primary chat path.** Saying a companion's display name in normal chat (`Kon, how are you?`, `Bit come here please`) triggers that companion — **no slash command required**. Works even when `chatListenMode` is `off` |
 | `chatReaction` | string | — | **Fabric JSON only (legacy alias):** same as `chatListenMode` if `chatListenMode` is absent |
 | `chatReactRange` | double | `48` | Max blocks from speaker/owner; clamped **8–128** |
-| `chatReactCooldownSeconds` | int | `20` | Per-companion cooldown; clamped **5–600** |
+| `chatReactCooldownSeconds` | int | `12` | Per-companion cooldown; clamped **5–600** |
 | `censorChat` | bool | `true` | Star-out common profanity in AI prompts and `speakLine` output (alias `filterProfanity`) |
 | `censorExtraWords` | string[] | `[]` | Extra whole words to censor |
 
@@ -552,9 +554,9 @@ While an AI request is in flight, the owner (and stranger speaker when relevant)
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line. |
-| `idleChatSecondsMin` | int | `90` | Min seconds between ambient lines; clamped **30–3600** |
-| `idleChatSecondsMax` | int | `240` | Max seconds (random in `[min,max]`); clamped **30–3600** |
+| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line (~25s when reacting to a recent event). Also grounds lines in **recent actions** (explosion, darkness→ask for light, notable finds, craft-ready, crafts like “NICE SWORD!”). |
+| `idleChatSecondsMin` | int | `75` | Min seconds between ambient lines; clamped **30–3600** |
+| `idleChatSecondsMax` | int | `180` | Max seconds (random in `[min,max]`); clamped **30–3600** |
 
 ### Call player when away
 
@@ -621,20 +623,22 @@ Use material gather tasks instead (`/az gather <item> <count> [nearest|look]` or
   "systemPrompt": "You are {name}, a wholesome adult Minecraft companion (form: {form}). Stay in character, keep replies short (1-3 sentences), never be sexual or cruel. The player speaks in {language}. Reply in that language unless they ask otherwise.",
   "inputLanguage": "en",
   "timeoutSeconds": 30,
+  "connectTimeoutSeconds": 8,
   "maxTokens": 256,
+  "maxParallelRequests": 2,
   "enableChatMessages": true,
   "serverLlmOnly": false,
   "perCompanionMemory": true,
-  "memoryMaxMessages": 16,
+  "memoryMaxMessages": 12,
   "censorChat": true,
   "censorExtraWords": [],
   "chatListenMode": "off",
   "nameListen": true,
   "chatReactRange": 48.0,
-  "chatReactCooldownSeconds": 20,
+  "chatReactCooldownSeconds": 12,
   "idleChat": true,
-  "idleChatSecondsMin": 90,
-  "idleChatSecondsMax": 240,
+  "idleChatSecondsMin": 75,
+  "idleChatSecondsMax": 180,
   "callPlayerWhenAway": false,
   "callPlayerAfterSeconds": 90,
   "callPlayerDistance": 48.0,
@@ -670,20 +674,22 @@ apiKey = ""
 apiKeyEnv = "AZS_LLM_API_KEY"
 inputLanguage = "en"
 timeoutSeconds = 30
+connectTimeoutSeconds = 8
 maxTokens = 256
+maxParallelRequests = 2
 enableChatMessages = true
 serverLlmOnly = false
 perCompanionMemory = true
-memoryMaxMessages = 16
+memoryMaxMessages = 12
 censorChat = true
 censorExtraWords = []
 chatListenMode = "off"
 nameListen = true
 chatReactRange = 48.0
-chatReactCooldownSeconds = 20
+chatReactCooldownSeconds = 12
 idleChat = true
-idleChatSecondsMin = 90
-idleChatSecondsMax = 240
+idleChatSecondsMin = 75
+idleChatSecondsMax = 180
 callPlayerWhenAway = false
 callPlayerAfterSeconds = 90
 callPlayerDistance = 48.0
@@ -732,7 +738,7 @@ Mod root is **`/az`**. Legacy **`/azscompanions`** redirects to the same tree.
 
 ## Per-companion persona (Who / What / How + optional extras)
 
-Each companion has an independent mind. Persona fields persist in entity NBT (survives charm store/summon, dimension change) and are injected into that companion’s LLM system prompt.
+Each companion has an independent mind. Persona fields persist in entity NBT (survives charm store/summon, dimension travel, logout park) and are injected into that companion’s LLM system prompt. Appearance + persona are **one global identity per world save** — entering Nether/End or any modded dimension teleports the living companion with the owner (no re-onboarding).
 
 | Property | Meaning | NBT key |
 |----------|---------|---------|
@@ -786,7 +792,7 @@ Aliases: `who`/`whoAmI`, `what`/`whatAmIDoing`, `how`/`howWillIBe`, plus `speech
 **Configure AI once on the server** — not on each player's client.
 
 - **Opt-in shared server LLM (`serverLlmOnly` / admin **Use server LLM**, default false):** When **ON**, the dedicated server or LAN host loads `config/azscompanions-ai.json` / `.toml` (and env `AZS_LLM_API_KEY` / optional file `apiKey`) as the **shared** endpoint for every companion. Joining players do **not** need LM Studio, Ollama, or API keys. When **OFF** (default), SP/integrated hosts use that same file as a **personal** local or remote LLM without favoring multiplayer sharing. Dedicated joiners still have no per-client LLM path — ask runs on the server process if the provider is enabled.
-- **Separate minds (`perCompanionMemory`, default true):** Shared endpoint ≠ shared brain. Each companion has its own rolling chat history keyed by **entity UUID**, plus a system prompt built from **that** companion’s name, form, attitude, and child/parent flags — never another companion’s recent chat. Idle / name-mention / ask for A cannot inject B’s transcript. `memoryMaxMessages` (default 16) caps the buffer. Child Bits get their **own** history (parent name may appear in the prompt only).
+- **Separate minds (`perCompanionMemory`, default true):** Shared endpoint ≠ shared brain. Each companion has its own rolling chat history keyed by **entity UUID**, plus a system prompt built from **that** companion’s name, form, attitude, and child/parent flags — never another companion’s recent chat. Idle / name-mention / ask for A cannot inject B’s transcript. `memoryMaxMessages` (default 12) caps the buffer. Child Bits get their **own** history (parent name may appear in the prompt only).
 - **Singleplayer / offline:** The integrated server reads the same config file in your instance — local setup still works as before.
 - **Where LLM runs:** `/ask`, name-mention, chat listen, idle/call-away, and CCI AI subjects execute on the **server** process only (`CompanionAiRuntime`). Clients never call the LLM for companions.
 - **Ownership:** `/ask`, `/az ask`, and chat `Name ask …` only target companions **owned by the commanding player**. Two players can both have a companion named Kon — each command hits **their own** Kon only.

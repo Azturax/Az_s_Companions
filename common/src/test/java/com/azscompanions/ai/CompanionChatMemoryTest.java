@@ -59,7 +59,7 @@ class CompanionChatMemoryTest {
         assertFalse(loaded.perCompanionMemory());
         assertEquals(8, loaded.memoryMaxMessages());
         assertTrue(new CompanionAiSettings().perCompanionMemory());
-        assertEquals(16, new CompanionAiSettings().memoryMaxMessages());
+        assertEquals(12, new CompanionAiSettings().memoryMaxMessages());
     }
 
     @Test

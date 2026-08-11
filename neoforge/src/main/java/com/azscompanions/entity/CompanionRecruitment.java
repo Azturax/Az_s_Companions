@@ -196,7 +196,7 @@ public final class CompanionRecruitment {
         child.setAttitude(root.getAttitude());
         child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
         child.setForm(root.getForm());
-        child.inheritOrbSettingsFrom(root);
+        child.setFormVariant(root.getFormVariant());
         child.setSkinPath(root.getSkinPath() == null ? "" : root.getSkinPath());
         child.setArmorVisible(root.isArmorVisible());
         child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);

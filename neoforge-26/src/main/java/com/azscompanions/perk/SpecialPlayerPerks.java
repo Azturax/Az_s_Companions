@@ -75,10 +75,6 @@ public final class SpecialPlayerPerks {
     }
 
     public static void applyCompanionPerks(Mob companion, UUID ownerUuid) {
-        if (companion instanceof CompanionEntity orb && orb.getForm().isOrb()) {
-            companion.setNoGravity(true);
-            return;
-        }
         if (isSpecial(ownerUuid)) {
             clearGlow(companion);
             Player owner = companion.level().getPlayerByUUID(ownerUuid);

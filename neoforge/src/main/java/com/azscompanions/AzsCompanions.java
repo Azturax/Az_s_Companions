@@ -12,6 +12,7 @@ import com.azscompanions.config.ClientConfig;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.data.CompanionDefinitionReloadListener;
+import com.azscompanions.loot.CompanionLootSupport;
 import com.azscompanions.network.ModNetworking;
 import com.azscompanions.event.CompanionAiChatEvents;
 import com.azscompanions.event.CompanionGameEvents;
@@ -79,8 +80,13 @@ public final class AzsCompanions {
         NeoForge.EVENT_BUS.addListener(this::onServerStopped);
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
         NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionRecentActionEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
         NeoForge.EVENT_BUS.register(DepositSelectionEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionLogoutEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionDimensionTravelEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionCreeperCatScareEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionSkeletonWolfScareEvents.class);
         com.azscompanions.ai.NeoAiJoinOfferEvents.bootstrap();
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
@@ -90,6 +96,9 @@ public final class AzsCompanions {
     }
 
     private void onModConfig(ModConfigEvent event) {
+        if (event.getConfig().getSpec() == CommonConfig.SPEC) {
+            CompanionLootSupport.setLootInjectionEnabled(CommonConfig.ENABLE_LOOT.get());
+        }
         if (event.getConfig().getSpec() == AiConfig.SPEC) {
             CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
         }
@@ -163,5 +172,7 @@ public final class AzsCompanions {
     private void onServerStopped(ServerStoppedEvent event) {
         CompanionAiRuntime.get().clearServerContext();
         CompanionChunkLoading.clearAll();
+        com.azscompanions.ai.CompanionRecentActionMemory.clearAll();
+        com.azscompanions.ai.CompanionInventoryWatchSupport.clearAll();
     }
 }

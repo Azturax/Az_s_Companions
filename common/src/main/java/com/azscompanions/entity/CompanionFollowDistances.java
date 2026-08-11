@@ -6,6 +6,9 @@ package com.azscompanions.entity;
  * <p>
  * Defaults match the classic static bands; per-companion overrides live on the entity
  * ({@code FollowRadius}, {@code PersonalSpace}, {@code WanderRadius} NBT / synched data).
+ * <p>
+ * Invariant: {@code WanderRadius ≥ FollowRadius} at all times (both clamped to max 128).
+ * Raising follow bumps wander; wander cannot be set below follow.
  */
 public final class CompanionFollowDistances {
     /** Never stand closer than this to the owner (default personal space). */
@@ -51,10 +54,14 @@ public final class CompanionFollowDistances {
     public static final float PERSONAL_SPACE_MAX = 12.0f;
     public static final float DEFAULT_PERSONAL_SPACE = (float) MIN_PERSONAL_SPACE;
 
-    /** Wander free-roam radius slider (non–home-bed). */
+    /**
+     * Wander free-roam radius slider (non–home-bed).
+     * Always kept ≥ follow radius (same absolute max as follow: 128).
+     */
     public static final float WANDER_RADIUS_MIN = 3.0f;
-    public static final float WANDER_RADIUS_MAX = 48.0f;
-    public static final float DEFAULT_WANDER_RADIUS = (float) IDLE_WANDER_MAX;
+    public static final float WANDER_RADIUS_MAX = 128.0f;
+    /** Default matches follow leash so wander ≥ follow from spawn. */
+    public static final float DEFAULT_WANDER_RADIUS = DEFAULT_FOLLOW_RADIUS;
 
     /** Child inherit factor for spacing (slightly tighter than parent). */
     public static final float CHILD_SPACING_SCALE = 0.75f;
@@ -74,6 +81,25 @@ public final class CompanionFollowDistances {
         return Math.max(WANDER_RADIUS_MIN, Math.min(WANDER_RADIUS_MAX, value));
     }
 
+    /**
+     * Clamp wander into range, then raise it to at least the clamped follow radius
+     * ({@code wander ≥ follow} always).
+     */
+    public static float clampWanderRadius(float value, float followRadius) {
+        float follow = clampFollowRadius(followRadius);
+        return Math.max(clampWanderRadius(value), follow);
+    }
+
+    /**
+     * Pair clamp: follow in 1–128, wander in 3–128 and {@code wander ≥ follow}.
+     * If follow rises above the requested wander, wander is bumped up.
+     */
+    public static float[] clampFollowAndWander(float followRadius, float wanderRadius) {
+        float follow = clampFollowRadius(followRadius);
+        float wander = clampWanderRadius(wanderRadius, follow);
+        return new float[]{follow, wander};
+    }
+
     /** Inherit parent spacing with a slightly smaller radius (Bits cling closer). */
     public static float inheritFollowRadius(float parent) {
         return clampFollowRadius(parent * CHILD_SPACING_SCALE);
@@ -85,6 +111,11 @@ public final class CompanionFollowDistances {
 
     public static float inheritWanderRadius(float parent) {
         return clampWanderRadius(parent * CHILD_SPACING_SCALE);
+    }
+
+    /** Inherit wander, still enforcing wander ≥ the child's follow radius. */
+    public static float inheritWanderRadius(float parentWander, float childFollowRadius) {
+        return clampWanderRadius(parentWander * CHILD_SPACING_SCALE, childFollowRadius);
     }
 
     /** Path-start distance derived from follow leash + personal space. */

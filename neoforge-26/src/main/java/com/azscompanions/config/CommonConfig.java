@@ -17,6 +17,7 @@ public final class CommonConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> ALLOWED_DIMENSIONS;
     public static final ModConfigSpec.BooleanValue AVOID_BREAKING_TOOLS;
     public static final ModConfigSpec.BooleanValue RESPECT_CLAIM_MODS;
+    public static final ModConfigSpec.BooleanValue ENABLE_LOOT;
     public static final ModConfigSpec.IntValue CONTAINER_POLL_COOLDOWN_TICKS;
     public static final ModConfigSpec.IntValue MAX_BLOCKS_SCANNED_PER_TICK;
 
@@ -51,6 +52,9 @@ public final class CommonConfig {
         RESPECT_CLAIM_MODS = builder.comment("Honor claim/protection mods when integrations are present.")
                 .define("respectClaimMods", true);
         AVOID_BREAKING_TOOLS = builder.define("avoidBreakingTools", true);
+        ENABLE_LOOT = builder.comment(
+                        "Inject mod treasure loot (Companion Charm in desert pyramids, Jindujun Whistle in Trail Ruins archaeology, etc.). Default true.")
+                .define("enableLoot", com.azscompanions.loot.CompanionLootSupport.DEFAULT_ENABLE_LOOT);
         builder.pop();
 
         SPEC = builder.build();

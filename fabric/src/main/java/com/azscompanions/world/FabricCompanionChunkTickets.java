@@ -116,7 +116,8 @@ public final class FabricCompanionChunkTickets {
         }
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerUuid);
         if (owner == null) {
-            return true;
+            // Owner offline: companions are parked on logout; no ticket needed.
+            return false;
         }
         return owner.level() == level;
     }

@@ -4,7 +4,6 @@ import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
-import com.azscompanions.entity.CompanionOrbSettings;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -33,17 +32,9 @@ public final class ClientAppearanceDraft {
     public float shoulders = CompanionBodyProportions.DEFAULT_SHOULDERS;
     public float bustOffset = CompanionBodyProportions.DEFAULT_BUST_OFFSET;
     public CompanionForm form = CompanionForm.PLAYER;
+    public String formVariant = "";
     public boolean showNameTag = true;
     public boolean showArmor = true;
-    public int orbColorRgb = CompanionOrbSettings.DEFAULT_COLOR_RGB;
-    public int orbBrightness = CompanionOrbSettings.DEFAULT_BRIGHTNESS;
-    public float orbFloatAmplitude = CompanionOrbSettings.DEFAULT_FLOAT_AMPLITUDE;
-    public float orbFloatSpeed = CompanionOrbSettings.DEFAULT_FLOAT_SPEED;
-    public float orbFloatHeight = CompanionOrbSettings.DEFAULT_FLOAT_HEIGHT;
-    public float orbOffsetX = CompanionOrbSettings.DEFAULT_OFFSET_X;
-    public float orbOffsetY = CompanionOrbSettings.DEFAULT_OFFSET_Y;
-    public float orbOffsetZ = CompanionOrbSettings.DEFAULT_OFFSET_Z;
-    public boolean orbFront = CompanionOrbSettings.DEFAULT_FRONT;
 
     public ClientAppearanceDraft(int entityId) {
         this.entityId = entityId;
@@ -67,17 +58,9 @@ public final class ClientAppearanceDraft {
         d.shoulders = entity.getShoulders();
         d.bustOffset = entity.getBustOffset();
         d.form = entity.getForm();
+        d.formVariant = entity.getFormVariant();
         d.showNameTag = entity.isNameTagVisible();
         d.showArmor = entity.isArmorVisible();
-        d.orbColorRgb = entity.getOrbColorRgb();
-        d.orbBrightness = entity.getOrbBrightness();
-        d.orbFloatAmplitude = entity.getOrbFloatAmplitude();
-        d.orbFloatSpeed = entity.getOrbFloatSpeed();
-        d.orbFloatHeight = entity.getOrbFloatHeight();
-        d.orbOffsetX = entity.getOrbOffsetX();
-        d.orbOffsetY = entity.getOrbOffsetY();
-        d.orbOffsetZ = entity.getOrbOffsetZ();
-        d.orbFront = entity.isOrbFront();
         return d;
     }
 

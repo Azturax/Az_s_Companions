@@ -1,15 +1,17 @@
 package com.azscompanions.client.renderer;
 
+import com.azscompanions.client.ClientAppearanceDraft;
 import com.azscompanions.compat.fancyanim.FancyAnimCompat;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.CompanionFormVariants;
+import com.azscompanions.entity.CompanionMode;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -18,7 +20,6 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.WalkAnimationState;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Fox;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import java.lang.reflect.Field;
@@ -30,7 +31,7 @@ import java.util.UUID;
  * Renders non-player companion forms by delegating to vanilla mob renderers.
  * Client-only proxy entities avoid ClassCastException in models that cast to Wolf/Fox/etc.,
  * and LivingEntityRenderer supplies the correct upright orientation in world and GUI.
- * Walk/attack state and equipment are copied each frame so vanilla layers animate and show items.
+ * Walk/attack state and armor are copied each frame; held items are not rendered in mob form.
  */
 public final class CompanionMobFormRenderer {
     private static final Field WALK_SPEED_OLD;
@@ -48,15 +49,15 @@ public final class CompanionMobFormRenderer {
     }
 
     private final Map<CompanionForm, LivingEntity> visuals = new EnumMap<>(CompanionForm.class);
-    private final ItemInHandRenderer itemInHandRenderer;
+    /** Client-only mount so humanoid proxies report {@code isPassenger()} for the minecart sit pose. */
+    private Entity sitMount;
 
     public CompanionMobFormRenderer(EntityRendererProvider.Context context) {
-        this.itemInHandRenderer = context.getItemInHandRenderer();
     }
 
     public void render(CompanionEntity entity, CompanionForm form, float entityYaw, float partialTicks,
                        PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
-        if (form == null || form.isPlayer() || form.isOrb()) {
+        if (form == null || form.isPlayer()) {
             return;
         }
         Level level = entity.level();
@@ -68,17 +69,12 @@ public final class CompanionMobFormRenderer {
             return;
         }
 
-        syncVisual(entity, visual);
+        syncVisual(entity, form, visual);
         @SuppressWarnings("unchecked")
         EntityRenderer<LivingEntity> renderer =
                 (EntityRenderer<LivingEntity>) (EntityRenderer<?>)
                         Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(visual);
         renderer.render(visual, entityYaw, partialTicks, poseStack, buffer, packedLight);
-
-        // Animal/spider renderers lack ItemInHandLayer — draw held items ourselves.
-        if (!usesHumanoidHeldItems(form)) {
-            renderAnimalHeldItems(entity, form, poseStack, buffer, packedLight);
-        }
     }
 
     private LivingEntity visualFor(CompanionForm form, Level level) {
@@ -104,7 +100,7 @@ public final class CompanionMobFormRenderer {
         return created;
     }
 
-    private static void syncVisual(CompanionEntity source, LivingEntity visual) {
+    private void syncVisual(CompanionEntity source, CompanionForm form, LivingEntity visual) {
         if (FancyAnimCompat.syncMobFormUuid()) {
             UUID id = source.getUUID();
             if (!id.equals(visual.getUUID())) {
@@ -140,6 +136,8 @@ public final class CompanionMobFormRenderer {
         visual.setSwimming(source.isSwimming());
         visual.setCustomNameVisible(false);
 
+        // Sit command only — Stay holds still without a sit mesh.
+        boolean sitting = source.getMode() == CompanionMode.SIT;
         boolean aggressive = source.getTarget() != null && source.getTarget().isAlive() || source.swinging;
         if (visual instanceof net.minecraft.world.entity.Mob mob) {
             mob.setAggressive(aggressive);
@@ -151,41 +149,119 @@ public final class CompanionMobFormRenderer {
         }
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {
-            ItemStack stack = source.getItemBySlot(slot);
-            if (!isArmorVisibleForRender(source) && isArmorEquipmentSlot(slot)) {
+            ItemStack stack;
+            if (isHandEquipmentSlot(slot)) {
+                // Mob forms never show held items (humanoid ItemInHandLayer or animal overlays).
                 stack = ItemStack.EMPTY;
+            } else if (!isArmorVisibleForRender(source) && isArmorEquipmentSlot(slot)) {
+                stack = ItemStack.EMPTY;
+            } else {
+                stack = source.getItemBySlot(slot);
             }
             if (!ItemStack.matches(visual.getItemBySlot(slot), stack)) {
                 visual.setItemSlot(slot, stack.copy());
             }
         }
 
+        boolean nativeSit = sitting && form.usesNativeAnimalSitPose();
         if (visual instanceof TamableAnimal tamable) {
-            tamable.setInSittingPose(source.isSitting());
-            tamable.setOrderedToSit(source.isSitting());
+            tamable.setInSittingPose(nativeSit);
+            tamable.setOrderedToSit(nativeSit);
         }
         if (visual instanceof Fox fox) {
-            fox.setSitting(source.isSitting());
+            fox.setSitting(nativeSit);
             fox.setIsCrouching(source.isShiftKeyDown());
         }
-        if (visual instanceof net.minecraft.world.entity.animal.Wolf wolf) {
-            applyWolfCoat(wolf, source.getChatDisplayName());
+        syncPassengerSitPose(visual, sitting && form.usesPassengerSitPose());
+        applyFormVariant(visual, form, resolveFormVariant(source, form));
+    }
+
+    private void syncPassengerSitPose(LivingEntity visual, boolean sitting) {
+        if (!sitting) {
+            if (visual.isPassenger()) {
+                visual.stopRiding();
+            }
+            return;
+        }
+        Level level = visual.level();
+        if (level == null) {
+            return;
+        }
+        Entity mount = sitMountFor(level);
+        if (mount == null) {
+            return;
+        }
+        mount.setPosRaw(visual.getX(), visual.getY(), visual.getZ());
+        if (visual.getVehicle() != mount) {
+            visual.startRiding(mount, true);
         }
     }
 
-    /** Chestnut = brown coat for Wolfy; pale for other wolf-form companions. */
-    private static void applyWolfCoat(net.minecraft.world.entity.animal.Wolf wolf, String displayName) {
-        String want = com.azscompanions.perk.WolfyPerkSupport.isWolfyName(displayName)
-                ? com.azscompanions.perk.WolfyPerkSupport.BROWN_WOLF_VARIANT_ID
-                : "minecraft:pale";
-        var nbt = new net.minecraft.nbt.CompoundTag();
-        wolf.saveWithoutId(nbt);
-        String current = nbt.contains("variant") ? nbt.getString("variant") : "";
-        if (want.equals(current)) {
+    private Entity sitMountFor(Level level) {
+        if (sitMount != null && sitMount.level() == level) {
+            return sitMount;
+        }
+        // Invisible client-only mount; humanoid models use isPassenger() for bent-leg sit.
+        Entity created = EntityType.MARKER.create(level);
+        if (created == null) {
+            created = EntityType.MINECART.create(level);
+        }
+        sitMount = created;
+        return sitMount;
+    }
+
+    private static String resolveFormVariant(CompanionEntity source, CompanionForm form) {
+        if (ClientAppearanceDraft.matches(source) && ClientAppearanceDraft.ACTIVE.formVariant != null) {
+            return CompanionFormVariants.normalize(form, ClientAppearanceDraft.ACTIVE.formVariant);
+        }
+        return CompanionFormVariants.normalize(form, source.getFormVariant());
+    }
+
+    private static void applyFormVariant(LivingEntity visual, CompanionForm form, String variantId) {
+        if (form == null || !CompanionFormVariants.hasVariants(form)) {
             return;
         }
-        nbt.putString("variant", want);
-        wolf.load(nbt);
+        String want = CompanionFormVariants.normalize(form, variantId);
+        var nbt = new net.minecraft.nbt.CompoundTag();
+        visual.saveWithoutId(nbt);
+        boolean changed = false;
+        switch (form) {
+            case WOLF, CAT -> {
+                String current = nbt.contains("variant") ? nbt.getString("variant") : "";
+                if (!want.equals(current)) {
+                    nbt.putString("variant", want);
+                    changed = true;
+                }
+            }
+            case FOX -> {
+                String current = nbt.contains("Type") ? nbt.getString("Type") : "";
+                if (!want.equalsIgnoreCase(current)) {
+                    nbt.putString("Type", want);
+                    changed = true;
+                }
+            }
+            case RABBIT -> {
+                int wantType = CompanionFormVariants.rabbitTypeId(want);
+                int current = nbt.contains("RabbitType") ? nbt.getInt("RabbitType") : 0;
+                if (wantType != current) {
+                    nbt.putInt("RabbitType", wantType);
+                    changed = true;
+                }
+            }
+            case SHEEP -> {
+                byte wantColor = (byte) CompanionFormVariants.sheepColorId(want);
+                byte current = nbt.contains("Color") ? nbt.getByte("Color") : 0;
+                if (wantColor != current) {
+                    nbt.putByte("Color", wantColor);
+                    changed = true;
+                }
+            }
+            default -> {
+            }
+        }
+        if (changed) {
+            visual.load(nbt);
+        }
     }
 
     private static boolean isArmorVisibleForRender(CompanionEntity source) {
@@ -203,6 +279,10 @@ public final class CompanionMobFormRenderer {
                 || slot == EquipmentSlot.BODY;
     }
 
+    private static boolean isHandEquipmentSlot(EquipmentSlot slot) {
+        return slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND;
+    }
+
     private static void copyWalkAnimation(WalkAnimationState from, WalkAnimationState to) {
         to.setSpeed(from.speed());
         try {
@@ -211,42 +291,6 @@ public final class CompanionMobFormRenderer {
         } catch (IllegalAccessException ignored) {
             // Keep speed only; limbs may look less smooth without position.
         }
-    }
-
-    private void renderAnimalHeldItems(CompanionEntity entity, CompanionForm form, PoseStack poseStack,
-                                       MultiBufferSource buffer, int packedLight) {
-        ItemStack main = entity.getMainHandItem();
-        ItemStack off = entity.getOffhandItem();
-        if (main.isEmpty() && off.isEmpty()) {
-            return;
-        }
-        float height = form.height() * entity.getBodyScale();
-        if (!main.isEmpty()) {
-            poseStack.pushPose();
-            poseStack.translate(0.28f, height * 0.45f, -0.05f);
-            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
-            poseStack.scale(0.7f, 0.7f, 0.7f);
-            itemInHandRenderer.renderItem(entity, main, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,
-                    false, poseStack, buffer, packedLight);
-            poseStack.popPose();
-        }
-        if (!off.isEmpty()) {
-            poseStack.pushPose();
-            poseStack.translate(-0.28f, height * 0.45f, -0.05f);
-            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
-            poseStack.scale(0.7f, 0.7f, 0.7f);
-            itemInHandRenderer.renderItem(entity, off, ItemDisplayContext.THIRD_PERSON_LEFT_HAND,
-                    true, poseStack, buffer, packedLight);
-            poseStack.popPose();
-        }
-    }
-
-    /** Zombie-family / skeleton / enderman use humanoid ItemInHandLayer + armor layers. */
-    private static boolean usesHumanoidHeldItems(CompanionForm form) {
-        return switch (form) {
-            case ZOMBIE, SKELETON, HUSK, STRAY, ENDERMAN -> true;
-            default -> false;
-        };
     }
 
     private static EntityType<? extends LivingEntity> vanillaType(CompanionForm form) {

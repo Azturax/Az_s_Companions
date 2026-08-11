@@ -24,9 +24,28 @@ import java.util.Optional;
 public final class OpenAiCompatibleClient implements CompanionAiClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("azscompanions/ai");
 
-    private final HttpClient http = HttpClient.newBuilder()
+    private volatile HttpClient http = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS))
             .build();
+    private volatile int appliedConnectTimeout = CompanionAiInput.DEFAULT_CONNECT_TIMEOUT_SECONDS;
+
+    private HttpClient httpClient(CompanionAiSettings settings) {
+        int connectSec = settings.connectTimeoutSeconds();
+        if (connectSec == appliedConnectTimeout) {
+            return http;
+        }
+        synchronized (this) {
+            if (connectSec != appliedConnectTimeout) {
+                appliedConnectTimeout = connectSec;
+                http = HttpClient.newBuilder()
+                        .followRedirects(HttpClient.Redirect.NORMAL)
+                        .connectTimeout(Duration.ofSeconds(connectSec))
+                        .build();
+            }
+            return http;
+        }
+    }
 
     @Override
     public Optional<String> chat(CompanionAiSettings settings, CompanionChatContext context) throws Exception {
@@ -53,11 +72,8 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
 
         String model = settings.model() == null ? "" : settings.model().trim();
         boolean gemmaLike = looksLikeGemma(model);
-        int maxTokens = settings.maxTokens();
-        if (gemmaLike && maxTokens < 512) {
-            // Thinking models often burn a small budget on reasoning and leave content empty.
-            maxTokens = 512;
-        }
+        boolean background = CompanionAiChatSupport.isBackgroundPrompt(context.playerMessage());
+        int maxTokens = CompanionAiInput.effectiveMaxTokens(settings.maxTokens(), background, gemmaLike);
 
         JsonObject body = new JsonObject();
         body.addProperty("model", model);
@@ -104,11 +120,12 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
 
         HttpResponse<String> response;
         try {
-            response = http.send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            response = httpClient(settings).send(req.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (java.net.ConnectException e) {
             throw new IllegalStateException("LLM connection refused at " + base + " — is the proxy/server running?", e);
         } catch (java.net.http.HttpTimeoutException e) {
-            throw new IllegalStateException("LLM request timed out after " + settings.timeoutSeconds() + "s", e);
+            throw new IllegalStateException("LLM request timed out after " + settings.timeoutSeconds()
+                    + "s (connectTimeout=" + settings.connectTimeoutSeconds() + "s)", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("LLM request interrupted", e);

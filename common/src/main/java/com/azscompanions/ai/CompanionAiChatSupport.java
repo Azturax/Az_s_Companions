@@ -5,9 +5,9 @@ package com.azscompanions.ai;
  */
 public final class CompanionAiChatSupport {
     public static final double DEFAULT_CHAT_REACT_RANGE = 48.0d;
-    public static final int DEFAULT_CHAT_REACT_COOLDOWN_SECONDS = 20;
-    public static final int DEFAULT_IDLE_CHAT_SECONDS_MIN = 90;
-    public static final int DEFAULT_IDLE_CHAT_SECONDS_MAX = 240;
+    public static final int DEFAULT_CHAT_REACT_COOLDOWN_SECONDS = 12;
+    public static final int DEFAULT_IDLE_CHAT_SECONDS_MIN = 75;
+    public static final int DEFAULT_IDLE_CHAT_SECONDS_MAX = 180;
     public static final int DEFAULT_CALL_PLAYER_AFTER_SECONDS = 90;
     public static final double DEFAULT_CALL_PLAYER_DISTANCE = 48.0d;
     public static final int DEFAULT_CALL_PLAYER_COOLDOWN_SECONDS = 60;
@@ -107,9 +107,73 @@ public final class CompanionAiChatSupport {
                 + "Do not mine, build, craft, take items, drop gear, or become their follower. Stay loyal to your owner.";
     }
 
+    /**
+     * Idle / react / call-away prompts — lower queue priority and a smaller token budget so
+     * {@code /ask} is not stuck behind ambient generation.
+     */
+    public static boolean isBackgroundPrompt(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        String t = message.trim();
+        return t.startsWith("[ambient]") || t.startsWith("[react]") || t.startsWith("[call]");
+    }
+
     public static String idleAmbientPrompt(String ownerName) {
         return "[ambient] Your owner " + ownerName
                 + " is nearby. Say one short wholesome in-character line — no greeting spam.";
+    }
+
+    /**
+     * Idle or reactive ambient prompt. When {@code focus} or {@code recent} is set, ground the
+     * line in those world events (explosion, darkness, craft, find, …).
+     */
+    public static String ambientPromptWithRecent(
+            String ownerName,
+            CompanionRecentAction focus,
+            java.util.List<CompanionRecentAction> recent) {
+        StringBuilder sb = new StringBuilder();
+        if (focus != null) {
+            sb.append("[react] Your owner ").append(safeName(ownerName))
+                    .append(" just did something nearby. React in one short wholesome in-character line. Event: ")
+                    .append(describeAction(focus));
+            if (focus.kind() == CompanionRecentActionKind.DARKNESS) {
+                sb.append(" Ask for light / a torch.");
+            } else if (focus.kind() == CompanionRecentActionKind.ITEM_CRAFT
+                    && focus.itemId() != null
+                    && CompanionNotableItemSupport.isSword(focus.itemId())) {
+                sb.append(" Cheer the new sword (e.g. NICE SWORD!).");
+            } else if (focus.kind() == CompanionRecentActionKind.EXPLOSION) {
+                sb.append(" React to the boom / TNT.");
+            }
+        } else {
+            sb.append(idleAmbientPrompt(ownerName));
+        }
+        if (recent != null && !recent.isEmpty()) {
+            sb.append(" Recent context:");
+            int n = 0;
+            for (CompanionRecentAction a : recent) {
+                if (a == null || (focus != null && a.equals(focus))) {
+                    continue;
+                }
+                sb.append(" | ").append(describeAction(a));
+                if (++n >= 4) {
+                    break;
+                }
+            }
+        }
+        sb.append(" No greeting spam.");
+        return sb.toString();
+    }
+
+    public static String describeAction(CompanionRecentAction action) {
+        if (action == null) {
+            return "something happened";
+        }
+        if (action.detail() != null && !action.detail().isBlank()) {
+            return action.kind().name().toLowerCase(java.util.Locale.ROOT) + ": " + action.detail();
+        }
+        return action.kind().name().toLowerCase(java.util.Locale.ROOT);
     }
 
     public static String callPlayerPrompt(String ownerName) {
@@ -118,7 +182,7 @@ public final class CompanionAiChatSupport {
     }
 
     public static String fallbackIdleLine(String ownerName) {
-        String name = ownerName == null || ownerName.isBlank() ? "friend" : ownerName.trim();
+        String name = safeName(ownerName);
         String[] lines = {
                 "Hey " + name + "… just checking you're still there.",
                 "Hmm… nice day for an adventure, " + name + ".",
@@ -128,6 +192,69 @@ public final class CompanionAiChatSupport {
         };
         int idx = Math.floorMod(name.hashCode() ^ (int) (System.currentTimeMillis() / 60_000L), lines.length);
         return lines[idx];
+    }
+
+    /** Scripted fallback when reacting to a recent event (LLM off or failed). */
+    public static String fallbackReactiveLine(String ownerName, CompanionRecentAction focus) {
+        String name = safeName(ownerName);
+        if (focus == null) {
+            return fallbackIdleLine(name);
+        }
+        return switch (focus.kind()) {
+            case EXPLOSION -> {
+                String[] lines = {
+                        "Whoa! That was loud!",
+                        "Ah! TNT?! Warn me next time, " + name + "!",
+                        "My ears… what exploded?"
+                };
+                yield pick(lines, name, focus);
+            }
+            case DARKNESS -> {
+                String[] lines = {
+                        "It's so dark… got a torch, " + name + "?",
+                        name + ", can we place some light? I can barely see.",
+                        "Too dark for me — need a torch!"
+                };
+                yield pick(lines, name, focus);
+            }
+            case ITEM_CRAFT -> {
+                if (focus.itemId() != null) {
+                    yield CompanionNotableItemSupport.craftCompliment(focus.itemId());
+                }
+                yield "Nice craft, " + name + "!";
+            }
+            case CRAFT_READY -> {
+                String item = focus.itemId() == null ? "that"
+                        : CompanionNotableItemSupport.prettyName(focus.itemId());
+                yield "Hey " + name + ", you've got everything for a " + item + "!";
+            }
+            case ITEM_FIND -> {
+                String item = focus.itemId() == null ? "that"
+                        : CompanionNotableItemSupport.prettyName(focus.itemId());
+                String[] lines = {
+                        "Ooh, " + item + "! Nice find, " + name + "!",
+                        "You found " + item + "? Neat!",
+                        "Look at that " + item + "!"
+                };
+                yield pick(lines, name, focus);
+            }
+            case DAMAGE -> name + ", are you okay?!";
+            case COMBAT -> "I've got your back, " + name + "!";
+            case EATING -> "Save me a bite?";
+            case SLEEPING -> "Sleep well, " + name + "…";
+            case BLOCK_PLACE, BLOCK_BREAK -> fallbackIdleLine(name);
+        };
+    }
+
+    private static String safeName(String ownerName) {
+        return ownerName == null || ownerName.isBlank() ? "friend" : ownerName.trim();
+    }
+
+    private static String pick(String[] lines, String name, CompanionRecentAction focus) {
+        int salt = name.hashCode()
+                ^ (focus.kind().ordinal() * 31)
+                ^ (focus.itemId() == null ? 0 : focus.itemId().hashCode());
+        return lines[Math.floorMod(salt, lines.length)];
     }
 
     public static String fallbackCallLine(String ownerName) {

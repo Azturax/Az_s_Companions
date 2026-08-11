@@ -3,10 +3,13 @@ package com.azscompanions;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.command.FabricCompanionCommands;
+import com.azscompanions.config.FabricCommonConfig;
 import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.data.FabricCompanionDefinitionLoader;
 import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.entity.FabricBuiltinCompanions;
+import com.azscompanions.entity.JindujunSupport;
+import com.azscompanions.loot.CompanionLootSupport;
 import com.azscompanions.event.FabricCompanionAiChatEvents;
 import com.azscompanions.event.FabricTeamFightEvents;
 import com.azscompanions.network.FabricNetworking;
@@ -45,6 +48,12 @@ public final class AzsCompanionsFabric implements ModInitializer {
     public void onInitialize() {
         // AI config is applied on SERVER_STARTING so dedicated + LAN/integrated hosts
         // own the LLM; pure clients never need local provider setup.
+        try {
+            FabricCommonConfig.loadOrCreate();
+        } catch (Exception e) {
+            LOGGER.error("Common config load failed — using defaults (enableLoot={})",
+                    CompanionLootSupport.DEFAULT_ENABLE_LOOT, e);
+        }
         FabricModBlocks.register();
         FabricModBlockEntities.register();
         FabricModItems.register();
@@ -55,8 +64,13 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricNetworking.register();
         FabricTeamFightEvents.register();
         FabricCompanionAiChatEvents.register();
+        com.azscompanions.event.FabricCompanionRecentActionEvents.register();
         com.azscompanions.deposit.FabricDepositEvents.register();
+        com.azscompanions.event.FabricCompanionLogoutEvents.register();
+        com.azscompanions.event.FabricCompanionDimensionTravelEvents.register();
         com.azscompanions.ai.FabricAiJoinOfferEvents.register();
+        com.azscompanions.entity.FabricCreeperCatScareEvents.register();
+        com.azscompanions.entity.FabricSkeletonWolfScareEvents.register();
         FabricTaskRegistry.bootstrap();
         FabricBuiltinCompanions.registerDefaults();
         com.azscompanions.compat.FabricFtbCompat.bootstrap();
@@ -118,6 +132,8 @@ public final class AzsCompanionsFabric implements ModInitializer {
             CompanionAiRuntime.get().clearServerContext();
             CompanionChunkLoading.clearAll();
             com.azscompanions.deposit.DepositChestSelection.clearAll();
+            com.azscompanions.ai.CompanionRecentActionMemory.clearAll();
+            com.azscompanions.ai.CompanionInventoryWatchSupport.clearAll();
         });
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -129,17 +145,23 @@ public final class AzsCompanionsFabric implements ModInitializer {
         ResourceLocation desertPyramid = ResourceLocation.withDefaultNamespace("chests/desert_pyramid");
         ResourceLocation trailRuinsRare = ResourceLocation.withDefaultNamespace("archaeology/trail_ruins_rare");
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+            if (!CompanionLootSupport.isLootInjectionEnabled()) {
+                return;
+            }
+            // Unique loot: 1 stack per successful roll (within 1–3 treasure policy).
             if (desertPyramid.equals(key.location())) {
                 tableBuilder.pool(LootPool.lootPool()
-                        .setRolls(ConstantValue.exactly(1))
+                        .setRolls(ConstantValue.exactly(CompanionLootSupport.TREASURE_ROLLS_MIN))
+                        .when(LootItemRandomChanceCondition.randomChance(
+                                CompanionLootSupport.DESERT_PYRAMID_CHARM_CHANCE))
                         .add(LootItem.lootTableItem(FabricModItems.COMPANION_CHARM))
                         .build());
             }
             if (trailRuinsRare.equals(key.location())) {
                 tableBuilder.pool(LootPool.lootPool()
-                        .setRolls(ConstantValue.exactly(1))
+                        .setRolls(ConstantValue.exactly(CompanionLootSupport.TREASURE_ROLLS_MIN))
                         .when(LootItemRandomChanceCondition.randomChance(
-                                com.azscompanions.entity.JindujunSupport.TRAIL_RUINS_LOOT_CHANCE))
+                                JindujunSupport.TRAIL_RUINS_LOOT_CHANCE))
                         .add(LootItem.lootTableItem(FabricModItems.JINDUJUN_WHISTLE))
                         .build());
             }

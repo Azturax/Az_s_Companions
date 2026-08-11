@@ -4,7 +4,6 @@ import com.azscompanions.config.CommonConfig;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
-import com.azscompanions.entity.CompanionOrbFollow;
 import com.azscompanions.entity.CompanionSwimFollow;
 import com.azscompanions.perk.SpecialPlayerPerks;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -74,7 +73,7 @@ public final class CompanionFollowGoal extends Goal {
         if (owner == null || owner.isSpectator() || owner.isSleeping()) {
             return false;
         }
-        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
         if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
@@ -105,7 +104,7 @@ public final class CompanionFollowGoal extends Goal {
         if (companion.getTarget() != null && companion.getTarget().isAlive()) {
             return false;
         }
-        if (CompanionOrbFollow.isOrb(companion) || (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner))) {
+        if (SpecialPlayerPerks.isSpecial(owner) && SpecialPlayerPerks.isOwnerActivelyFlying(owner)) {
             return true;
         }
         if (CompanionSwimFollow.shouldKeepFollowing(owner, companion)
@@ -139,9 +138,6 @@ public final class CompanionFollowGoal extends Goal {
             return;
         }
         double teleportLeash = Math.max(CommonConfig.TELEPORT_DISTANCE.get(), followRadius());
-        if (CompanionOrbFollow.tick(companion, owner)) {
-            return;
-        }
         if (SpecialPlayerPerks.tickCompanionFlightFollow(companion, owner, teleportLeash, personalSpace())) {
             return;
         }

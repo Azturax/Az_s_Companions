@@ -1,5 +1,6 @@
 package com.azscompanions.item;
 
+import com.azscompanions.entity.FabricCompanionDimensionTravelSupport;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.FabricCompanionRegistry;
@@ -62,22 +63,42 @@ public final class FabricCompanionCharmItem extends Item {
             return;
         }
         if (FabricCharmData.hasStoredCompanion(stack)) {
-            var stored = FabricCharmData.takeStoredCompanion(stack);
+            var stored = FabricCharmData.peekStoredCompanion(stack);
             if (stored != null) {
-                FabricCompanionEntity spawned = FabricCompanionRecruitment.spawnFromStored(player, stored, bound);
+                FabricCompanionEntity spawned = FabricCompanionRecruitment.spawnFromStored(player, stored.copy(), bound);
                 if (spawned != null) {
+                    FabricCharmData.clearStoredCompanion(stack);
                     spawned.sayHello();
                     player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
                 }
             }
             return;
         }
+
+        // Bound but missing: restore world identity snapshot (same UUID) — not a fresh create.
+        var server = player.getServer();
+        if (server != null) {
+            var identity = com.azscompanions.world.FabricCompanionIdentityStore.get(server).peekIdentity(bound);
+            if (identity != null) {
+                FabricCompanionEntity restored =
+                        FabricCompanionRecruitment.spawnFromStored(player, identity.copy(), bound);
+                if (restored != null) {
+                    FabricCharmData.clearLogoutParked(stack);
+                    restored.sayHello();
+                    player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+                    FabricCompanionDimensionTravelSupport.rememberIdentity(player, restored);
+                    return;
+                }
+            }
+        }
+
         FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
         if (created != null) {
             FabricCharmData.bind(stack, created.getUUID());
             created.sayHello();
             player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
             com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, created);
+            FabricCompanionDimensionTravelSupport.rememberIdentity(player, created);
         }
     }
 

@@ -39,7 +39,8 @@ final class CompanionFollowDistancesTest {
         assertEquals(1.0f, CompanionFollowDistances.clampPersonalSpace(0.1f), 0.001f);
         assertEquals(12.0f, CompanionFollowDistances.clampPersonalSpace(99.0f), 0.001f);
         assertEquals(3.0f, CompanionFollowDistances.clampWanderRadius(1.0f), 0.001f);
-        assertEquals(48.0f, CompanionFollowDistances.clampWanderRadius(100.0f), 0.001f);
+        assertEquals(128.0f, CompanionFollowDistances.clampWanderRadius(200.0f), 0.001f);
+        assertEquals(48.0f, CompanionFollowDistances.clampWanderRadius(48.0f), 0.001f);
 
         assertTrue(CompanionFollowDistances.tooClose(1.5d, 2.0d));
         assertFalse(CompanionFollowDistances.tooClose(3.0d, 2.0d));
@@ -54,5 +55,30 @@ final class CompanionFollowDistancesTest {
         float inherited = CompanionFollowDistances.inheritFollowRadius(48.0f);
         assertEquals(36.0f, inherited, 0.001f);
         assertTrue(inherited < 48.0f);
+    }
+
+    @Test
+    void wanderAlwaysAtLeastFollow() {
+        assertTrue(CompanionFollowDistances.DEFAULT_WANDER_RADIUS
+                >= CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
+        assertEquals(CompanionFollowDistances.FOLLOW_RADIUS_MAX,
+                CompanionFollowDistances.WANDER_RADIUS_MAX, 0.001f);
+
+        // Wander below follow → raised to follow.
+        assertEquals(64.0f, CompanionFollowDistances.clampWanderRadius(16.0f, 64.0f), 0.001f);
+        // Wander already above follow → kept.
+        assertEquals(80.0f, CompanionFollowDistances.clampWanderRadius(80.0f, 64.0f), 0.001f);
+        // Both max out at 128.
+        assertEquals(128.0f, CompanionFollowDistances.clampWanderRadius(999.0f, 999.0f), 0.001f);
+        // Tiny follow still respects wander min.
+        assertEquals(3.0f, CompanionFollowDistances.clampWanderRadius(1.0f, 1.0f), 0.001f);
+
+        float[] pair = CompanionFollowDistances.clampFollowAndWander(96.0f, 12.0f);
+        assertEquals(96.0f, pair[0], 0.001f);
+        assertEquals(96.0f, pair[1], 0.001f);
+
+        float childFollow = CompanionFollowDistances.inheritFollowRadius(64.0f);
+        float childWander = CompanionFollowDistances.inheritWanderRadius(64.0f, childFollow);
+        assertTrue(childWander >= childFollow);
     }
 }

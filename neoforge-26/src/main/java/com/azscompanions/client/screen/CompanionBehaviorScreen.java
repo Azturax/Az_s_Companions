@@ -9,7 +9,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -17,6 +16,7 @@ import java.util.function.Supplier;
 
 /**
  * Follow / personal-space / wander sliders. Values sync to the companion entity.
+ * Wander is always kept ≥ follow (both max 128).
  */
 public final class CompanionBehaviorScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
@@ -27,6 +27,7 @@ public final class CompanionBehaviorScreen extends Screen {
     private float followRadius;
     private float personalSpace;
     private float wanderRadius;
+    private SyncSlider wanderSlider;
     private int panelX;
     private int panelY;
     private final int panelW = 240;
@@ -36,9 +37,11 @@ public final class CompanionBehaviorScreen extends Screen {
         super(Component.translatable("screen.azscompanions.behavior"));
         this.companion = companion;
         this.parent = parent;
-        this.followRadius = companion.getFollowRadius();
+        float[] radii = CompanionFollowDistances.clampFollowAndWander(
+                companion.getFollowRadius(), companion.getWanderRadius());
+        this.followRadius = radii[0];
         this.personalSpace = companion.getPersonalSpace();
-        this.wanderRadius = companion.getWanderRadius();
+        this.wanderRadius = radii[1];
     }
 
     @Override
@@ -49,13 +52,15 @@ public final class CompanionBehaviorScreen extends Screen {
         int by = panelY + 36;
         int bw = panelW - 40;
         by = addSlider(bx, by, bw, "screen.azscompanions.behavior.follow_radius",
-                () -> followRadius, v -> followRadius = v,
-                CompanionFollowDistances.FOLLOW_RADIUS_MIN, CompanionFollowDistances.FOLLOW_RADIUS_MAX, 1.0f);
+                () -> followRadius, this::onFollowChanged,
+                CompanionFollowDistances.FOLLOW_RADIUS_MIN, CompanionFollowDistances.FOLLOW_RADIUS_MAX, 1.0f)
+                .getY() + 22;
         by = addSlider(bx, by + 6, bw, "screen.azscompanions.behavior.personal_space",
                 () -> personalSpace, v -> personalSpace = v,
-                CompanionFollowDistances.PERSONAL_SPACE_MIN, CompanionFollowDistances.PERSONAL_SPACE_MAX, 0.5f);
-        by = addSlider(bx, by + 6, bw, "screen.azscompanions.behavior.wander_radius",
-                () -> wanderRadius, v -> wanderRadius = v,
+                CompanionFollowDistances.PERSONAL_SPACE_MIN, CompanionFollowDistances.PERSONAL_SPACE_MAX, 0.5f)
+                .getY() + 22;
+        wanderSlider = addSlider(bx, by + 6, bw, "screen.azscompanions.behavior.wander_radius",
+                () -> wanderRadius, this::onWanderChanged,
                 CompanionFollowDistances.WANDER_RADIUS_MIN, CompanionFollowDistances.WANDER_RADIUS_MAX, 1.0f);
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> {
             push();
@@ -70,33 +75,32 @@ public final class CompanionBehaviorScreen extends Screen {
         }).bounds(bx, panelY + panelH - 24, bw, 18).build());
     }
 
-    private int addSlider(int x, int y, int w, String langKey, Supplier<Float> getter, Consumer<Float> setter,
-                          float min, float max, float step) {
+    private void onFollowChanged(float v) {
+        followRadius = v;
+        if (wanderRadius < followRadius) {
+            wanderRadius = followRadius;
+            if (wanderSlider != null) {
+                wanderSlider.syncFromField();
+            }
+        }
+    }
+
+    private void onWanderChanged(float v) {
+        wanderRadius = Math.max(v, followRadius);
+    }
+
+    private SyncSlider addSlider(int x, int y, int w, String langKey, Supplier<Float> getter, Consumer<Float> setter,
+                                 float min, float max, float step) {
         double initial = Math.max(0.0d, Math.min(1.0d, (getter.get() - min) / (max - min)));
-        AbstractSliderButton slider = new AbstractSliderButton(x, y, w, 20, Component.empty(), initial) {
-            {
-                updateMessage();
-            }
-
-            @Override
-            protected void updateMessage() {
-                setMessage(Component.translatable(langKey, String.format(Locale.ROOT, "%.1f", getter.get())));
-            }
-
-            @Override
-            protected void applyValue() {
-                float v = min + (float) (this.value * (max - min));
-                v = Math.round(v / step) * step;
-                setter.accept(Math.max(min, Math.min(max, v)));
-                updateMessage();
-                push();
-            }
-        };
+        SyncSlider slider = new SyncSlider(x, y, w, langKey, getter, setter, min, max, step, initial);
         addRenderableWidget(slider);
-        return y + 22;
+        return slider;
     }
 
     private void push() {
+        float[] radii = CompanionFollowDistances.clampFollowAndWander(followRadius, wanderRadius);
+        followRadius = radii[0];
+        wanderRadius = radii[1];
         ClientPacketDistributor.sendToServer(new CompanionBehaviorPacket(
                 companion.getId(), followRadius, personalSpace, wanderRadius));
     }
@@ -118,5 +122,46 @@ public final class CompanionBehaviorScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private final class SyncSlider extends AbstractSliderButton {
+        private final String langKey;
+        private final Supplier<Float> getter;
+        private final Consumer<Float> setter;
+        private final float min;
+        private final float max;
+        private final float step;
+
+        private SyncSlider(int x, int y, int w, String langKey, Supplier<Float> getter, Consumer<Float> setter,
+                           float min, float max, float step, double initial) {
+            super(x, y, w, 20, Component.empty(), initial);
+            this.langKey = langKey;
+            this.getter = getter;
+            this.setter = setter;
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            updateMessage();
+        }
+
+        void syncFromField() {
+            float v = getter.get();
+            this.value = Math.max(0.0d, Math.min(1.0d, (v - min) / (max - min)));
+            updateMessage();
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Component.translatable(langKey, String.format(Locale.ROOT, "%.1f", getter.get())));
+        }
+
+        @Override
+        protected void applyValue() {
+            float v = min + (float) (this.value * (max - min));
+            v = Math.round(v / step) * step;
+            setter.accept(Math.max(min, Math.min(max, v)));
+            syncFromField();
+            push();
+        }
     }
 }

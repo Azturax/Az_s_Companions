@@ -25,8 +25,7 @@ public final class DynamicLightsLegacyHooks {
 
     /**
      * Same as {@link #tryRegisterLivingEntityHandler(Supplier)} with an extra luminance source
-     * (e.g. glowing-orb brightness). Merged with held-item scanning when
-     * {@code makeLivingEntityHandler} exists.
+     * (merged with held-item scanning when {@code makeLivingEntityHandler} exists).
      *
      * @param extraLuminance receives the entity instance; return 0–15
      */

@@ -47,6 +47,7 @@ dependencies {
 }
 
 loom {
+    accessWidenerPath = fabricProject.file("src/main/resources/azscompanions.accesswidener")
     runs {
         client {
             client()

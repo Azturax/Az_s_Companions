@@ -86,7 +86,26 @@ public final class CompanionCharmItem extends Item {
             return;
         }
 
-        // Bound but missing (lost entity / no payload): recruit replacement and rebind.
+        // Bound but missing (unloaded / left behind before dimension travel): restore world identity first.
+        // Never treat this as a fresh-world create — do not re-open persona onboarding.
+        var server = player.getServer();
+        if (server != null) {
+            var identity = com.azscompanions.world.CompanionIdentityStore.get(server).peekIdentity(bound);
+            if (identity != null) {
+                var payload = identity.copy();
+                CompanionEntity restored = CompanionRecruitment.spawnFromStored(player, payload, bound);
+                if (restored != null) {
+                    CharmData.clearLogoutParked(stack);
+                    MisterWigglySidekick.ensureFor(restored);
+                    restored.sayHello();
+                    player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+                    com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, restored);
+                    return;
+                }
+            }
+        }
+
+        // Last resort: recruit replacement and rebind (new companion → persona onboarding OK).
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
@@ -94,6 +113,7 @@ public final class CompanionCharmItem extends Item {
             created.sayHello();
             player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
             com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
+            com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, created);
         }
     }
 

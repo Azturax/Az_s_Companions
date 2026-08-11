@@ -2,7 +2,6 @@ package com.azscompanions.client.renderer;
 
 import com.azscompanions.entity.FlightAuraSupport;
 import com.azscompanions.entity.FlightAuraTrailBuffer;
-import com.azscompanions.entity.CompanionOrbSupport;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -24,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class FlightAuraRenderer {
     private static final ResourceLocation TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("azscompanions", "textures/entity/companion/glowing_orb.png");
+            ResourceLocation.fromNamespaceAndPath("azscompanions", "textures/entity/companion/flight_aura.png");
     private static final int FULLBRIGHT = 0x00F000F0;
     private static final Map<UUID, FlightAuraTrailBuffer> TRAILS = new ConcurrentHashMap<>();
     private static final double MIN_SAMPLE_DIST_SQ = 0.04d * 0.04d;
@@ -62,9 +61,9 @@ public final class FlightAuraRenderer {
         if (entity == null || !entity.isAlive()) {
             return;
         }
-        int r = CompanionOrbSupport.red(colorRgb);
-        int g = CompanionOrbSupport.green(colorRgb);
-        int b = CompanionOrbSupport.blue(colorRgb);
+        int r = FlightAuraSupport.red(colorRgb);
+        int g = FlightAuraSupport.green(colorRgb);
+        int b = FlightAuraSupport.blue(colorRgb);
         float pulse = FlightAuraSupport.pulseScale(entity.tickCount, partialTicks, ascending);
 
         if (recordTrail) {

@@ -27,6 +27,9 @@ public final class AddItemLootModifier extends LootModifier {
 
     @Override
     protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
+        if (!CompanionLootSupport.isLootInjectionEnabled()) {
+            return generatedLoot;
+        }
         generatedLoot.add(new ItemStack(item));
         return generatedLoot;
     }

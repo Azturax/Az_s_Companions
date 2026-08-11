@@ -32,7 +32,6 @@ public final class FabricNetworking {
         PayloadTypeRegistry.playC2S().register(RecruitPayload.TYPE, RecruitPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ContextSkinsPayload.TYPE, ContextSkinsPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(OrbSettingsPayload.TYPE, OrbSettingsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(BehaviorPayload.TYPE, BehaviorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(PersonaPayload.TYPE, PersonaPayload.CODEC);
@@ -179,6 +178,9 @@ public final class FabricNetworking {
                     if ((payload.flags() & SettingsPayload.FLAG_FORM) != 0) {
                         companion.setForm(CompanionForm.byName(payload.form()));
                     }
+                    if ((payload.flags() & SettingsPayload.FLAG_FORM_VARIANT) != 0) {
+                        companion.setFormVariant(payload.formVariant());
+                    }
                     if ((payload.flags() & SettingsPayload.FLAG_SHOW_NAME) != 0) {
                         companion.setNameTagVisible(payload.showNameTag());
                     }
@@ -207,28 +209,6 @@ public final class FabricNetworking {
                             payload.sleepingSkin(), payload.bathingSkin(), payload.adventuringSkin());
                 }));
 
-        ServerPlayNetworking.registerGlobalReceiver(OrbSettingsPayload.TYPE, (payload, context) ->
-                context.server().execute(() -> {
-                    ServerPlayer player = context.player();
-                    Entity entity = player.level().getEntity(payload.entityId());
-                    if (!(entity instanceof FabricCompanionEntity companion)
-                            || (!companion.isOwnedBy(player) && !companion.isTrusted(player))) {
-                        return;
-                    }
-                    if (companion.distanceTo(player) > 16.0d) {
-                        return;
-                    }
-                    companion.setOrbSettings(
-                            payload.colorRgb(),
-                            payload.brightness(),
-                            payload.floatAmplitude(),
-                            payload.floatSpeed(),
-                            payload.floatHeight(),
-                            payload.offsetX(),
-                            payload.offsetY(),
-                            payload.offsetZ(),
-                            payload.front());
-                }));
 
         ServerPlayNetworking.registerGlobalReceiver(BehaviorPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -264,6 +244,7 @@ public final class FabricNetworking {
                                     payload.quirks(),
                                     true);
                     companion.setPersona(next);
+                    com.azscompanions.entity.FabricCompanionDimensionTravelSupport.rememberIdentity(player, companion);
                     player.displayClientMessage(Component.literal(
                             companion.getChatDisplayName() + " — persona "
                                     + (payload.skip() ? "skipped (defaults)" : "saved")), true);
@@ -820,6 +801,7 @@ public final class FabricNetworking {
             String form,
             boolean showNameTag,
             boolean showArmor,
+            String formVariant,
             int flags
     ) implements CustomPacketPayload {
         public static final int FLAG_NAME = 1;
@@ -831,6 +813,7 @@ public final class FabricNetworking {
         public static final int FLAG_FORM = 64;
         public static final int FLAG_SHOW_NAME = 128;
         public static final int FLAG_SHOW_ARMOR = 256;
+        public static final int FLAG_FORM_VARIANT = 512;
 
         public static final Type<SettingsPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_settings"));
@@ -853,6 +836,7 @@ public final class FabricNetworking {
             buf.writeUtf(p.form == null ? "player" : p.form, 32);
             buf.writeBoolean(p.showNameTag);
             buf.writeBoolean(p.showArmor);
+            buf.writeUtf(p.formVariant == null ? "" : p.formVariant, 64);
             buf.writeVarInt(p.flags);
         }
 
@@ -862,6 +846,7 @@ public final class FabricNetworking {
                     buf.readBoolean(), buf.readBoolean(),
                     buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
                     buf.readUtf(32), buf.readBoolean(), buf.readBoolean(),
+                    buf.readUtf(64),
                     buf.readVarInt());
         }
 
@@ -903,56 +888,6 @@ public final class FabricNetworking {
         }
     }
 
-    public record OrbSettingsPayload(
-            int entityId,
-            int colorRgb,
-            int brightness,
-            float floatAmplitude,
-            float floatSpeed,
-            float floatHeight,
-            float offsetX,
-            float offsetY,
-            float offsetZ,
-            boolean front
-    ) implements CustomPacketPayload {
-        public static final Type<OrbSettingsPayload> TYPE = new Type<>(
-                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_orb_settings"));
-
-        public static final StreamCodec<RegistryFriendlyByteBuf, OrbSettingsPayload> CODEC =
-                StreamCodec.of(OrbSettingsPayload::write, OrbSettingsPayload::read);
-
-        private static void write(RegistryFriendlyByteBuf buf, OrbSettingsPayload p) {
-            buf.writeVarInt(p.entityId);
-            buf.writeInt(p.colorRgb);
-            buf.writeVarInt(p.brightness);
-            buf.writeFloat(p.floatAmplitude);
-            buf.writeFloat(p.floatSpeed);
-            buf.writeFloat(p.floatHeight);
-            buf.writeFloat(p.offsetX);
-            buf.writeFloat(p.offsetY);
-            buf.writeFloat(p.offsetZ);
-            buf.writeBoolean(p.front);
-        }
-
-        private static OrbSettingsPayload read(RegistryFriendlyByteBuf buf) {
-            return new OrbSettingsPayload(
-                    buf.readVarInt(),
-                    buf.readInt(),
-                    buf.readVarInt(),
-                    buf.readFloat(),
-                    buf.readFloat(),
-                    buf.readFloat(),
-                    buf.readFloat(),
-                    buf.readFloat(),
-                    buf.readFloat(),
-                    buf.readBoolean());
-        }
-
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
-        }
-    }
 
     public record BehaviorPayload(
             int entityId,

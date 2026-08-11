@@ -70,6 +70,14 @@ class OpenAiCompatibleClientTest {
         assertTrue(OpenAiCompatibleClient.looksLikeGemma("google/gemma-4-e4b"));
         assertFalse(OpenAiCompatibleClient.looksLikeGemma("gpt-4o-mini"));
     }
+
+    @Test
+    void effectiveMaxTokensCapsBackground() {
+        assertEquals(128, CompanionAiInput.effectiveMaxTokens(256, true, false));
+        assertEquals(256, CompanionAiInput.effectiveMaxTokens(256, false, false));
+        assertEquals(512, CompanionAiInput.effectiveMaxTokens(256, false, true));
+        assertEquals(128, CompanionAiInput.effectiveMaxTokens(256, true, true));
+    }
 }
 
 class CompanionAiChatSupportErrorTest {

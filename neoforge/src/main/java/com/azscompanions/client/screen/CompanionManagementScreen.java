@@ -241,6 +241,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 c.getForm().serializedName(),
                 c.isNameTagVisible(),
                 c.isArmorVisible(),
+                c.getFormVariant(),
                 flags
         ));
     }

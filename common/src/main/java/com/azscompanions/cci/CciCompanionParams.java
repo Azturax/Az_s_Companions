@@ -23,7 +23,7 @@ import java.util.Map;
  *   <li>{@code whoAmI=…;whatAmIDoing=…;howWillIBe=…} ({@code companion_persona} / {@code companion_modify})</li>
  *   <li>{@code form=wolf;skin=Notch;name=Fluffy} ({@code companion_modify})</li>
  *   <li>{@code showArmor=false} ({@code companion_modify} — hide armor render)</li>
- *   <li>{@code followRadius=64;personalSpace=3;wanderRadius=12} ({@code companion_modify})</li>
+ *   <li>{@code followRadius=64;personalSpace=3;wanderRadius=64} ({@code companion_modify})</li>
  *   <li>{@code whoAmI=brave wolf;whatAmIDoing=guard;howWillIBe=loyal} (persona on summon/modify)</li>
  *   <li>{@code chunkLoading=false} ({@code companion_modify} — per-companion ticket opt-out)</li>
  *   <li>{@code mode=rush;seconds=8} ({@code companion_play})</li>
@@ -288,7 +288,8 @@ public final class CciCompanionParams {
     }
 
     /**
-     * Wander free-roam radius ({@code wanderRadius=}). Returns null when absent. Clamped 3–48.
+     * Wander free-roam radius ({@code wanderRadius=}). Returns null when absent. Clamped 3–128.
+     * Entity setters still enforce wander ≥ follow when applied.
      */
     public Float wanderRadiusOrNull() {
         String v = first("wanderradius", "wander_radius", "wander");

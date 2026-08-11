@@ -188,12 +188,12 @@ public final class FabricCompanionRecruitment {
         child.setAttitude(root.getAttitude());
         child.setTeamId(root.getTeamId() == null ? "" : root.getTeamId());
         child.setForm(root.getForm());
+        child.setFormVariant(root.getFormVariant());
         child.setSkinPath(root.getSkinPath() == null ? "" : root.getSkinPath());
         child.setArmorVisible(root.isArmorVisible());
         child.setBodyScale(CompanionChildLimits.DEFAULT_BODY_SCALE);
         child.setCustomDisplayName(CompanionChildLimits.DEFAULT_NAME);
         child.inheritSpacingFrom(root);
-        child.inheritOrbSettingsFrom(root);
         level.addFreshEntity(child);
         return child;
     }

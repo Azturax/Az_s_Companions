@@ -4,6 +4,8 @@ import com.azscompanions.AzsCompanions;
 import com.azscompanions.client.ClientAppearanceDraft;
 import com.azscompanions.entity.CompanionBodyProportions;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.CompanionMode;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -57,6 +59,17 @@ public final class FeminineCompanionModel<T extends LivingEntity> extends Player
     public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks,
                           float netHeadYaw, float headPitch) {
         resetPartScales();
+        // Passenger / minecart bent-leg pose when commanded Sit (Stay stays upright).
+        if (entity instanceof CompanionEntity companion
+                && companion.getMode() == CompanionMode.SIT) {
+            CompanionForm form = companion.getForm();
+            if (ClientAppearanceDraft.matches(companion) && ClientAppearanceDraft.ACTIVE.form != null) {
+                form = ClientAppearanceDraft.ACTIVE.form;
+            }
+            if (form.usesPassengerSitPose()) {
+                this.riding = true;
+            }
+        }
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         boolean showBust = true;
         if (entity instanceof CompanionEntity companion) {

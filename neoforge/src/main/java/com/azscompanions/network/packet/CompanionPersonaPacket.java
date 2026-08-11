@@ -85,6 +85,7 @@ public record CompanionPersonaPacket(
                             packet.quirks(),
                             true);
             companion.setPersona(next);
+            com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, companion);
             player.displayClientMessage(net.minecraft.network.chat.Component.literal(
                     companion.getChatDisplayName() + " — persona "
                             + (packet.skip() ? "skipped (defaults)" : "saved")), true);

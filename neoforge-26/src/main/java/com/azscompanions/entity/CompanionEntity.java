@@ -7,6 +7,8 @@ import com.azscompanions.ai.CompanionAiChatSupport;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
+import com.azscompanions.ai.CompanionRecentAction;
+import com.azscompanions.ai.CompanionRecentActionMemory;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.CompanionPlayMode;
@@ -15,8 +17,10 @@ import com.azscompanions.entity.ai.CompanionHostileTargetGoal;
 import com.azscompanions.entity.ai.CompanionLookAtOwnerGoal;
 import com.azscompanions.entity.ai.CompanionOwnerDefendTargetGoal;
 import com.azscompanions.entity.ai.CompanionPotionBehaviorGoal;
+import com.azscompanions.entity.ai.CompanionRideAlongGoal;
 import com.azscompanions.entity.ai.CompanionSitGoal;
 import com.azscompanions.entity.ai.CompanionSleepInBedGoal;
+import com.azscompanions.entity.ai.CompanionWanderMobInteractGoal;
 import com.azscompanions.entity.ai.CompanionWanderNearOwnerGoal;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.menu.CompanionInventoryMenu;
@@ -24,6 +28,7 @@ import com.azscompanions.menu.CompanionManagementMenu;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
 import com.azscompanions.perk.MisterWigglySidekick;
 import com.azscompanions.perk.SpecialPlayerPerks;
+import com.azscompanions.perk.WolfyPerkSupport;
 import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModItems;
 import com.azscompanions.task.TaskQueue;
@@ -128,6 +133,8 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<String> DATA_FORM =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_FORM_VARIANT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
@@ -142,24 +149,6 @@ public class CompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_WANDER_RADIUS =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Integer> DATA_ORB_COLOR =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_ORB_BRIGHTNESS =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_AMPLITUDE =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_SPEED =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> DATA_ORB_FLOAT_HEIGHT =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_X =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_Y =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_Z =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Boolean> DATA_ORB_FRONT =
-            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     /** Synced so client UI ownership checks work without looking at NBT. */
     private static final EntityDataAccessor<String> DATA_OWNER =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
@@ -201,6 +190,12 @@ public class CompanionEntity extends PathfinderMob {
     private BlockPos playHideTarget;
     /** Per-companion AI persona (who / what / how). Persisted in NBT; charm store preserves it. */
     private com.azscompanions.ai.CompanionPersona persona = com.azscompanions.ai.CompanionPersona.EMPTY;
+    /** Pending flower the companion offers after a gift; empty when none. Persisted. */
+    private ItemStack offeredFlower = ItemStack.EMPTY;
+    /** Game time when the next flower gift is allowed. Not persisted. */
+    private long flowerGiftCooldownUntil;
+    /** Mounted via owner ride-along; sync-dismount when the owner dismounts. Not persisted. */
+    private boolean rideAlongActive;
     // skinPath / bodyScale / slimArms live in synched entity data
 
     /** Default playful-evil duration when no CCI {@code seconds=} is given. */
@@ -231,7 +226,7 @@ public class CompanionEntity extends PathfinderMob {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0d)
                 .add(Attributes.MOVEMENT_SPEED, 0.32d)
-                .add(Attributes.ATTACK_DAMAGE, 4.0d)
+                .add(Attributes.ATTACK_DAMAGE, CompanionCombatDamage.NETHERITE_SWORD_ATTACK_DAMAGE)
                 .add(Attributes.FOLLOW_RANGE, 64.0d)
                 .add(Attributes.ARMOR, 2.0d)
                 .add(Attributes.SCALE, DEFAULT_BODY_SCALE)
@@ -267,6 +262,7 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_SHOULDERS, CompanionBodyProportions.DEFAULT_SHOULDERS);
         builder.define(DATA_BUST_OFFSET, CompanionBodyProportions.DEFAULT_BUST_OFFSET);
         builder.define(DATA_FORM, CompanionForm.PLAYER.serializedName());
+        builder.define(DATA_FORM_VARIANT, "");
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
@@ -274,15 +270,6 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
         builder.define(DATA_PERSONAL_SPACE, CompanionFollowDistances.DEFAULT_PERSONAL_SPACE);
         builder.define(DATA_WANDER_RADIUS, CompanionFollowDistances.DEFAULT_WANDER_RADIUS);
-        builder.define(DATA_ORB_COLOR, CompanionOrbSettings.DEFAULT_COLOR_RGB);
-        builder.define(DATA_ORB_BRIGHTNESS, CompanionOrbSettings.DEFAULT_BRIGHTNESS);
-        builder.define(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSettings.DEFAULT_FLOAT_AMPLITUDE);
-        builder.define(DATA_ORB_FLOAT_SPEED, CompanionOrbSettings.DEFAULT_FLOAT_SPEED);
-        builder.define(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSettings.DEFAULT_FLOAT_HEIGHT);
-        builder.define(DATA_ORB_OFFSET_X, CompanionOrbSettings.DEFAULT_OFFSET_X);
-        builder.define(DATA_ORB_OFFSET_Y, CompanionOrbSettings.DEFAULT_OFFSET_Y);
-        builder.define(DATA_ORB_OFFSET_Z, CompanionOrbSettings.DEFAULT_OFFSET_Z);
-        builder.define(DATA_ORB_FRONT, CompanionOrbSettings.DEFAULT_FRONT);
         builder.define(DATA_OWNER, "");
     }
 
@@ -298,12 +285,14 @@ public class CompanionEntity extends PathfinderMob {
         goalSelector.addGoal(2, new CompanionSleepInBedGoal(this));
         goalSelector.addGoal(3, new CompanionPotionBehaviorGoal(this));
         goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25d, true));
-        goalSelector.addGoal(5, new CompanionFollowGoal(this));
-        goalSelector.addGoal(6, new CompanionWanderNearOwnerGoal(this));
-        goalSelector.addGoal(7, new OpenDoorGoal(this, true));
-        goalSelector.addGoal(8, new CompanionLookAtOwnerGoal(this));
-        goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        goalSelector.addGoal(10, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(5, new CompanionRideAlongGoal(this));
+        goalSelector.addGoal(6, new CompanionFollowGoal(this));
+        goalSelector.addGoal(7, new CompanionWanderMobInteractGoal(this));
+        goalSelector.addGoal(8, new CompanionWanderNearOwnerGoal(this));
+        goalSelector.addGoal(9, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(10, new CompanionLookAtOwnerGoal(this));
+        goalSelector.addGoal(11, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(12, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new CompanionOwnerDefendTargetGoal(this));
         targetSelector.addGoal(2, new CompanionHostileTargetGoal(this));
@@ -327,9 +316,6 @@ public class CompanionEntity extends PathfinderMob {
             }
             taskQueue.tick(serverLevel);
             SpecialPlayerPerks.applyCompanionPerks(this, getOwnerUuid());
-            if (getForm().isOrb()) {
-                setNoGravity(true);
-            }
             tickOwnerActivity();
             tickContextSkinState();
             tickHomeBedLeash();
@@ -338,6 +324,7 @@ public class CompanionEntity extends PathfinderMob {
             tickAiAmbientSpeech();
             tickPlayBehavior();
             tickChildParentLeash();
+            tickRideAlongSync();
             if (tickCount % 40 == 0) {
                 MisterWigglySidekick.ensureFor(this);
             }
@@ -437,7 +424,10 @@ public class CompanionEntity extends PathfinderMob {
         if (isSleeping() || (getTarget() != null && getTarget().isAlive())) {
             return;
         }
-        if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, 45)) {
+        long gameTime = level() instanceof ServerLevel slGt ? slGt.getGameTime() : tickCount;
+        boolean hasReactive = CompanionRecentActionMemory.hasReactive(owner.getUUID(), gameTime);
+        int speakCoolSec = hasReactive ? 25 : 45;
+        if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, speakCoolSec)) {
             return;
         }
         String ownerName = owner.getGameProfile().name();
@@ -485,19 +475,28 @@ public class CompanionEntity extends PathfinderMob {
         if (dist > settings.chatReactRange()) {
             return;
         }
-        if (nextIdleChatTick <= 0) {
-            int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
-                    settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
-            nextIdleChatTick = tickCount + Math.max(40, secs * 20);
-            return;
-        }
-        if (tickCount < nextIdleChatTick) {
-            return;
+        CompanionRecentAction focus = hasReactive
+                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime).orElse(null)
+                : null;
+        boolean reactiveNow = focus != null;
+        if (!reactiveNow) {
+            if (nextIdleChatTick <= 0) {
+                int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
+                nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+                return;
+            }
+            if (tickCount < nextIdleChatTick) {
+                return;
+            }
         }
         int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
                 settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
         nextIdleChatTick = tickCount + Math.max(40, secs * 20);
-        String fallback = CompanionAiChatSupport.fallbackIdleLine(ownerName);
+        var recent = CompanionRecentActionMemory.peek(owner.getUUID(), gameTime);
+        String fallback = focus != null
+                ? CompanionAiChatSupport.fallbackReactiveLine(ownerName, focus)
+                : CompanionAiChatSupport.fallbackIdleLine(ownerName);
         if (!llmOn) {
             speakLine(fallback);
             return;
@@ -508,7 +507,7 @@ public class CompanionEntity extends PathfinderMob {
             prompt = "[ambient child] Talk briefly to your parent " + parent.getChatDisplayName()
                     + " — one short wholesome line.";
         } else {
-            prompt = CompanionAiChatSupport.idleAmbientPrompt(ownerName);
+            prompt = CompanionAiChatSupport.ambientPromptWithRecent(ownerName, focus, recent);
         }
         if (!CompanionAiAsk.askQuiet(owner, this, ownerName, prompt,
                 CompanionAiActionTrust.OWNER, null, fallback)) {
@@ -690,6 +689,24 @@ public class CompanionEntity extends PathfinderMob {
         return !isNearHomeBed();
     }
 
+    public boolean isRideAlongActive() {
+        return rideAlongActive;
+    }
+
+    public void setRideAlongActive(boolean active) {
+        this.rideAlongActive = active;
+    }
+
+    /** Dismount when ride-along mounted us and the owner is no longer riding. */
+    private void tickRideAlongSync() {
+        Player owner = getOwner();
+        boolean ownerRiding = owner != null && owner.isPassenger();
+        if (CompanionRideAlongSupport.shouldSyncDismount(rideAlongActive, ownerRiding)) {
+            CompanionRideAlong.stopRideAlong(this);
+            rideAlongActive = false;
+        }
+    }
+
     /** Home-idle / Wander near bed when bed exists and owner has not left the home radius. */
     public boolean shouldHomeIdleNearBed() {
         CompanionMode mode = getMode();
@@ -770,6 +787,9 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void safeTeleportNear(BlockPos target) {
+        if (isPassenger()) {
+            return;
+        }
         // Stay/Sit hold position — never teleport (like sitting cats/dogs).
         CompanionMode mode = getMode();
         if (mode == CompanionMode.STAY || mode == CompanionMode.SIT || isSitting()) {
@@ -827,10 +847,17 @@ public class CompanionEntity extends PathfinderMob {
             if (held.is(net.minecraft.world.item.Items.CAKE)) {
                 return feedCakeSpawnChild(serverPlayer, hand);
             }
+            if (CompanionFlowerGift.isFlower(held)) {
+                return CompanionFlowerGift.tryGift(this, serverPlayer, hand, held);
+            }
             if (isEdibleFood(held)) {
                 return feedFromPlayer(serverPlayer, hand);
             }
             return giveItemToHands(serverPlayer, hand, held);
+        }
+        InteractionResult tookFlower = CompanionFlowerGift.tryTakeOffer(this, serverPlayer, hand);
+        if (tookFlower.consumesAction()) {
+            return tookFlower;
         }
         return takeItemFromHands(serverPlayer, hand);
     }
@@ -866,9 +893,6 @@ public class CompanionEntity extends PathfinderMob {
                     ParticleTypes.ANGRY_VILLAGER,
                     getX(), getY() + getBbHeight() * 1.0d, getZ(),
                     4, 0.25d, 0.15d, 0.25d, 0.0d);
-            if (getForm().isOrb()) {
-                strikeOrbEvilLightning(serverLevel, true);
-            }
         }
     }
 
@@ -882,11 +906,6 @@ public class CompanionEntity extends PathfinderMob {
         }
         playfulEvilTicks--;
         if (playfulEvilTicks > 0) {
-            if (getForm().isOrb()
-                    && CompanionOrbEvilLightningSupport.shouldPeriodicPulse(playfulEvilTicks)
-                    && level() instanceof ServerLevel serverLevel) {
-                strikeOrbEvilLightning(serverLevel, false);
-            }
             return;
         }
         setAttitude(playfulEvilRestoreAttitude == null
@@ -902,42 +921,6 @@ public class CompanionEntity extends PathfinderMob {
                     ParticleTypes.HEART,
                     getX(), getY() + getBbHeight() * 0.9d, getZ(),
                     6, 0.35d, 0.25d, 0.35d, 0.02d);
-        }
-    }
-
-    private void strikeOrbEvilLightning(ServerLevel serverLevel, boolean enterBurst) {
-        int count = enterBurst
-                ? CompanionOrbEvilLightningSupport.ENTER_BOLTS
-                : CompanionOrbEvilLightningSupport.PERIODIC_BOLTS;
-        Player owner = getOwner();
-        int elapsed = CompanionOrbEvilLightningSupport.elapsedEvilTicks(
-                playfulEvilDurationTicks, playfulEvilTicks);
-        for (int i = 0; i < count; i++) {
-            boolean aimPlayer = !enterBurst
-                    && owner != null
-                    && owner.isAlive()
-                    && CompanionOrbEvilLightningSupport.shouldTargetPlayer(elapsed, random.nextDouble());
-            double x;
-            double y;
-            double z;
-            if (aimPlayer) {
-                double[] o = CompanionOrbEvilLightningSupport.playerNearOffset(random.nextLong());
-                x = owner.getX() + o[0];
-                y = owner.getY();
-                z = owner.getZ() + o[1];
-            } else {
-                double[] o = CompanionOrbEvilLightningSupport.nearbyOffset(
-                        random.nextLong(), CompanionOrbEvilLightningSupport.NEARBY_RADIUS);
-                x = getX() + o[0];
-                y = getY();
-                z = getZ() + o[1];
-            }
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
-            if (bolt == null) {
-                continue;
-            }
-            bolt.moveTo(x, y, z);
-            serverLevel.addFreshEntity(bolt);
         }
     }
 
@@ -1140,7 +1123,15 @@ public class CompanionEntity extends PathfinderMob {
         if (!canAttackTarget(living)) {
             return false;
         }
-        return super.doHurtTarget(level, target);
+        var attack = getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attack == null) {
+            return super.doHurtTarget(level, target);
+        }
+        return CompanionCombatDamage.withFixedMeleeDamage(
+                attack.getValue(),
+                attack.getBaseValue(),
+                attack::setBaseValue,
+                () -> super.doHurtTarget(level, target));
     }
 
     public boolean canAttackTarget(LivingEntity target) {
@@ -1393,6 +1384,22 @@ public class CompanionEntity extends PathfinderMob {
         return inventory;
     }
 
+    public ItemStack getOfferedFlower() {
+        return offeredFlower;
+    }
+
+    public void setOfferedFlower(ItemStack stack) {
+        this.offeredFlower = stack == null || stack.isEmpty() ? ItemStack.EMPTY : stack.copy();
+    }
+
+    public long getFlowerGiftCooldownUntil() {
+        return flowerGiftCooldownUntil;
+    }
+
+    public void setFlowerGiftCooldownUntil(long gameTime) {
+        this.flowerGiftCooldownUntil = gameTime;
+    }
+
     public TaskQueue getTaskQueue() {
         return taskQueue;
     }
@@ -1516,10 +1523,21 @@ public class CompanionEntity extends PathfinderMob {
         CompanionForm value = form == null ? CompanionForm.PLAYER : form;
         CompanionForm previous = getForm();
         entityData.set(DATA_FORM, value.serializedName());
+        if (previous != value) {
+            setFormVariant(CompanionFormVariants.defaultVariant(value));
+        }
         refreshDimensions();
         if (!level().isClientSide() && previous != value) {
             ejectIncompatibleArmor();
         }
+    }
+
+    public String getFormVariant() {
+        return CompanionFormVariants.normalize(getForm(), entityData.get(DATA_FORM_VARIANT));
+    }
+
+    public void setFormVariant(String variant) {
+        entityData.set(DATA_FORM_VARIANT, CompanionFormVariants.normalize(getForm(), variant));
     }
 
     /** Move armor that this form cannot show into backpack (or drop) so slots stay honest. */
@@ -1632,7 +1650,12 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void setFollowRadius(float radius) {
-        entityData.set(DATA_FOLLOW_RADIUS, CompanionFollowDistances.clampFollowRadius(radius));
+        float follow = CompanionFollowDistances.clampFollowRadius(radius);
+        entityData.set(DATA_FOLLOW_RADIUS, follow);
+        // Wander must stay ≥ follow (bump when follow is raised past wander).
+        if (getWanderRadius() < follow) {
+            entityData.set(DATA_WANDER_RADIUS, CompanionFollowDistances.clampWanderRadius(follow));
+        }
     }
 
     public float getPersonalSpace() {
@@ -1648,7 +1671,8 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public void setWanderRadius(float radius) {
-        entityData.set(DATA_WANDER_RADIUS, CompanionFollowDistances.clampWanderRadius(radius));
+        entityData.set(DATA_WANDER_RADIUS,
+                CompanionFollowDistances.clampWanderRadius(radius, getFollowRadius()));
     }
 
     public com.azscompanions.ai.CompanionPersona getPersona() {
@@ -1668,104 +1692,10 @@ public class CompanionEntity extends PathfinderMob {
         if (parent == null) {
             return;
         }
-        setFollowRadius(CompanionFollowDistances.inheritFollowRadius(parent.getFollowRadius()));
+        float childFollow = CompanionFollowDistances.inheritFollowRadius(parent.getFollowRadius());
+        setFollowRadius(childFollow);
         setPersonalSpace(CompanionFollowDistances.inheritPersonalSpace(parent.getPersonalSpace()));
-        setWanderRadius(CompanionFollowDistances.inheritWanderRadius(parent.getWanderRadius()));
-    }
-
-    /** Copy glowing-orb customization from a parent (children of orbs stay orbs visually). */
-    public void inheritOrbSettingsFrom(CompanionEntity parent) {
-        if (parent == null) {
-            return;
-        }
-        setOrbSettings(
-                parent.getOrbColorRgb(),
-                parent.getOrbBrightness(),
-                parent.getOrbFloatAmplitude(),
-                parent.getOrbFloatSpeed(),
-                parent.getOrbFloatHeight(),
-                parent.getOrbOffsetX(),
-                parent.getOrbOffsetY(),
-                parent.getOrbOffsetZ(),
-                parent.isOrbFront());
-    }
-
-    public int getOrbColorRgb() {
-        return CompanionOrbSettings.clampRgb(entityData.get(DATA_ORB_COLOR));
-    }
-
-    public int getOrbBrightness() {
-        return CompanionOrbSettings.clampBrightness(entityData.get(DATA_ORB_BRIGHTNESS));
-    }
-
-    public float getOrbFloatAmplitude() {
-        return CompanionOrbSettings.clampFloatAmplitude(entityData.get(DATA_ORB_FLOAT_AMPLITUDE));
-    }
-
-    public float getOrbFloatSpeed() {
-        return CompanionOrbSettings.clampFloatSpeed(entityData.get(DATA_ORB_FLOAT_SPEED));
-    }
-
-    public float getOrbFloatHeight() {
-        return CompanionOrbSettings.clampFloatHeight(entityData.get(DATA_ORB_FLOAT_HEIGHT));
-    }
-
-    public float getOrbOffsetX() {
-        return CompanionOrbSettings.clampOffset(entityData.get(DATA_ORB_OFFSET_X));
-    }
-
-    public float getOrbOffsetY() {
-        return CompanionOrbSettings.clampOffset(entityData.get(DATA_ORB_OFFSET_Y));
-    }
-
-    public float getOrbOffsetZ() {
-        return CompanionOrbSettings.clampOffset(entityData.get(DATA_ORB_OFFSET_Z));
-    }
-
-    public boolean isOrbFront() {
-        return entityData.get(DATA_ORB_FRONT);
-    }
-
-    public void setOrbFront(boolean front) {
-        entityData.set(DATA_ORB_FRONT, front);
-    }
-
-    public void setOrbSettings(
-            int colorRgb,
-            int brightness,
-            float floatAmplitude,
-            float floatSpeed,
-            float floatHeight,
-            float offsetX,
-            float offsetY,
-            float offsetZ,
-            boolean front
-    ) {
-        entityData.set(DATA_ORB_COLOR, CompanionOrbSettings.clampRgb(colorRgb));
-        entityData.set(DATA_ORB_BRIGHTNESS, CompanionOrbSettings.clampBrightness(brightness));
-        entityData.set(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSettings.clampFloatAmplitude(floatAmplitude));
-        entityData.set(DATA_ORB_FLOAT_SPEED, CompanionOrbSettings.clampFloatSpeed(floatSpeed));
-        entityData.set(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSettings.clampFloatHeight(floatHeight));
-        entityData.set(DATA_ORB_OFFSET_X, CompanionOrbSettings.clampOffset(offsetX));
-        entityData.set(DATA_ORB_OFFSET_Y, CompanionOrbSettings.clampOffset(offsetY));
-        entityData.set(DATA_ORB_OFFSET_Z, CompanionOrbSettings.clampOffset(offsetZ));
-        setOrbFront(front);
-    }
-
-    /** @deprecated prefer {@link #setOrbSettings(int, int, float, float, float, float, float, float, boolean)} */
-    @Deprecated
-    public void setOrbSettings(
-            int colorRgb,
-            int brightness,
-            float floatAmplitude,
-            float floatSpeed,
-            float floatHeight,
-            float offsetX,
-            float offsetY,
-            float offsetZ
-    ) {
-        setOrbSettings(colorRgb, brightness, floatAmplitude, floatSpeed, floatHeight,
-                offsetX, offsetY, offsetZ, isOrbFront());
+        setWanderRadius(CompanionFollowDistances.inheritWanderRadius(parent.getWanderRadius(), childFollow));
     }
 
     public boolean wantsAggressiveTargets() {
@@ -1893,6 +1823,7 @@ public class CompanionEntity extends PathfinderMob {
         }
         if (com.azscompanions.AzsCompanionsConstants.isWolfyOwner(player.getUUID())) {
             setForm(CompanionForm.WOLF);
+            setFormVariant(WolfyPerkSupport.BROWN_WOLF_VARIANT_ID);
             setCustomDisplayName(com.azscompanions.AzsCompanionsConstants.WOLFY_COMPANION_NAME);
             setSkinPath("");
             setNameTagVisible(true);
@@ -2013,6 +1944,7 @@ public class CompanionEntity extends PathfinderMob {
         output.putBoolean(com.azscompanions.ai.CompanionPersona.NBT_INITIALIZED, getPersona().initialized());
         output.putString("CustomNameOverride", entityData.get(DATA_CUSTOM_NAME_OVERRIDE));
         output.putString("CompanionForm", getForm().serializedName());
+        output.putString(CompanionFormVariants.NBT_KEY, getFormVariant());
         output.putBoolean("ShowNameTag", isNameTagVisible());
         output.putBoolean("ShowArmor", isArmorVisible());
         output.putString("Attitude", getAttitude().serializedName());
@@ -2020,15 +1952,6 @@ public class CompanionEntity extends PathfinderMob {
         output.putFloat("FollowRadius", getFollowRadius());
         output.putFloat("PersonalSpace", getPersonalSpace());
         output.putFloat("WanderRadius", getWanderRadius());
-        output.putInt(CompanionOrbSettings.NBT_COLOR, getOrbColorRgb());
-        output.putInt(CompanionOrbSettings.NBT_BRIGHTNESS, getOrbBrightness());
-        output.putFloat(CompanionOrbSettings.NBT_FLOAT_AMPLITUDE, getOrbFloatAmplitude());
-        output.putFloat(CompanionOrbSettings.NBT_FLOAT_SPEED, getOrbFloatSpeed());
-        output.putFloat(CompanionOrbSettings.NBT_FLOAT_HEIGHT, getOrbFloatHeight());
-        output.putFloat(CompanionOrbSettings.NBT_OFFSET_X, getOrbOffsetX());
-        output.putFloat(CompanionOrbSettings.NBT_OFFSET_Y, getOrbOffsetY());
-        output.putFloat(CompanionOrbSettings.NBT_OFFSET_Z, getOrbOffsetZ());
-        output.putBoolean(CompanionOrbSettings.NBT_FRONT, isOrbFront());
         output.store("Inventory", CompoundTag.CODEC, inventory.save(level().registryAccess()));
         output.store("Tasks", CompoundTag.CODEC, taskQueue.save());
         if (homePos != null) {
@@ -2048,6 +1971,9 @@ public class CompanionEntity extends PathfinderMob {
         }
         output.putInt("TrustedCount", i);
         output.putString("Permissions", String.join(",", permissions));
+        if (!offeredFlower.isEmpty()) {
+            output.store("OfferedFlower", ItemStack.CODEC, offeredFlower);
+        }
     }
 
     @Override
@@ -2097,6 +2023,15 @@ public class CompanionEntity extends PathfinderMob {
             setCustomName(Component.literal(override));
         }
         setForm(CompanionForm.byName(input.getStringOr("CompanionForm", CompanionForm.PLAYER.serializedName())));
+        String savedVariant = input.getStringOr(CompanionFormVariants.NBT_KEY, "");
+        if (!savedVariant.isEmpty()) {
+            setFormVariant(savedVariant);
+        } else if (getForm() == CompanionForm.WOLF
+                && WolfyPerkSupport.isWolfyName(getChatDisplayName())) {
+            setFormVariant(WolfyPerkSupport.BROWN_WOLF_VARIANT_ID);
+        } else {
+            setFormVariant(CompanionFormVariants.defaultVariant(getForm()));
+        }
         setNameTagVisible(input.getBooleanOr("ShowNameTag", true));
         setArmorVisible(input.getBooleanOr("ShowArmor", true));
         setAttitude(CompanionAttitude.byName(input.getStringOr("Attitude", CompanionAttitude.PASSIVE.serializedName())));
@@ -2104,16 +2039,6 @@ public class CompanionEntity extends PathfinderMob {
         setFollowRadius(input.getFloatOr("FollowRadius", CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS));
         setPersonalSpace(input.getFloatOr("PersonalSpace", CompanionFollowDistances.DEFAULT_PERSONAL_SPACE));
         setWanderRadius(input.getFloatOr("WanderRadius", CompanionFollowDistances.DEFAULT_WANDER_RADIUS));
-        setOrbSettings(
-                input.getIntOr(CompanionOrbSettings.NBT_COLOR, CompanionOrbSettings.DEFAULT_COLOR_RGB),
-                input.getIntOr(CompanionOrbSettings.NBT_BRIGHTNESS, CompanionOrbSettings.DEFAULT_BRIGHTNESS),
-                input.getFloatOr(CompanionOrbSettings.NBT_FLOAT_AMPLITUDE, CompanionOrbSettings.DEFAULT_FLOAT_AMPLITUDE),
-                input.getFloatOr(CompanionOrbSettings.NBT_FLOAT_SPEED, CompanionOrbSettings.DEFAULT_FLOAT_SPEED),
-                input.getFloatOr(CompanionOrbSettings.NBT_FLOAT_HEIGHT, CompanionOrbSettings.DEFAULT_FLOAT_HEIGHT),
-                input.getFloatOr(CompanionOrbSettings.NBT_OFFSET_X, CompanionOrbSettings.DEFAULT_OFFSET_X),
-                input.getFloatOr(CompanionOrbSettings.NBT_OFFSET_Y, CompanionOrbSettings.DEFAULT_OFFSET_Y),
-                input.getFloatOr(CompanionOrbSettings.NBT_OFFSET_Z, CompanionOrbSettings.DEFAULT_OFFSET_Z),
-                input.getBooleanOr(CompanionOrbSettings.NBT_FRONT, CompanionOrbSettings.DEFAULT_FRONT));
         input.read("Inventory", CompoundTag.CODEC).ifPresent(inv -> inventory.load(inv, level().registryAccess()));
         ejectIncompatibleArmor();
         ejectForbiddenCharm();
@@ -2142,6 +2067,7 @@ public class CompanionEntity extends PathfinderMob {
                 permissions.add(permission.trim());
             }
         }
+        offeredFlower = input.read("OfferedFlower", ItemStack.CODEC).orElse(ItemStack.EMPTY);
     }
 
 }

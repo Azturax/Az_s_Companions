@@ -24,15 +24,12 @@ public enum CompanionForm {
     SPIDER(FormGroup.HOSTILE, 1.4f, 0.9f),
     ENDERMAN(FormGroup.HOSTILE, 0.6f, 2.9f),
     HUSK(FormGroup.HOSTILE, 0.6f, 1.95f),
-    STRAY(FormGroup.HOSTILE, 0.6f, 1.99f),
-    /** Soft glowing flying orb — custom color/brightness/float/offset; no mob proxy. */
-    GLOWING_ORB(FormGroup.SPECIAL, 0.45f, 0.45f);
+    STRAY(FormGroup.HOSTILE, 0.6f, 1.99f);
 
     public enum FormGroup {
         PLAYER,
         ANIMAL,
-        HOSTILE,
-        SPECIAL
+        HOSTILE
     }
 
     private final FormGroup group;
@@ -61,20 +58,31 @@ public enum CompanionForm {
         return this == PLAYER;
     }
 
-    /** Glowing flying orb form (billboard render + dynamic light + always-air follow). */
-    public boolean isOrb() {
-        return this == GLOWING_ORB;
-    }
-
     /**
      * Forms that use vanilla humanoid armor layers (player mesh or zombie-family / skeleton / enderman proxies).
-     * True animals, spider, and orbs have no humanoid armor layers — do not accept plate armor for them.
+     * True animals and spider have no humanoid armor layers — do not accept plate armor for them.
      */
     public boolean supportsHumanoidArmor() {
         return switch (this) {
             case PLAYER, ZOMBIE, SKELETON, HUSK, STRAY, ENDERMAN -> true;
             default -> false;
         };
+    }
+
+    /**
+     * Sit command uses the passenger / minecart bent-leg pose (same as riding) for these forms.
+     * Matches {@link #supportsHumanoidArmor()} — player mesh and humanoid hostile proxies.
+     */
+    public boolean usesPassengerSitPose() {
+        return supportsHumanoidArmor();
+    }
+
+    /**
+     * Sit command uses the vanilla animal sitting animation (wolf / cat / fox).
+     * Other animals stay still without a dedicated sit mesh.
+     */
+    public boolean usesNativeAnimalSitPose() {
+        return this == WOLF || this == CAT || this == FOX;
     }
 
     /** Wolf form can wear {@code AnimalArmorItem} canine (wolf) armor via the chest inventory slot → BODY. */
@@ -87,9 +95,6 @@ public enum CompanionForm {
     }
 
     public String displayLabel() {
-        if (this == GLOWING_ORB) {
-            return "Glowing Orb";
-        }
         String raw = name().toLowerCase(Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
@@ -99,8 +104,10 @@ public enum CompanionForm {
             return PLAYER;
         }
         String key = value.trim().toUpperCase(Locale.ROOT).replace('-', '_');
-        if ("ORB".equals(key) || "GLOWINGORB".equals(key.replace("_", ""))) {
-            return GLOWING_ORB;
+        // Removed Glowing Orb form — migrate old saves / CCI aliases to default player form.
+        String compact = key.replace("_", "");
+        if ("ORB".equals(key) || "GLOWINGORB".equals(compact) || "GLOWING_ORB".equals(key)) {
+            return PLAYER;
         }
         try {
             return CompanionForm.valueOf(key);

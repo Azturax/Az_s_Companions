@@ -124,8 +124,8 @@ public final class CompanionChunkTickets {
         }
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerUuid);
         if (owner == null) {
-            // Owner offline: still keep the chunk loaded so Stay/Wander/sleep can run.
-            return true;
+            // Owner offline: companions are parked on logout; no ticket needed.
+            return false;
         }
         return owner.level() == level;
     }

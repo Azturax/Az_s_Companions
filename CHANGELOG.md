@@ -2,22 +2,45 @@
 
 ## Unreleased
 
+## 0.4.2
+
+### Added
+- **`world.enableLoot` config** (default **true**): master switch for mod treasure loot injections (Companion Charm in desert pyramids, Jindujun Whistle in Trail Ruins archaeology). Set **false** to disable all of them. NeoForge: `config/azscompanions-common.toml` → `[world] enableLoot`; Fabric: `config/azscompanions-common.json` → `world.enableLoot`.
+- **Reactive AI chatter (recent actions):** owned companions (Idle chat ON, in range) react to short-lived nearby events — TNT/explosions, entering darkness (asks for a torch), notable item finds, last ingredient toward watched crafts (swords/tools/armor), and crafting gear (e.g. **NICE SWORD!**). LLM prompt includes event context; scripted fallbacks when LLM is off. Rate-limited; Fabric + NeoForge (+26.2) hooks.
+- **Ride-along mounts:** when you mount a horse/camel/llama, boat, minecart, pig, or strider, following companions try to tame (if needed) and mount the nearest empty matching rideable, then keep pace nearby. They never take your vehicle or another player's pet. If nothing empty is nearby they briefly approach a candidate, then cool down. They dismount when you do.
+- **Cat-form creeper scare:** companions in **Cat** form scare creepers like vanilla cats (creepers flee within ~6 blocks). Player and other forms do not.
+- **Wolf-form skeleton scare:** companions in **Wolf** (dog) form scare skeletons the same way — Skeleton, Stray, Wither Skeleton, and Bogged flee within ~6 blocks. Other forms do not.
+- **Wander mob play:** in **Wander** mode only, companions occasionally circle, sneak around, nudge/push, or give a light punch (knockback; tiny damage only if combat is allowed) to nearby passive/hostile mobs. Rate-limited; skips players, owner pets, bosses, and protected entities. Follow/Stay/Sit unchanged.
+- **Sit pose (minecart-like):** Command **Sit** now applies a visible passenger / bent-leg sit pose for **Player**, **Zombie**, **Skeleton**, **Husk**, **Stray**, and **Enderman** forms (same as riding a minecart). Wolf / Cat / Fox keep their native sit. Other animals and spider still hold still without a sit mesh. Stay remains upright hold-still.
+- **Mob form variants:** Customization → Form shows small `<` / `>` buttons beside Wolf, Cat, Fox, Rabbit, and Sheep to cycle coats/breeds/types/wool. Persisted as synched `CompanionFormVariant` NBT; live preview. Player and other forms have no arrows.
+- **Logout park / login restore:** owned companions despawn when the owner disconnects and respawn near them on join. Snapshots go to player persistent data (NeoForge) / overworld SavedData (Fabric), and the bound Companion Charm mirrors with `LogoutParked` so charm state stays consistent. Manual charm store is unchanged (no auto-summon). Children fold into parent `StoredChildren` before parking.
+- **Flower gifts:** right-click your companion with any `#minecraft:flowers` item (poppies, tulips, torchflower, tall flowers, etc.) to gift one — hearts appear, then they **throw** a **context-weighted** return gift as an item entity toward you (mild arc; short pickup delay). Quiet moments lean on classic flowers; darkness/night → torch/lantern, low hunger → food, sleeping/bathing/adventuring, recent combat/craft/find, biome, and attitude also bias the pool. The tossed stack is newly created (never pulled from task inventory). Empty-hand right-click remains a fallback if a pending offer could not be thrown. ~3s cooldown. Owner (Fabric) / owner or trusted (NeoForge).
+- **Flight aura + Jindujun Whistle:** soft **ki aura** + foot-level motion trails on flying players (creative/survival flight, elytra); no rising particle columns into first-person view. **Jindujun Whistle** summons a rideable **Flying Nimbus** cloud (steer WASD + jump/sneak). Creative tab + Trail Ruins archaeology loot (chance below).
+
+### Fixed
+- **Companions follow into every dimension:** on any owner dimension change (vanilla Nether/End **and** modded dims via registry key — no mod-id allowlist), owned companions **teleport with the player** (`Entity.teleportTo` / `DimensionTransition`). Not logout park/respawn — form, skin, persona, and proportions stay continuous for the world save. First-create persona UI only on new companion creation. Logout park remains disconnect-only.
+
+### Changed
+- **Companion AI snappier `/ask`:** up to **2 parallel** LLM calls (`maxParallelRequests`, 1–4) so ask is not stuck behind idle ambient; interactive prompts jump the queue ahead of `[ambient]`/`[react]`/`[call]`. New `connectTimeoutSeconds` default **8** (fail dead endpoints faster; full `timeoutSeconds` still **30** for slow local models). Ambient completions capped at **128** tokens. Defaults: idle interval **75–180s** (was 90–240), chat-react cooldown **12s** (was 20), `memoryMaxMessages` **12** (was 16). See [COMPANION_AI.md](docs/COMPANION_AI.md).
+- **Behavior radii:** Wander radius is always **≥ follow radius** (raising follow bumps wander; wander cannot be set below follow). Wander max raised **48 → 128** (same as follow). Defaults: follow **48**, wander **48** (was wander 16). Persists via existing NBT / Behavior screen / CCI.
+- **Treasure loot rarer + small finds:** Companion Charm desert-pyramid chest chance **100% → 5%** (1 charm when it hits). Jindujun Whistle Trail Ruins archaeology chance **2% → 0.5%** (taiga GLM on NeoForge). Mod treasure appends **1** unique item per successful roll (within a 1–3 item policy; no multi-roll stacks).
+- **Companion melee damage:** fixed to vanilla netherite sword Attack Damage (**8**). Ignores Bit gear tiers / held tool material (no more base-4 + weapon modifier stacking).
+- **Special perk UUID mapping:** **Wolfy** (`7c97e337-2c49-448c-b710-7655487f18df`) brown wolf grant **only**; special flight UUID (`4274c47f-d61f-4850-bf29-9e5c185db4ac`) gets survival flight + flying companion + toggleable **Wiggly** (H / `/az wiggly`) with **auto-glowing removed**. 0.4.0 had wrongly attached Wiggly to the Wolfy UUID.
+
+### Removed
+- **Mob-form held-item rendering:** companions in non-player forms no longer draw mainhand/offhand items (animal overlays or humanoid `ItemInHandLayer` on zombie/skeleton/husk/stray/enderman proxies). Player form hand items unchanged. Armor on mob forms still syncs when visible.
+- **Glowing Orb** companion form and all related settings/UI/render/particles/dynamic-light hooks, evil-mode orb lightning, and CCI `glowing_orb`/`orb` form aliases. Old saves with that form migrate to the default **Player** form on load.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.2+1.21.1.jar` | `azscompanions-fabric-0.4.2+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.2+1.21.1.jar` | `azscompanions-fabric-cci-0.4.2+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.1
 
-### Fix: special perk UUID mapping
-- **Wolfy** (`7c97e337-2c49-448c-b710-7655487f18df`): brown wolf companion grant **only** — no toggle Wiggly, no glowing changes.
-- **Special flight UUID** (`4274c47f-d61f-4850-bf29-9e5c185db4ac`): survival flight + flying companion + toggleable **Wiggly** (H / `/az wiggly`); **auto-glowing removed** (leftover Glowing cleared on player / companions / toggle dog).
-- 0.4.0 had wrongly attached Wiggly (and glow-clear logic) to the Wolfy UUID; corrected here.
-
-### Glowing Orb polish
-- **Particles-only** 3D look (colored dust + glow sparks; no textured billboard).
-- Default brightness **14** (torch-like) for dynamic-lights luminance.
-- Customization **Front / Back** position switch (owner-local stand-off).
-- Playful **evil mode** on Glowing Orb: lightning nearby (periodic pulses; rare near-owner after ~3s grace).
-
-### Flight aura + Jindujun Whistle
-- Soft **ki aura** + foot-level motion trails on flying players (creative/survival flight, elytra); no rising particle columns into first-person view.
-- **Jindujun Whistle** summons a rideable **Flying Nimbus** cloud (steer WASD + jump/sneak). Creative tab + Trail Ruins archaeology loot (**2%**, NeoForge taiga biome GLM; Fabric trail-ruins table chance).
+Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jindujun from that draft are superseded by **0.4.2** (orbs removed; other items shipped there).
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
@@ -116,7 +139,7 @@
 ### Ambient idle chat (speech only)
 - **`idleChat` default ON** (new installs / NeoForge TOML default). Admin AI Config toggle **Idle chat: ON/OFF**.
 - Prefers LLM ambient prompts when the server provider is enabled; on empty/error or when AI is disabled, uses sparse scripted fallback lines.
-- Skips sleep, combat, busy LLM worker, and ~45s after any recent speak line. Interval still `idleChatSecondsMin`/`Max` (default 90–240s).
+- Skips sleep, combat, busy LLM worker, and ~45s after any recent speak line. Interval still `idleChatSecondsMin`/`Max` (default 75–180s).
 - Docs: [COMPANION_AI.md](docs/COMPANION_AI.md), [ADMIN.md](docs/ADMIN.md).
 
 ### Loaders

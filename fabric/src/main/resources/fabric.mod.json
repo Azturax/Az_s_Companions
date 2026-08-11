@@ -15,6 +15,10 @@
   "license": "${mod_license}",
   "icon": "assets/azscompanions/textures/item/companion_charm.png",
   "environment": "*",
+  "accessWidener": "azscompanions.accesswidener",
+  "mixins": [
+    "azscompanions.mixins.json"
+  ],
   "entrypoints": {
     "main": [
       "com.azscompanions.AzsCompanionsFabric"
