@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.17
+
+### `/ask` empty reply UX (Gemma / LiteLLM)
+- Root cause: Gemma 4 often returns HTTP 200 with empty `message.content` (thinking budget / `reasoning_content`). Idle chat still “spoke” via **scripted fallback**; `/ask` dumped the exception **including truncated JSON** into chat (looked like `"role"` / `"content"` lines).
+- Parser falls back to `reasoning_content` / `reasoning` / `thinking` when content is null/blank.
+- Gemma-like model ids send `think:false` + `reasoning_effort:none` and bump request `max_tokens` to at least 512.
+- Player-facing `/ask` errors are **short** (no raw JSON body). Full body + diagnosis go to the **server log** only.
+
+### Companion swim-follow
+- When the owner is swimming / in water, following companions enter water (water pathfinding malus cleared + float navigation) and use **direct swim steering** to match owner depth instead of floating at the surface or pathing around shorelines.
+- Follow goals stay active while the owner is wet and the companion is still ashore; Fabric now enables `GroundPathNavigation#setCanFloat` like NeoForge. NeoForge 26.2 wiring included in tree (no jar shipped).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.3.17+1.21.1.jar` | `azscompanions-fabric-0.3.17+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.17+1.21.1.jar` | `azscompanions-fabric-cci-0.3.17+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.3.16
 
 ### Empty LLM reply / talk path

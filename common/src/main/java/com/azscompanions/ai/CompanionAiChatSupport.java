@@ -15,6 +15,44 @@ public final class CompanionAiChatSupport {
     private CompanionAiChatSupport() {
     }
 
+    /**
+     * Short player-facing LLM error for chat. Never includes raw JSON bodies (those wrap into
+     * confusing {@code "role"}/{@code "content"} lines in Minecraft chat). Full detail stays in logs.
+     */
+    public static String playerFacingAiError(Throwable error) {
+        String raw = error == null ? "unknown error"
+                : (error.getMessage() == null || error.getMessage().isBlank()
+                ? error.toString() : error.getMessage().trim());
+        // Drop any embedded response dump from older clients / nested causes.
+        int bodyAt = indexOfIgnoreCase(raw, "Body:");
+        if (bodyAt >= 0) {
+            raw = raw.substring(0, bodyAt).trim();
+        }
+        if (raw.contains("\"choices\"") || raw.contains("\"content\"") || raw.contains("\"role\"")) {
+            return "Companion AI error: empty or invalid model reply. "
+                    + "For Gemma 4, disable thinking / raise maxTokens (512+). See server log.";
+        }
+        if (raw.toLowerCase(java.util.Locale.ROOT).contains("empty assistant content")) {
+            return "Companion AI error: empty model reply (HTTP 200). "
+                    + "Check model id; for Gemma 4 disable thinking or raise maxTokens. See server log.";
+        }
+        if (raw.length() > 140) {
+            raw = raw.substring(0, 137) + "…";
+        }
+        if (!raw.regionMatches(true, 0, "Companion AI", 0, "Companion AI".length())) {
+            return "Companion AI error: " + raw;
+        }
+        return raw;
+    }
+
+    private static int indexOfIgnoreCase(String haystack, String needle) {
+        if (haystack == null || needle == null) {
+            return -1;
+        }
+        return haystack.toLowerCase(java.util.Locale.ROOT)
+                .indexOf(needle.toLowerCase(java.util.Locale.ROOT));
+    }
+
     /** Slash commands and blank lines never trigger auto AI. */
     public static boolean shouldIgnoreChatMessage(String raw) {
         if (raw == null) {

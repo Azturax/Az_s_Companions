@@ -230,16 +230,16 @@ public final class CompanionAiAsk {
         }
         if (error != null) {
             if (reportErrors) {
-                String msg = error.getMessage() == null ? error.toString() : error.getMessage();
-                player.displayClientMessage(Component.literal("Companion AI error: " + msg), false);
+                player.displayClientMessage(Component.literal(
+                        CompanionAiChatSupport.playerFacingAiError(error)), false);
             }
             return;
         }
         if (reply == null || reply.isBlank()) {
             if (reportErrors) {
                 player.displayClientMessage(Component.literal(
-                        "Companion AI returned an empty reply (HTTP OK but no assistant text). "
-                                + "Check model id / LiteLLM logs, or /az ai status."), false);
+                        "Companion AI returned an empty reply. "
+                                + "Check model id; for Gemma 4 disable thinking / raise maxTokens. See server log."), false);
             }
             return;
         }

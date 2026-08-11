@@ -3,6 +3,7 @@ package com.azscompanions.ai;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +34,14 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
+    void extractsReasoningContentWhenContentEmpty() {
+        String json = """
+                {"choices":[{"message":{"role":"assistant","content":"","reasoning_content":"Final answer: hi!"},"finish_reason":"length"}]}
+                """;
+        assertEquals("Final answer: hi!", OpenAiCompatibleClient.extractAssistantText(json));
+    }
+
+    @Test
     void emptyContentYieldsNull() {
         String json = """
                 {"choices":[{"message":{"role":"assistant","content":""}}]}
@@ -43,6 +52,46 @@ class OpenAiCompatibleClientTest {
     @Test
     void rejectsMalformedJson() {
         assertThrows(IllegalStateException.class, () -> OpenAiCompatibleClient.extractAssistantText("{not-json"));
+    }
+
+    @Test
+    void diagnoseReportsNullContentShape() {
+        String json = """
+                {"choices":[{"finish_reason":"length","message":{"role":"assistant","content":null}}]}
+                """;
+        String d = OpenAiCompatibleClient.diagnoseEmptyAssistant(json);
+        assertTrue(d.contains("content=null"), d);
+        assertTrue(d.contains("finish_reason=length"), d);
+        assertFalse(d.contains("{"), d);
+    }
+
+    @Test
+    void looksLikeGemmaDetectsModelIds() {
+        assertTrue(OpenAiCompatibleClient.looksLikeGemma("google/gemma-4-e4b"));
+        assertFalse(OpenAiCompatibleClient.looksLikeGemma("gpt-4o-mini"));
+    }
+}
+
+class CompanionAiChatSupportErrorTest {
+    @Test
+    void playerFacingErrorStripsBodyDump() {
+        Throwable err = new IllegalStateException(
+                "LLM returned empty assistant content (HTTP 200). Check model. Body: "
+                        + "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":null}}]}");
+        String msg = CompanionAiChatSupport.playerFacingAiError(err);
+        assertTrue(msg.startsWith("Companion AI error:"), msg);
+        assertFalse(msg.contains("\"role\""), msg);
+        assertFalse(msg.contains("Body:"), msg);
+        assertTrue(msg.length() < 200, msg);
+    }
+
+    @Test
+    void playerFacingErrorKeepsShortMessages() {
+        String msg = CompanionAiChatSupport.playerFacingAiError(
+                new IllegalStateException("LLM connection refused at http://127.0.0.1:4000/v1"));
+        assertEquals(
+                "Companion AI error: LLM connection refused at http://127.0.0.1:4000/v1",
+                msg);
     }
 }
 

@@ -130,6 +130,8 @@ Common bases:
 | **LiteLLM** (local/remote proxy) | `http://127.0.0.1:4000/v1` | model id as configured in LiteLLM |
 | Azure / custom proxy | your gateway’s `…/v1` | as exposed by the proxy |
 
+**Gemma 4 note:** models like `google/gemma-4-e4b` often enable **thinking**. With a low `maxTokens` (default 256), the proxy can return HTTP 200 with empty `message.content` (text may sit in `reasoning_content` only). The mod disables thinking for Gemma-like ids and raises the request budget to ≥512; if replies stay empty, set LiteLLM/Ollama `think: false` / higher `max_tokens`, and check the **server log** (player chat no longer dumps raw JSON).
+
 Auth: when a key is resolved, HTTP clients send `Authorization: Bearer <key>`. If the value already starts with `Bearer `, it is not double-prefixed. LiteLLM’s master key (and virtual keys) require this header on **chat** and on **MCP** (`POST /mcp/`). Without a key, no Authorization header is sent (open proxies still work; secured ones return HTTP 401).
 
 ### Fabric — LiteLLM proxy (JSON)

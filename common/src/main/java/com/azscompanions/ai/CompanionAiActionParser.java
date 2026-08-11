@@ -82,6 +82,11 @@ public final class CompanionAiActionParser {
         if (content.isBlank() && message.has("refusal") && message.get("refusal").isJsonPrimitive()) {
             content = message.get("refusal").getAsString();
         }
+        // Gemma 4 / Ollama / LiteLLM thinking: final text may land only in reasoning_* when
+        // content is null/"" (often after think tokens ate max_tokens).
+        if (content.isBlank()) {
+            content = firstNonBlankPrimitive(message, "reasoning_content", "reasoning", "thinking");
+        }
         List<CompanionAiAction> actions = new ArrayList<>();
         if (message.has("tool_calls") && message.get("tool_calls").isJsonArray()) {
             for (JsonElement el : message.getAsJsonArray("tool_calls")) {
@@ -163,6 +168,25 @@ public final class CompanionAiActionParser {
                 }
             }
             return sb.toString();
+        }
+        return "";
+    }
+
+    static String firstNonBlankPrimitive(JsonObject obj, String... keys) {
+        if (obj == null || keys == null) {
+            return "";
+        }
+        for (String key : keys) {
+            if (key == null || !obj.has(key)) {
+                continue;
+            }
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                String v = el.getAsString();
+                if (v != null && !v.isBlank()) {
+                    return v;
+                }
+            }
         }
         return "";
     }

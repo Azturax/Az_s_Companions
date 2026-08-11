@@ -4,6 +4,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -11,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -19,6 +22,8 @@ import java.util.Optional;
  * OpenAI, OpenRouter, Groq, Together, LiteLLM, Azure OpenAI-compatible proxies, etc.
  */
 public final class OpenAiCompatibleClient implements CompanionAiClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger("azscompanions/ai");
+
     private final HttpClient http = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
@@ -46,10 +51,26 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
             throw new IllegalStateException("Invalid Companion AI baseUrl: " + rawBase);
         }
 
+        String model = settings.model() == null ? "" : settings.model().trim();
+        boolean gemmaLike = looksLikeGemma(model);
+        int maxTokens = settings.maxTokens();
+        if (gemmaLike && maxTokens < 512) {
+            // Thinking models often burn a small budget on reasoning and leave content empty.
+            maxTokens = 512;
+        }
+
         JsonObject body = new JsonObject();
-        body.addProperty("model", settings.model());
-        body.addProperty("max_tokens", settings.maxTokens());
+        body.addProperty("model", model);
+        body.addProperty("max_tokens", maxTokens);
         body.addProperty("temperature", 0.7);
+        if (gemmaLike) {
+            // Ollama / LiteLLM / vLLM Gemma 4: disable thinking so content is populated.
+            body.addProperty("think", false);
+            body.addProperty("reasoning_effort", "none");
+            JsonObject kwargs = new JsonObject();
+            kwargs.addProperty("enable_thinking", false);
+            body.add("chat_template_kwargs", kwargs);
+        }
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
@@ -96,17 +117,86 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
             throw new IllegalStateException("LLM returned no HTTP response");
         }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("LLM HTTP " + response.statusCode() + ": " + truncate(response.body()));
+            LOGGER.warn("LLM HTTP {} body={}", response.statusCode(), truncate(response.body(), 2000));
+            throw new IllegalStateException("LLM HTTP " + response.statusCode()
+                    + " — check model id / proxy auth (details in server log)");
         }
         Optional<String> text = Optional.ofNullable(extractAssistantText(response.body())).filter(s -> !s.isBlank());
         if (text.isEmpty()) {
             // HTTP OK but no speakable text — usually wrong/empty upstream content, not a mod crash.
+            String diagnose = diagnoseEmptyAssistant(response.body());
+            LOGGER.warn("LLM empty assistant content (HTTP {}). {}. Body={}",
+                    response.statusCode(), diagnose, truncate(response.body(), 2000));
             throw new IllegalStateException(
                     "LLM returned empty assistant content (HTTP " + response.statusCode()
-                            + "). Check model id vs LiteLLM/proxy config, then proxy logs. Body: "
-                            + truncate(response.body()));
+                            + "). " + diagnose
+                            + (gemmaLike
+                            ? " For Gemma 4, disable thinking in the proxy or raise maxTokens."
+                            : " Check model id vs LiteLLM/proxy config."));
         }
         return text;
+    }
+
+    static boolean looksLikeGemma(String model) {
+        if (model == null || model.isBlank()) {
+            return false;
+        }
+        return model.toLowerCase(Locale.ROOT).contains("gemma");
+    }
+
+    /**
+     * Compact diagnosis for empty replies — never dumps the raw body (that leaks into /ask chat).
+     */
+    static String diagnoseEmptyAssistant(String json) {
+        if (json == null || json.isBlank()) {
+            return "Response body empty.";
+        }
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonArray choices = root.getAsJsonArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                return "No choices[] in response.";
+            }
+            JsonObject first = choices.get(0).getAsJsonObject();
+            String finish = first.has("finish_reason") && first.get("finish_reason").isJsonPrimitive()
+                    ? first.get("finish_reason").getAsString() : "?";
+            JsonElement messageEl = first.get("message");
+            if (messageEl == null || !messageEl.isJsonObject()) {
+                return "Missing message object (finish_reason=" + finish + ").";
+            }
+            JsonObject message = messageEl.getAsJsonObject();
+            String contentShape = contentShape(message.get("content"));
+            boolean hasReasoning = !CompanionAiActionParser.firstNonBlankPrimitive(
+                    message, "reasoning_content", "reasoning", "thinking").isBlank();
+            boolean hasTools = message.has("tool_calls") && message.get("tool_calls").isJsonArray()
+                    && !message.getAsJsonArray("tool_calls").isEmpty();
+            return "content=" + contentShape
+                    + ", reasoning=" + (hasReasoning ? "present" : "absent")
+                    + ", tool_calls=" + (hasTools ? "yes" : "no")
+                    + ", finish_reason=" + finish;
+        } catch (RuntimeException e) {
+            return "Malformed JSON response.";
+        }
+    }
+
+    static String contentShape(JsonElement contentEl) {
+        if (contentEl == null || contentEl.isJsonNull()) {
+            return "null";
+        }
+        if (contentEl.isJsonPrimitive()) {
+            String s = contentEl.getAsString();
+            if (s == null || s.isEmpty()) {
+                return "empty-string";
+            }
+            if (s.isBlank()) {
+                return "blank-string";
+            }
+            return "text(" + s.length() + ")";
+        }
+        if (contentEl.isJsonArray()) {
+            return "array(" + contentEl.getAsJsonArray().size() + ")";
+        }
+        return "object";
     }
 
     static String extractAssistantText(String json) {
@@ -117,7 +207,7 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         try {
             root = JsonParser.parseString(json).getAsJsonObject();
         } catch (RuntimeException e) {
-            throw new IllegalStateException("LLM returned malformed JSON: " + truncate(json), e);
+            throw new IllegalStateException("LLM returned malformed JSON", e);
         }
         JsonArray choices = root.getAsJsonArray("choices");
         if (choices == null || choices.isEmpty()) {
@@ -168,10 +258,11 @@ public final class OpenAiCompatibleClient implements CompanionAiClient {
         return null;
     }
 
-    private static String truncate(String s) {
+    static String truncate(String s, int max) {
         if (s == null) {
             return "";
         }
-        return s.length() <= 240 ? s : s.substring(0, 240) + "…";
+        int limit = Math.max(32, max);
+        return s.length() <= limit ? s : s.substring(0, limit) + "…";
     }
 }
