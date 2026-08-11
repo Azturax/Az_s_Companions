@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.4.5
+
+### Fixed
+- **Jindujun sit gap:** 2.5× render scaled *after* the Blockbench `-1.501` feet pivot, sinking the mesh ~2.25 blocks under the hitbox so the rider floated above the cloud. Scale now wraps the pivot; `RIDER_Y_OFFSET` lowered from `HEIGHT×0.88` (~1.21) to `0.32×SCALE` (~0.80) so the player sits flush on the deck.
+- **Jindujun enchant stream:** denser / taller glyph cloud reduced — compact pixels, stream further behind at foot height, far fewer particles per tick, and enchant velocity no longer lifts glyphs into the rider. Spawn origin remains the nimbus entity only.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.5+1.21.1.jar` | `azscompanions-fabric-0.4.5+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.5+1.21.1.jar` | `azscompanions-fabric-cci-0.4.5+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.4
 
 ### Changed

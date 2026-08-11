@@ -54,8 +54,20 @@ class JindujunParticleSupportTest {
         assertEquals(2.5f, JindujunSupport.SCALE, 1.0e-4f);
         assertEquals(1.35f * 2.5f, JindujunSupport.WIDTH, 1.0e-4f);
         assertEquals(0.55f * 2.5f, JindujunSupport.HEIGHT, 1.0e-4f);
-        assertTrue(JindujunSupport.RIDER_Y_OFFSET > JindujunSupport.HEIGHT * 0.5d);
-        assertTrue(JindujunSupport.RIDER_Y_OFFSET <= JindujunSupport.HEIGHT + 0.05d);
+        // Seat on mesh deck (~0.32×SCALE), not hitbox top (HEIGHT×0.88 left a large float gap).
+        assertEquals(0.32d * JindujunSupport.SCALE, JindujunSupport.RIDER_Y_OFFSET, 1.0e-4d);
+        assertTrue(JindujunSupport.RIDER_Y_OFFSET < JindujunSupport.HEIGHT * 0.7d);
+    }
+
+    @Test
+    void particleStreamStaysCompactAndSparse() {
+        assertTrue(JindujunParticleSupport.PIXEL < 0.12f);
+        assertTrue(JindujunParticleSupport.BEHIND > JindujunParticleSupport.SHAPE_CENTER_Y);
+        int idle = JindujunParticleSupport.particlesThisTick(false, 0);
+        int moving = JindujunParticleSupport.particlesThisTick(true, 0);
+        assertTrue(idle <= JindujunParticleSupport.shapePointCount() / 10);
+        assertTrue(moving < JindujunParticleSupport.shapePointCount() / 3);
+        assertTrue(moving >= idle);
     }
 
     @Test

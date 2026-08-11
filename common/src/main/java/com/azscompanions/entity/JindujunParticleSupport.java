@@ -28,14 +28,14 @@ public final class JindujunParticleSupport {
             "#########.",
     };
 
-    /** Blocks per shape pixel (scaled with cloud). */
-    public static final float PIXEL = 0.11f * JindujunSupport.SCALE;
-    /** Raise stream slightly above cloud feet (FP-safe). */
-    public static final float STREAM_Y = 0.08f * JindujunSupport.SCALE;
-    /** Push pattern behind the cloud along facing. */
-    public static final float BEHIND = 0.55f * JindujunSupport.SCALE;
-    /** Vertical centering of the grid around STREAM_Y. */
-    public static final float SHAPE_CENTER_Y = 0.35f * JindujunSupport.SCALE;
+    /** Blocks per shape pixel — compact trail (not a full-size glyph billboard). */
+    public static final float PIXEL = 0.045f * JindujunSupport.SCALE;
+    /** Keep stream at cloud-foot height (never rider torso / eyes). */
+    public static final float STREAM_Y = 0.04f * JindujunSupport.SCALE;
+    /** Push pattern well behind the cloud along facing. */
+    public static final float BEHIND = 0.85f * JindujunSupport.SCALE;
+    /** Flatten vertical centering so glyphs stay under the deck. */
+    public static final float SHAPE_CENTER_Y = 0.06f * JindujunSupport.SCALE;
     /** Min speed² (blocks/tick) before the stream densifies. */
     public static final double MOVE_SPEED_SQ = 0.08d * 0.08d;
 
@@ -129,11 +129,11 @@ public final class JindujunParticleSupport {
      */
     public static int particlesThisTick(boolean movingFast, int tickAge) {
         if (!movingFast) {
-            // Idle hover: sparse ambient glyphs
-            return Math.max(2, POINT_COUNT / 6);
+            // Idle hover: very sparse ambient glyphs
+            return Math.max(1, POINT_COUNT / 18);
         }
-        // Moving: denser — still not every pixel every tick
-        return Math.max(4, POINT_COUNT / 2 + (tickAge & 1));
+        // Moving: light trail — never a purple face-blast
+        return Math.max(2, POINT_COUNT / 10 + (tickAge & 1));
     }
 
     /**
@@ -174,9 +174,10 @@ public final class JindujunParticleSupport {
      * @param out length ≥ 3; filled with vx, vy, vz relative offsets used by ENCHANT
      */
     public static void enchantVelocity(float offsetX, float offsetY, float offsetZ, float[] out) {
-        // ENCHANT interprets the three floats as direction toward the target (like the book).
-        out[0] = -offsetX * 0.85f;
-        out[1] = 0.12f - offsetY * 0.35f;
-        out[2] = -offsetZ * 0.85f;
+        // ENCHANT floats interpret these as target offsets (enchant-table style).
+        // Pull horizontally toward the cloud; keep Y calm so glyphs do not rise into the rider.
+        out[0] = -offsetX * 0.55f;
+        out[1] = -offsetY * 0.2f;
+        out[2] = -offsetZ * 0.55f;
     }
 }

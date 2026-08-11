@@ -39,11 +39,11 @@ public final class FlyingNimbusRenderer extends EntityRenderer<FabricFlyingNimbu
             MultiBufferSource buffer,
             int packedLight) {
         poseStack.pushPose();
-        // Standard Blockbench entity transform (model pivot at y=24), then uniform cloud scale.
-        poseStack.scale(-1.0f, -1.0f, 1.0f);
-        poseStack.translate(0.0d, -1.501d, 0.0d);
+        // Scale must wrap the -1.501 Blockbench feet pivot; scaling *after* that translate
+        // sinks a 2.5× mesh by ~(SCALE-1)*1.501 and leaves the rider floating above the cloud.
         float s = JindujunSupport.SCALE;
-        poseStack.scale(s, s, s);
+        poseStack.scale(-s, -s, s);
+        poseStack.translate(0.0d, -1.501d, 0.0d);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - entityYaw));
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(JindujunModel.TEXTURE));
         model.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);

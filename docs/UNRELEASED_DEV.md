@@ -4,9 +4,9 @@ Friendly local dig of everything in the tree that is **not yet a published GitHu
 
 | | |
 |---|---|
-| **Pending publish** | _(none — last ship was **v0.4.4**)_ |
-| **Last published tag** | **v0.4.4** |
-| **CHANGELOG** | Notes under `## Unreleased` (empty after 0.4.4) |
+| **Pending publish** | _(none — last ship was **v0.4.5**)_ |
+| **Last published tag** | **v0.4.5** |
+| **CHANGELOG** | Notes under `## Unreleased` (empty after 0.4.5) |
 | **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI). NeoForge **26.2** still not shipped. |
 
 Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do not treat as published.
@@ -18,6 +18,11 @@ Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do
 _(empty)_
 
 ---
+
+## Shipped in 0.4.5 (reference)
+
+- **Jindujun sit gap:** scale wraps Blockbench feet pivot; `RIDER_Y_OFFSET` ~0.80 so rider sits flush.
+- **Jindujun enchant stream:** sparser, further behind cloud at foot height; no upward glyph blast into rider face.
 
 ## Shipped in 0.4.4 (reference)
 
@@ -35,7 +40,7 @@ _(empty)_
 
 ## Still WIP / not in this publish
 
-- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.4 loader matrix.
+- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.5 loader matrix.
 - **`CompanionRecentActionHooks.java.wip`** — shared hooks draft still under a `.wip` name; live wiring is via loader event classes / mixins.
 - VoiceMod TTS bridge / Simple Voice Chat entity audio emission — still not shipped (detect-only / soft-compat as before).
 

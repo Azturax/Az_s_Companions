@@ -26,10 +26,11 @@ public final class JindujunSupport {
     public static final float HEIGHT = 0.55f * SCALE;
 
     /**
-     * Rider seat Y above entity feet — sits on the cloud top (sitting pose).
-     * Tuned for {@link #SCALE} so feet rest on the fluff, not floating or buried.
+     * Rider seat Y above entity feet — flush on the Blockbench cloud deck.
+     * Deck top is ~0.375 blocks at 1× (6px); sit slightly into the fluff.
+     * (Do not use {@link #HEIGHT} here — hitbox is taller than the mesh.)
      */
-    public static final double RIDER_Y_OFFSET = HEIGHT * 0.88d;
+    public static final double RIDER_Y_OFFSET = 0.32d * SCALE;
 
     /** Unridden / untouched continuous time before the cloud dismisses itself. */
     public static final int IDLE_DESPAWN_SECONDS = 56;
