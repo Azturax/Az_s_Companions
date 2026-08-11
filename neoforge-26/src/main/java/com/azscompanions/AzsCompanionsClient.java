@@ -4,6 +4,7 @@ import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
+import com.azscompanions.client.renderer.FlyingNimbusRenderer;
 import com.azscompanions.client.renderer.KonAwareBedRenderer;
 import com.azscompanions.client.screen.CompanionInventoryScreen;
 import com.azscompanions.client.screen.CompanionManagementScreen;
@@ -43,6 +44,7 @@ public final class AzsCompanionsClient {
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.COMPANION.get(), CompanionRenderer::new);
+        event.registerEntityRenderer(ModEntities.FLYING_NIMBUS.get(), FlyingNimbusRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KON_BED.get(), KonAwareBedRenderer::new);
     }
 

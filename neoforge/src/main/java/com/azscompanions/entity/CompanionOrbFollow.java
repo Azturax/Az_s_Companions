@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Always-air follow for {@link CompanionForm#GLOWING_ORB} using personal space + orb X/Y/Z offsets.
+ * Always-air follow for {@link CompanionForm#GLOWING_ORB} using front/back stand-off + X/Y/Z offsets.
  */
 public final class CompanionOrbFollow {
     private CompanionOrbFollow() {
@@ -51,7 +51,8 @@ public final class CompanionOrbFollow {
                     companion.getX(), companion.getZ(),
                     personalSpace,
                     companion.getOrbFloatHeight(),
-                    companion.getOrbOffsetX(), companion.getOrbOffsetY(), companion.getOrbOffsetZ());
+                    companion.getOrbOffsetX(), companion.getOrbOffsetY(), companion.getOrbOffsetZ(),
+                    companion.isOrbFront());
             companion.teleportTo(target[0], target[1], target[2]);
             companion.setDeltaMovement(Vec3.ZERO);
             companion.hasImpulse = true;
@@ -64,7 +65,8 @@ public final class CompanionOrbFollow {
                 companion.getX(), companion.getZ(),
                 personalSpace,
                 companion.getOrbFloatHeight(),
-                companion.getOrbOffsetX(), companion.getOrbOffsetY(), companion.getOrbOffsetZ());
+                companion.getOrbOffsetX(), companion.getOrbOffsetY(), companion.getOrbOffsetZ(),
+                companion.isOrbFront());
         double[] vel = CompanionOrbFlightSupport.velocityWithBob(
                 companion.getX(), companion.getY(), companion.getZ(),
                 target[0], target[1], target[2],

@@ -2,22 +2,22 @@
 
 ## Unreleased
 
-### Dragon Ball–style flight aura + trails (0.4.2+)
-- Soft **ki aura bubble** (cutout + eyes emissive, orb-safe) on **players** (creative/survival flight, elytra), **companions**, and **Bits** while airborne / air-following.
-- **Motion trails** are afterimage billboards streaming **behind** at **foot / cloud height** — no rising particle columns into first-person view. Local FP skips the body shell; trails still draw low.
-- Color: warm gold/orange default; companions/Bits tint from orb color or team when set. Off on ground / in fluid; player body aura off while riding Jindujun (cloud trails instead).
-
-### Jindujun Whistle / Flying Nimbus (Überschallwolke)
-- New item **Jindujun Whistle** (`jindujun_whistle`): right-click summons a **rideable yellow Flying Nimbus** cloud; player sits on top and **steers** (WASD + jump up / sneak down; look pitch leans climb). Use again while mounted to dismiss; use with an existing owned cloud nearby to recall/mount.
-- **Loot:** 2% on `minecraft:archaeology/trail_ruins_rare` brushes, only when the dig site is in a **`#minecraft:is_taiga`** biome (NeoForge GLM + Fabric loot modify). Very rare hidden Trail Ruins find — not craftable.
-- Nimbus motion uses the same foot/cloud-height trail style (no FP face obstruction).
-
 ## 0.4.1
 
 ### Fix: special perk UUID mapping
 - **Wolfy** (`7c97e337-2c49-448c-b710-7655487f18df`): brown wolf companion grant **only** — no toggle Wiggly, no glowing changes.
 - **Special flight UUID** (`4274c47f-d61f-4850-bf29-9e5c185db4ac`): survival flight + flying companion + toggleable **Wiggly** (H / `/az wiggly`); **auto-glowing removed** (leftover Glowing cleared on player / companions / toggle dog).
 - 0.4.0 had wrongly attached Wiggly (and glow-clear logic) to the Wolfy UUID; corrected here.
+
+### Glowing Orb polish
+- **Particles-only** 3D look (colored dust + glow sparks; no textured billboard).
+- Default brightness **14** (torch-like) for dynamic-lights luminance.
+- Customization **Front / Back** position switch (owner-local stand-off).
+- Playful **evil mode** on Glowing Orb: lightning nearby (periodic pulses; rare near-owner after ~3s grace).
+
+### Flight aura + Jindujun Whistle
+- Soft **ki aura** + foot-level motion trails on flying players (creative/survival flight, elytra); no rising particle columns into first-person view.
+- **Jindujun Whistle** summons a rideable **Flying Nimbus** cloud (steer WASD + jump/sneak). Creative tab + Trail Ruins archaeology loot (**2%**, NeoForge taiga biome GLM; Fabric trail-ruins table chance).
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |

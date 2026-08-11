@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,11 +127,20 @@ public final class AzsCompanionsFabric implements ModInitializer {
         });
 
         ResourceLocation desertPyramid = ResourceLocation.withDefaultNamespace("chests/desert_pyramid");
+        ResourceLocation trailRuinsRare = ResourceLocation.withDefaultNamespace("archaeology/trail_ruins_rare");
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
             if (desertPyramid.equals(key.location())) {
                 tableBuilder.pool(LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1))
                         .add(LootItem.lootTableItem(FabricModItems.COMPANION_CHARM))
+                        .build());
+            }
+            if (trailRuinsRare.equals(key.location())) {
+                tableBuilder.pool(LootPool.lootPool()
+                        .setRolls(ConstantValue.exactly(1))
+                        .when(LootItemRandomChanceCondition.randomChance(
+                                com.azscompanions.entity.JindujunSupport.TRAIL_RUINS_LOOT_CHANCE))
+                        .add(LootItem.lootTableItem(FabricModItems.JINDUJUN_WHISTLE))
                         .build());
             }
         });

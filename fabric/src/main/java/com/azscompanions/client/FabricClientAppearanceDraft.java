@@ -37,6 +37,7 @@ public final class FabricClientAppearanceDraft {
     public float orbOffsetX = CompanionOrbSettings.DEFAULT_OFFSET_X;
     public float orbOffsetY = CompanionOrbSettings.DEFAULT_OFFSET_Y;
     public float orbOffsetZ = CompanionOrbSettings.DEFAULT_OFFSET_Z;
+    public boolean orbFront = CompanionOrbSettings.DEFAULT_FRONT;
 
     public FabricClientAppearanceDraft(int entityId) {
         this.entityId = entityId;
@@ -70,6 +71,7 @@ public final class FabricClientAppearanceDraft {
         d.orbOffsetX = entity.getOrbOffsetX();
         d.orbOffsetY = entity.getOrbOffsetY();
         d.orbOffsetZ = entity.getOrbOffsetZ();
+        d.orbFront = entity.isOrbFront();
         return d;
     }
 

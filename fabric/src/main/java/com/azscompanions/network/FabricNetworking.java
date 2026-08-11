@@ -226,7 +226,8 @@ public final class FabricNetworking {
                             payload.floatHeight(),
                             payload.offsetX(),
                             payload.offsetY(),
-                            payload.offsetZ());
+                            payload.offsetZ(),
+                            payload.front());
                 }));
 
         ServerPlayNetworking.registerGlobalReceiver(BehaviorPayload.TYPE, (payload, context) ->
@@ -911,7 +912,8 @@ public final class FabricNetworking {
             float floatHeight,
             float offsetX,
             float offsetY,
-            float offsetZ
+            float offsetZ,
+            boolean front
     ) implements CustomPacketPayload {
         public static final Type<OrbSettingsPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_orb_settings"));
@@ -929,6 +931,7 @@ public final class FabricNetworking {
             buf.writeFloat(p.offsetX);
             buf.writeFloat(p.offsetY);
             buf.writeFloat(p.offsetZ);
+            buf.writeBoolean(p.front);
         }
 
         private static OrbSettingsPayload read(RegistryFriendlyByteBuf buf) {
@@ -941,7 +944,8 @@ public final class FabricNetworking {
                     buf.readFloat(),
                     buf.readFloat(),
                     buf.readFloat(),
-                    buf.readFloat());
+                    buf.readFloat(),
+                    buf.readBoolean());
         }
 
         @Override

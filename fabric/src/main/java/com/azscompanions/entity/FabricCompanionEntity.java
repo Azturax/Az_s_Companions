@@ -39,6 +39,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
@@ -120,6 +121,8 @@ public class FabricCompanionEntity extends PathfinderMob {
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_ORB_OFFSET_Z =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> DATA_ORB_FRONT =
+            SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_NAME_TAG =
             SynchedEntityData.defineId(FabricCompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
@@ -155,6 +158,8 @@ public class FabricCompanionEntity extends PathfinderMob {
     private boolean konBedGranted;
     /** Transient playful “turn evil” countdown (ticks). Not persisted. */
     private int playfulEvilTicks;
+    /** Duration set at the start of the current playful-evil burst (for elapsed lightning rolls). */
+    private int playfulEvilDurationTicks;
     private CompanionAttitude playfulEvilRestoreAttitude = CompanionAttitude.PASSIVE;
     private UUID leaderUuid;
     private boolean fightSpawn;
@@ -236,6 +241,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         builder.define(DATA_ORB_OFFSET_X, CompanionOrbSupport.DEFAULT_OFFSET_X);
         builder.define(DATA_ORB_OFFSET_Y, CompanionOrbSupport.DEFAULT_OFFSET_Y);
         builder.define(DATA_ORB_OFFSET_Z, CompanionOrbSupport.DEFAULT_OFFSET_Z);
+        builder.define(DATA_ORB_FRONT, CompanionOrbSupport.DEFAULT_FRONT);
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
@@ -766,6 +772,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (playfulEvilTicks <= 0) {
             playfulEvilRestoreAttitude = getAttitude();
         }
+        playfulEvilDurationTicks = ticks;
         playfulEvilTicks = ticks;
         setAttitude(CompanionAttitude.HOSTILE);
         if (getMode() == FabricCompanionMode.SIT || getMode() == FabricCompanionMode.STAY) {
@@ -783,6 +790,9 @@ public class FabricCompanionEntity extends PathfinderMob {
                     ParticleTypes.ANGRY_VILLAGER,
                     getX(), getY() + getBbHeight() * 1.0d, getZ(),
                     4, 0.25d, 0.15d, 0.25d, 0.0d);
+            if (getForm().isOrb()) {
+                strikeOrbEvilLightning(serverLevel, true);
+            }
         }
     }
 
@@ -796,12 +806,18 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
         playfulEvilTicks--;
         if (playfulEvilTicks > 0) {
+            if (getForm().isOrb()
+                    && CompanionOrbEvilLightningSupport.shouldPeriodicPulse(playfulEvilTicks)
+                    && level() instanceof ServerLevel serverLevel) {
+                strikeOrbEvilLightning(serverLevel, false);
+            }
             return;
         }
         setAttitude(playfulEvilRestoreAttitude == null
                 ? CompanionAttitude.PASSIVE
                 : playfulEvilRestoreAttitude);
         setTarget(null);
+        playfulEvilDurationTicks = 0;
         sayOwnerChatLine("dialogue.azscompanions.evil_off");
         level().playSound(null, getX(), getY(), getZ(), SoundEvents.CAT_PURR, SoundSource.NEUTRAL,
                 0.85f, 1.05f + random.nextFloat() * 0.1f);
@@ -810,6 +826,46 @@ public class FabricCompanionEntity extends PathfinderMob {
                     ParticleTypes.HEART,
                     getX(), getY() + getBbHeight() * 0.9d, getZ(),
                     6, 0.35d, 0.25d, 0.35d, 0.02d);
+        }
+    }
+
+    /**
+     * Glowing Orb evil-mode lightning: mostly nearby atmospheric bolts; after a short grace
+     * a low-probability roll may strike near the owner.
+     */
+    private void strikeOrbEvilLightning(ServerLevel serverLevel, boolean enterBurst) {
+        int count = enterBurst
+                ? CompanionOrbEvilLightningSupport.ENTER_BOLTS
+                : CompanionOrbEvilLightningSupport.PERIODIC_BOLTS;
+        Player owner = getOwner();
+        int elapsed = CompanionOrbEvilLightningSupport.elapsedEvilTicks(
+                playfulEvilDurationTicks, playfulEvilTicks);
+        for (int i = 0; i < count; i++) {
+            boolean aimPlayer = !enterBurst
+                    && owner != null
+                    && owner.isAlive()
+                    && CompanionOrbEvilLightningSupport.shouldTargetPlayer(elapsed, random.nextDouble());
+            double x;
+            double y;
+            double z;
+            if (aimPlayer) {
+                double[] o = CompanionOrbEvilLightningSupport.playerNearOffset(random.nextLong());
+                x = owner.getX() + o[0];
+                y = owner.getY();
+                z = owner.getZ() + o[1];
+            } else {
+                double[] o = CompanionOrbEvilLightningSupport.nearbyOffset(
+                        random.nextLong(), CompanionOrbEvilLightningSupport.NEARBY_RADIUS);
+                x = getX() + o[0];
+                y = getY();
+                z = getZ() + o[1];
+            }
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
+            if (bolt == null) {
+                continue;
+            }
+            bolt.moveTo(x, y, z);
+            serverLevel.addFreshEntity(bolt);
         }
     }
 
@@ -1584,7 +1640,8 @@ public class FabricCompanionEntity extends PathfinderMob {
                 parent.getOrbFloatHeight(),
                 parent.getOrbOffsetX(),
                 parent.getOrbOffsetY(),
-                parent.getOrbOffsetZ());
+                parent.getOrbOffsetZ(),
+                parent.isOrbFront());
     }
 
     public int getOrbColorRgb() {
@@ -1619,6 +1676,34 @@ public class FabricCompanionEntity extends PathfinderMob {
         return CompanionOrbSettings.clampOffset(entityData.get(DATA_ORB_OFFSET_Z));
     }
 
+    public boolean isOrbFront() {
+        return entityData.get(DATA_ORB_FRONT);
+    }
+
+    public void setOrbSettings(
+            int colorRgb,
+            int brightness,
+            float floatAmplitude,
+            float floatSpeed,
+            float floatHeight,
+            float offsetX,
+            float offsetY,
+            float offsetZ,
+            boolean front
+    ) {
+        entityData.set(DATA_ORB_COLOR, CompanionOrbSettings.clampRgb(colorRgb));
+        entityData.set(DATA_ORB_BRIGHTNESS, CompanionOrbSettings.clampBrightness(brightness));
+        entityData.set(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSettings.clampFloatAmplitude(floatAmplitude));
+        entityData.set(DATA_ORB_FLOAT_SPEED, CompanionOrbSettings.clampFloatSpeed(floatSpeed));
+        entityData.set(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSettings.clampFloatHeight(floatHeight));
+        entityData.set(DATA_ORB_OFFSET_X, CompanionOrbSettings.clampOffset(offsetX));
+        entityData.set(DATA_ORB_OFFSET_Y, CompanionOrbSettings.clampOffset(offsetY));
+        entityData.set(DATA_ORB_OFFSET_Z, CompanionOrbSettings.clampOffset(offsetZ));
+        entityData.set(DATA_ORB_FRONT, front);
+    }
+
+    /** @deprecated prefer {@link #setOrbSettings(int, int, float, float, float, float, float, float, boolean)} */
+    @Deprecated
     public void setOrbSettings(
             int colorRgb,
             int brightness,
@@ -1629,14 +1714,8 @@ public class FabricCompanionEntity extends PathfinderMob {
             float offsetY,
             float offsetZ
     ) {
-        entityData.set(DATA_ORB_COLOR, CompanionOrbSettings.clampRgb(colorRgb));
-        entityData.set(DATA_ORB_BRIGHTNESS, CompanionOrbSettings.clampBrightness(brightness));
-        entityData.set(DATA_ORB_FLOAT_AMPLITUDE, CompanionOrbSettings.clampFloatAmplitude(floatAmplitude));
-        entityData.set(DATA_ORB_FLOAT_SPEED, CompanionOrbSettings.clampFloatSpeed(floatSpeed));
-        entityData.set(DATA_ORB_FLOAT_HEIGHT, CompanionOrbSettings.clampFloatHeight(floatHeight));
-        entityData.set(DATA_ORB_OFFSET_X, CompanionOrbSettings.clampOffset(offsetX));
-        entityData.set(DATA_ORB_OFFSET_Y, CompanionOrbSettings.clampOffset(offsetY));
-        entityData.set(DATA_ORB_OFFSET_Z, CompanionOrbSettings.clampOffset(offsetZ));
+        setOrbSettings(colorRgb, brightness, floatAmplitude, floatSpeed, floatHeight,
+                offsetX, offsetY, offsetZ, isOrbFront());
     }
 
     public boolean wantsAggressiveTargets() {
@@ -1848,6 +1927,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         tag.putFloat(CompanionOrbSettings.NBT_OFFSET_X, getOrbOffsetX());
         tag.putFloat(CompanionOrbSettings.NBT_OFFSET_Y, getOrbOffsetY());
         tag.putFloat(CompanionOrbSettings.NBT_OFFSET_Z, getOrbOffsetZ());
+        tag.putBoolean(CompanionOrbSettings.NBT_FRONT, isOrbFront());
         tag.putBoolean("SlimArms", isSlimArms());
         tag.putString("Gender", getGender().getSerializedName());
         tag.putBoolean("KonBedGranted", konBedGranted);
@@ -1966,7 +2046,8 @@ public class FabricCompanionEntity extends PathfinderMob {
                 tag.contains(CompanionOrbSettings.NBT_FLOAT_HEIGHT) ? tag.getFloat(CompanionOrbSettings.NBT_FLOAT_HEIGHT) : CompanionOrbSettings.DEFAULT_FLOAT_HEIGHT,
                 tag.contains(CompanionOrbSettings.NBT_OFFSET_X) ? tag.getFloat(CompanionOrbSettings.NBT_OFFSET_X) : CompanionOrbSettings.DEFAULT_OFFSET_X,
                 tag.contains(CompanionOrbSettings.NBT_OFFSET_Y) ? tag.getFloat(CompanionOrbSettings.NBT_OFFSET_Y) : CompanionOrbSettings.DEFAULT_OFFSET_Y,
-                tag.contains(CompanionOrbSettings.NBT_OFFSET_Z) ? tag.getFloat(CompanionOrbSettings.NBT_OFFSET_Z) : CompanionOrbSettings.DEFAULT_OFFSET_Z);
+                tag.contains(CompanionOrbSettings.NBT_OFFSET_Z) ? tag.getFloat(CompanionOrbSettings.NBT_OFFSET_Z) : CompanionOrbSettings.DEFAULT_OFFSET_Z,
+                tag.contains(CompanionOrbSettings.NBT_FRONT) ? tag.getBoolean(CompanionOrbSettings.NBT_FRONT) : CompanionOrbSettings.DEFAULT_FRONT);
         if (tag.contains("SlimArms")) {
             setSlimArms(tag.getBoolean("SlimArms"));
         }

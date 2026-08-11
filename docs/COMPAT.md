@@ -241,14 +241,15 @@ EMF looks for modded models roughly at:
 
 ### Glowing Orb form (Sodium + Iris / Oculus)
 
-**Glowing Orb** (`CompanionForm.GLOWING_ORB`) is a choosable Special form. Render uses:
+**Glowing Orb** (`CompanionForm.GLOWING_ORB`) is a choosable Special form. Visuals are **particles-only** (no textured billboard):
 
-| Pass | RenderType | Why |
-|------|------------|-----|
-| Soft halo + hot core | `RenderType.eyes` | Emissive / shader-friendly (Iris Fabulous, Oculus deferred) |
-| Solid disc | `RenderType.entityCutoutNoCull` + fullbright light | Same Sodium-safe cutout strategy as player skins — never invisible |
+| Effect | Approach | Why |
+|--------|----------|-----|
+| Soft spherical shell | Client `DustParticleOptions` tinted by orb RGB | Short-lived, volumetric ball of light |
+| Hot core sparks | `ParticleTypes.GLOW` / occasional `END_ROD` | Torch-like brightness without translucent quads |
+| World light | Dynamic-lights luminance = orb brightness (default **14**, torch) | LambDynamicLights / RyoamicLights soft-compat |
 
-Avoids `entityTranslucent` / `entityTranslucentEmissive` for orbs (those paths can vanish under Sodium without ETF or under Iris Fabulous). World light from orbs still goes through **dynamic lights** soft-compat (`DynamicLightsLegacyHooks` luminance = orb brightness 0–15) when LambDynamicLights / RyoamicLights / similar is present.
+Particles spawn around the orb entity only (near-zero velocity, capped per tick). Avoids `entityTranslucent` / billboard paths that looked flat or broke under Sodium/Iris. Follow position: **Front / Back** stand-off along owner look + XYZ offsets. Playful evil on orbs summons rate-limited nearby lightning (rare owner-near strike after grace).
 
 ### Code entry points
 

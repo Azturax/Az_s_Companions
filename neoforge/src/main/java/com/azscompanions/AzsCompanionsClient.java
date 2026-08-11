@@ -4,6 +4,8 @@ import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
+import com.azscompanions.client.renderer.FlightAuraLayer;
+import com.azscompanions.client.renderer.FlyingNimbusRenderer;
 import com.azscompanions.client.renderer.KonAwareBedRenderer;
 import com.azscompanions.client.renderer.KonEarsLayer;
 import com.azscompanions.client.screen.CompanionInventoryScreen;
@@ -54,12 +56,14 @@ public final class AzsCompanionsClient {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
                 renderer.addLayer(new KonEarsLayer(renderer, event.getEntityModels()));
+                renderer.addLayer(new FlightAuraLayer(renderer));
             }
         }
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.COMPANION.get(), CompanionRenderer::new);
+        event.registerEntityRenderer(ModEntities.FLYING_NIMBUS.get(), FlyingNimbusRenderer::new);
         // Kon bed only — never replace BlockEntityType.BED (that breaks vanilla bed items).
         event.registerBlockEntityRenderer(ModBlockEntities.KON_BED.get(), KonAwareBedRenderer::new);
     }

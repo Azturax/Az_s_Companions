@@ -5,6 +5,8 @@ import com.azscompanions.client.hud.TeamFightHudOverlay;
 import com.azscompanions.client.model.FeminineCompanionModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.FabricCompanionRenderer;
+import com.azscompanions.client.renderer.FlightAuraLayer;
+import com.azscompanions.client.renderer.FlyingNimbusRenderer;
 import com.azscompanions.client.renderer.KonEarsLayer;
 import com.azscompanions.client.screen.FabricCompanionInventoryScreen;
 import com.azscompanions.client.screen.FabricCompanionSelectionScreen;
@@ -28,10 +30,12 @@ public final class AzsCompanionsFabricClient implements ClientModInitializer {
                 () -> FeminineCompanionModel.createBodyLayer(true));
         EntityModelLayerRegistry.registerModelLayer(KonEarsModel.LAYER, KonEarsModel::createBodyLayer);
         EntityRendererRegistry.register(FabricModEntities.COMPANION, FabricCompanionRenderer::new);
+        EntityRendererRegistry.register(FabricModEntities.FLYING_NIMBUS, FlyingNimbusRenderer::new);
         LivingEntityFeatureRendererRegistrationCallback.EVENT.register(
                 (entityType, entityRenderer, registrationHelper, context) -> {
                     if (entityRenderer instanceof PlayerRenderer playerRenderer) {
                         registrationHelper.register(new KonEarsLayer(playerRenderer, context.getModelSet()));
+                        registrationHelper.register(new FlightAuraLayer(playerRenderer));
                     }
                 });
         MenuScreens.register(FabricModScreenHandlers.SELECTION, FabricCompanionSelectionScreen::new);

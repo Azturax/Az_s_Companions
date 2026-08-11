@@ -30,7 +30,7 @@ While summoned, each companion entity (primary and child Bits) holds a loader ch
 
 Prefer NeoForge capabilities (`ItemHandler`, energy/fluid later), item/block tags, and optional modules under `compat.optional.*` with `ModList.isLoaded` — no hard deps. FTB Teams/Chunks/Ranks: reflection soft-deps — [COMPAT.md](COMPAT.md).
 
-**Glowing Orb** form (`CompanionForm.GLOWING_ORB`): settings in `CompanionOrbSettings` (NBT + synched); always-air follow via `CompanionOrbFollow` + `CompanionFlightFollowSupport`; render `CompanionOrbRenderer` (cutout + eyes — Sodium/Iris/Oculus safe); dynamic-light luminance via `DynamicLightsLegacyHooks`.
+**Glowing Orb** form (`CompanionForm.GLOWING_ORB`): settings in `CompanionOrbSettings` (NBT + synched, incl. Front/Back); always-air follow via `CompanionOrbFollow` + `CompanionOrbFlightSupport`; client particles via `CompanionOrbRenderer` (Sodium/Iris-safe, no billboard); dynamic-light luminance via `DynamicLightsLegacyHooks` (default torch 14); evil-mode lightning via `CompanionOrbEvilLightningSupport`.
 
 ## Pathfinding / home blocks
 

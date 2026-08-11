@@ -23,17 +23,31 @@ class CompanionOrbSupportTest {
     @Test
     void clampsColorBrightnessFloatAndOffsets() {
         assertEquals(CompanionOrbSupport.DEFAULT_COLOR_RGB, 0xFFF5E6);
-        assertEquals(10, CompanionOrbSupport.DEFAULT_BRIGHTNESS);
+        assertEquals(14, CompanionOrbSupport.DEFAULT_BRIGHTNESS);
+        assertEquals(CompanionOrbSupport.TORCH_BRIGHTNESS, CompanionOrbSupport.DEFAULT_BRIGHTNESS);
+        assertFalse(CompanionOrbSupport.DEFAULT_FRONT);
         assertEquals(0x00FF00, CompanionOrbSupport.clampRgb(0xFF00FF00));
         assertEquals(0x112233, CompanionOrbSupport.rgb(0x11, 0x22, 0x33));
         assertEquals(15, CompanionOrbSupport.clampBrightness(99));
         assertEquals(0, CompanionOrbSupport.clampBrightness(-3));
-        assertEquals(10, CompanionOrbSupport.lightLuminance(true, 10));
+        assertEquals(14, CompanionOrbSupport.lightLuminance(true, 14));
         assertEquals(0, CompanionOrbSupport.lightLuminance(false, 15));
         assertEquals(0.75f, CompanionOrbSupport.clampFloatAmplitude(2.0f), 1.0e-4f);
         assertEquals(0.0f, CompanionOrbSupport.clampFloatAmplitude(-1.0f), 1.0e-4f);
         assertEquals(8.0f, CompanionOrbSupport.clampOffset(99.0f), 1.0e-4f);
         assertEquals(-8.0f, CompanionOrbSupport.clampOffset(-99.0f), 1.0e-4f);
+    }
+
+    @Test
+    void particleCountsScaleWithBrightness() {
+        assertEquals(0, CompanionOrbSupport.dustParticlesPerTick(0, 1.0f));
+        assertTrue(CompanionOrbSupport.dustParticlesPerTick(14, 1.0f) >= 8);
+        assertTrue(CompanionOrbSupport.glowParticlesPerTick(14) >= 1);
+        assertEquals(0, CompanionOrbSupport.glowParticlesPerTick(3));
+        float[] out = new float[3];
+        CompanionOrbSupport.sampleBallOffset(1, 2, 0.5f, out);
+        float len = (float) Math.sqrt(out[0] * out[0] + out[1] * out[1] + out[2] * out[2]);
+        assertTrue(len <= 0.5f + 1.0e-4f);
     }
 
     @Test
@@ -47,10 +61,17 @@ class CompanionOrbSupportTest {
     }
 
     @Test
-    void preferredTargetUsesFloatHeight() {
-        double[] t = CompanionOrbFlightSupport.preferredTarget(
-                0, 64, 0, 0.0f, 3, 0, 2.0d, 1.5f, 0, 0, 0);
-        assertEquals(64.0d + 1.5d, t[1], 1.0e-4d);
+    void preferredTargetFrontAndBack() {
+        double[] back = CompanionOrbFlightSupport.preferredTarget(
+                0, 64, 0, 0.0f, 3, 0, 2.0d, 1.5f, 0, 0, 0, false);
+        double[] front = CompanionOrbFlightSupport.preferredTarget(
+                0, 64, 0, 0.0f, 3, 0, 2.0d, 1.5f, 0, 0, 0, true);
+        assertEquals(64.0d + 1.5d, back[1], 1.0e-4d);
+        assertEquals(64.0d + 1.5d, front[1], 1.0e-4d);
+        // yaw 0 → +Z forward; back is −Z, front is +Z
+        assertTrue(back[2] < 0.0d);
+        assertTrue(front[2] > 0.0d);
+        assertEquals(-back[2], front[2], 1.0e-4d);
     }
 
     @Test

@@ -20,6 +20,7 @@ public final class ModCreativeTabs {
                     .displayItems((params, output) -> {
                         output.accept(ModItems.COMPANION_CHARM.get());
                         output.accept(ModItems.KON_BED.get());
+                        output.accept(ModItems.JINDUJUN_WHISTLE.get());
                     })
                     .build());
 

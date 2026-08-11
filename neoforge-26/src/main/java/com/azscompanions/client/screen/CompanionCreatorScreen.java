@@ -661,6 +661,26 @@ public final class CompanionCreatorScreen extends Screen {
     private int addOrbSettingsSection(int y) {
         addRightLabel(y, "Glowing Orb", 0xA0A0A0);
         y += 14;
+        addRightLabel(y, "Position", 0xA0A0A0);
+        y += 14;
+        int half = (rightW - 6) / 2;
+        Button frontBtn = Button.builder(
+                Component.literal(draft.orbFront ? "[Front]" : "Front"),
+                b -> {
+                    draft.orbFront = true;
+                    pushOrbSettings();
+                    init();
+                }).bounds(rightX, 0, half, 18).build();
+        Button backBtn = Button.builder(
+                Component.literal(!draft.orbFront ? "[Back]" : "Back"),
+                b -> {
+                    draft.orbFront = false;
+                    pushOrbSettings();
+                    init();
+                }).bounds(rightX + half + 6, 0, half, 18).build();
+        addRightWidget(frontBtn, y, 18);
+        addRightWidget(backBtn, y, 18);
+        y += 22;
         y = addRightSlider(y, "Red",
                 () -> (float) CompanionOrbSettings.red(draft.orbColorRgb),
                 v -> {
@@ -753,7 +773,8 @@ public final class CompanionCreatorScreen extends Screen {
                 draft.orbFloatHeight,
                 draft.orbOffsetX,
                 draft.orbOffsetY,
-                draft.orbOffsetZ
+                draft.orbOffsetZ,
+                draft.orbFront
         ));
     }
 

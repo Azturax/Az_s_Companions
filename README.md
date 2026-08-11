@@ -36,7 +36,9 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 ## Gameplay (0.4.1)
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
-- **Glowing Orb** form (Special) with color/brightness/float/offset; air personal space + wander flight
+- **Glowing Orb** form (Special): particles-only look, torch brightness 14, Front/Back, evil-mode lightning; air personal space + wander flight
+- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + flight, no glow (`4274…`)
+- **Jindujun Whistle** / Flying Nimbus + flight aura trails (foot-level)
 - **Swim follow:** companions swim with you in water while in Follow mode
 - **Activity skins** (player form): Sleeping / Bathing / Adventuring outfits — [CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
 - **Chunk tickets:** summoned companions and child Bits force-load their chunk (`companionChunkLoading`, default true) so AI/follow/sleep keep running when you walk away — NeoForge `config/azscompanions-server.toml` `[performance]`; Fabric mirrors defaults in code. Cap: `maxForcedChunksPerPlayer` (default 16). Not FTB claims.

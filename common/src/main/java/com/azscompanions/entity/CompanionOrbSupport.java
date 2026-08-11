@@ -10,10 +10,12 @@ public final class CompanionOrbSupport {
     public static final int MIN_CHANNEL = 0;
     public static final int MAX_CHANNEL = 255;
 
-    /** Dynamic-lights luminance (block-light scale 0–15). */
+    /** Dynamic-lights luminance (block-light scale 0–15). Torch-like default. */
     public static final int MIN_BRIGHTNESS = 0;
     public static final int MAX_BRIGHTNESS = 15;
-    public static final int DEFAULT_BRIGHTNESS = 10;
+    /** Vanilla torch block light level. */
+    public static final int TORCH_BRIGHTNESS = 14;
+    public static final int DEFAULT_BRIGHTNESS = TORCH_BRIGHTNESS;
 
     /** Vertical bob amplitude (blocks). */
     public static final float MIN_FLOAT_AMPLITUDE = 0.0f;
@@ -37,6 +39,15 @@ public final class CompanionOrbSupport {
     public static final float DEFAULT_OFFSET_Y = 0.0f;
     public static final float DEFAULT_OFFSET_Z = 0.0f;
 
+    /**
+     * Owner-local Z bias for Front/Back presets (added on top of Offset Z).
+     * Positive Z = ahead of the owner.
+     */
+    public static final float FRONT_STAND_OFF_Z = 1.75f;
+    public static final float BACK_STAND_OFF_Z = -1.75f;
+    /** Default follow side: behind the owner (less face-blocking). */
+    public static final boolean DEFAULT_FRONT = false;
+
     public static final String NBT_COLOR = "OrbColor";
     public static final String NBT_BRIGHTNESS = "OrbBrightness";
     public static final String NBT_FLOAT_AMPLITUDE = "OrbFloatAmplitude";
@@ -45,6 +56,11 @@ public final class CompanionOrbSupport {
     public static final String NBT_OFFSET_X = "OrbOffsetX";
     public static final String NBT_OFFSET_Y = "OrbOffsetY";
     public static final String NBT_OFFSET_Z = "OrbOffsetZ";
+    public static final String NBT_FRONT = "OrbFront";
+
+    /** Soft particle shell — FPS-conscious caps. */
+    public static final int MAX_DUST_PER_TICK = 10;
+    public static final int MAX_GLOW_PER_TICK = 2;
 
     private CompanionOrbSupport() {
     }
@@ -100,6 +116,12 @@ public final class CompanionOrbSupport {
         return Math.max(min, Math.min(max, value));
     }
 
+    /** Effective local Z including Front/Back stand-off preset. */
+    public static float effectiveOffsetZ(float offsetZ, boolean front) {
+        float bias = front ? FRONT_STAND_OFF_Z : BACK_STAND_OFF_Z;
+        return clampOffset(offsetZ + bias);
+    }
+
     /**
      * Vertical bob delta for render / motion (blocks).
      *
@@ -137,6 +159,59 @@ public final class CompanionOrbSupport {
         double wx = ox * cos - oz * sin;
         double wz = ox * sin + oz * cos;
         return new double[]{wx, oy, wz};
+    }
+
+    /** Soft particle shell radius for the particles-only orb look. */
+    public static float particleShellRadius(float bodyScale) {
+        return 0.28f * Math.max(0.35f, bodyScale);
+    }
+
+    /** Colored dust count per client tick (scales with brightness / size). */
+    public static int dustParticlesPerTick(int brightness, float bodyScale) {
+        int b = clampBrightness(brightness);
+        if (b <= 0) {
+            return 0;
+        }
+        float scale = Math.max(0.35f, bodyScale);
+        int n = 4 + (b * 10) / 15 + Math.round(scale * 2.0f);
+        return Math.max(3, Math.min(18, n));
+    }
+
+    /** Extra glow / end-rod spark count per client tick. */
+    public static int glowParticlesPerTick(int brightness) {
+        int b = clampBrightness(brightness);
+        if (b < 6) {
+            return 0;
+        }
+        return b >= TORCH_BRIGHTNESS ? MAX_GLOW_PER_TICK : 1;
+    }
+
+    /**
+     * Deterministic unit-ball sample into {@code out[3]} (x,y,z), scaled by {@code radius}.
+     */
+    public static void sampleBallOffset(int tick, int salt, float radius, float[] out) {
+        if (out == null || out.length < 3) {
+            return;
+        }
+        long h = ((long) tick * 374761393L) ^ ((long) salt * 668265263L);
+        h = (h ^ (h >>> 13)) * 1274126177L;
+        // Map 3×10 bits → [-1,1]
+        float x = (((h) & 1023) / 511.5f) - 1.0f;
+        float y = (((h >>> 10) & 1023) / 511.5f) - 1.0f;
+        float z = (((h >>> 20) & 1023) / 511.5f) - 1.0f;
+        float len2 = x * x + y * y + z * z;
+        if (len2 < 1.0e-6f) {
+            x = 1.0f;
+            y = 0.0f;
+            z = 0.0f;
+            len2 = 1.0f;
+        }
+        // Keep points inside the ball (not only on the shell).
+        float inv = radius / (float) Math.sqrt(len2);
+        float shrink = 0.35f + 0.65f * ((((h >>> 30) & 1023) / 1023.0f));
+        out[0] = x * inv * shrink;
+        out[1] = y * inv * shrink;
+        out[2] = z * inv * shrink;
     }
 
     /** Dynamic-lights luminance for an orb form (0 when not an orb / brightness off). */

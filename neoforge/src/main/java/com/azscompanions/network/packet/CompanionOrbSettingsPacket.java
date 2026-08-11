@@ -21,7 +21,8 @@ public record CompanionOrbSettingsPacket(
         float floatHeight,
         float offsetX,
         float offsetY,
-        float offsetZ
+        float offsetZ,
+        boolean front
 ) implements CustomPacketPayload {
     public static final Type<CompanionOrbSettingsPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "companion_orb_settings"));
@@ -39,6 +40,7 @@ public record CompanionOrbSettingsPacket(
         buf.writeFloat(packet.offsetX);
         buf.writeFloat(packet.offsetY);
         buf.writeFloat(packet.offsetZ);
+        buf.writeBoolean(packet.front);
     }
 
     private static CompanionOrbSettingsPacket read(RegistryFriendlyByteBuf buf) {
@@ -51,7 +53,8 @@ public record CompanionOrbSettingsPacket(
                 buf.readFloat(),
                 buf.readFloat(),
                 buf.readFloat(),
-                buf.readFloat());
+                buf.readFloat(),
+                buf.readBoolean());
     }
 
     @Override
@@ -82,7 +85,8 @@ public record CompanionOrbSettingsPacket(
                     packet.floatHeight(),
                     packet.offsetX(),
                     packet.offsetY(),
-                    packet.offsetZ());
+                    packet.offsetZ(),
+                    packet.front());
         });
     }
 }
