@@ -34,7 +34,7 @@ Owned living companions (non-child roots; Bits folded via `StoredChildren`) are 
 
 ## Companion AI recent-action chatter
 
-Owned companions with **Idle chat** ON can react to a short-lived per-owner event buffer (explosions, darkness, notable finds, craft-ready, crafts, damage). Loaders record events; entity ambient ticks consume reactive ones early (~25s speak cooldown) and always ground idle prompts in recent context. See [COMPANION_AI.md](COMPANION_AI.md#idle-ambient-chat).
+Owned companions with **Idle chat** ON can react to a short-lived per-owner event buffer (explosions, darkness, notable finds ~once per 14 days real-time, craft-ready, crafts, damage). Loaders record events; entity ambient ticks consume reactive ones early (~25s speak cooldown) and always ground idle prompts in recent context. See [COMPANION_AI.md](COMPANION_AI.md#idle-ambient-chat).
 
 ## Compatibility
 

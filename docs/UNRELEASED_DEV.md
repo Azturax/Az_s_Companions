@@ -4,14 +4,26 @@ Friendly local dig of everything in the tree that is **not yet a published GitHu
 
 | | |
 |---|---|
-| **Pending publish** | _(none)_ — tree matches **0.4.3** |
-| **Last published tag** | **v0.4.3** |
-| **CHANGELOG** | `## Unreleased` empty; ship notes under `## 0.4.3` |
-| **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI jars). NeoForge **26.2** still not shipped. |
+| **Pending publish** | _(none — last ship was **v0.4.4**)_ |
+| **Last published tag** | **v0.4.4** |
+| **CHANGELOG** | Notes under `## Unreleased` (empty after 0.4.4) |
+| **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI). NeoForge **26.2** still not shipped. |
 
 Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do not treat as published.
 
 ---
+
+## In Unreleased (not published)
+
+_(empty)_
+
+---
+
+## Shipped in 0.4.4 (reference)
+
+- **Jindujun polish:** 2.5× scale, rider yaw sync, sit-on-cloud offset, 56s idle despawn, cloud-only `ENCHANT` stream.
+- **ITEM_FIND** reactive chatter: ~14-day real-time per-owner cooldown.
+- **Join-time LLM consent** remembered once per server key (`azscompanions-ai-join-consent.json`).
 
 ## Shipped in 0.4.3 (reference)
 
@@ -23,7 +35,7 @@ Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do
 
 ## Still WIP / not in this publish
 
-- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.3 loader matrix.
+- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.4 loader matrix.
 - **`CompanionRecentActionHooks.java.wip`** — shared hooks draft still under a `.wip` name; live wiring is via loader event classes / mixins.
 - VoiceMod TTS bridge / Simple Voice Chat entity audio emission — still not shipped (detect-only / soft-compat as before).
 
@@ -31,5 +43,5 @@ Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do
 
 ## Dig notes
 
-- Source of truth for wording: `CHANGELOG.md` → `## 0.4.3`.
-- After the next feature lands, move notes into `## Unreleased` and bump **Pending publish** above.
+- Source of truth for wording: `CHANGELOG.md` → `## Unreleased`.
+- Do not release unless explicitly asked.

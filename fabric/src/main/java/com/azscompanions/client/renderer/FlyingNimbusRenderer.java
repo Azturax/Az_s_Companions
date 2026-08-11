@@ -2,6 +2,7 @@ package com.azscompanions.client.renderer;
 
 import com.azscompanions.client.model.JindujunModel;
 import com.azscompanions.entity.FabricFlyingNimbusEntity;
+import com.azscompanions.entity.JindujunSupport;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -20,7 +21,7 @@ public final class FlyingNimbusRenderer extends EntityRenderer<FabricFlyingNimbu
 
     public FlyingNimbusRenderer(EntityRendererProvider.Context context) {
         super(context);
-        this.shadowRadius = 0.55f;
+        this.shadowRadius = 0.55f * JindujunSupport.SCALE;
         this.model = new JindujunModel(context.bakeLayer(JindujunModel.LAYER));
     }
 
@@ -38,9 +39,11 @@ public final class FlyingNimbusRenderer extends EntityRenderer<FabricFlyingNimbu
             MultiBufferSource buffer,
             int packedLight) {
         poseStack.pushPose();
-        // Standard Blockbench entity transform (model pivot at y=24).
+        // Standard Blockbench entity transform (model pivot at y=24), then uniform cloud scale.
         poseStack.scale(-1.0f, -1.0f, 1.0f);
         poseStack.translate(0.0d, -1.501d, 0.0d);
+        float s = JindujunSupport.SCALE;
+        poseStack.scale(s, s, s);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - entityYaw));
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(JindujunModel.TEXTURE));
         model.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY);

@@ -28,14 +28,14 @@ public final class JindujunParticleSupport {
             "#########.",
     };
 
-    /** Blocks per shape pixel. */
-    public static final float PIXEL = 0.11f;
+    /** Blocks per shape pixel (scaled with cloud). */
+    public static final float PIXEL = 0.11f * JindujunSupport.SCALE;
     /** Raise stream slightly above cloud feet (FP-safe). */
-    public static final float STREAM_Y = 0.08f;
+    public static final float STREAM_Y = 0.08f * JindujunSupport.SCALE;
     /** Push pattern behind the cloud along facing. */
-    public static final float BEHIND = 0.55f;
+    public static final float BEHIND = 0.55f * JindujunSupport.SCALE;
     /** Vertical centering of the grid around STREAM_Y. */
-    public static final float SHAPE_CENTER_Y = 0.35f;
+    public static final float SHAPE_CENTER_Y = 0.35f * JindujunSupport.SCALE;
     /** Min speed² (blocks/tick) before the stream densifies. */
     public static final double MOVE_SPEED_SQ = 0.08d * 0.08d;
 

@@ -1,6 +1,9 @@
 package com.azscompanions.client;
 
+import com.azscompanions.AzsCompanions;
 import com.azscompanions.ai.AiJoinOffer;
+import com.azscompanions.ai.ClientAiJoinConsent;
+import com.azscompanions.ai.ClientAiJoinConsentStore;
 import com.azscompanions.ai.ClientAiJoinOfferController;
 import com.azscompanions.network.packet.CompanionAiJoinConsentPacket;
 import net.minecraft.client.Minecraft;
@@ -10,10 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import com.azscompanions.AzsCompanions;
 
 @EventBusSubscriber(modid = AzsCompanions.MOD_ID, value = Dist.CLIENT)
 public final class NeoAiJoinOfferClient {
@@ -27,6 +30,8 @@ public final class NeoAiJoinOfferClient {
             return;
         }
         configured = true;
+        ClientAiJoinConsent.configureStore(
+                FMLPaths.CONFIGDIR.get().resolve(ClientAiJoinConsentStore.FILE_NAME));
         ClientAiJoinOfferController.configure(
                 NeoAiJoinOfferClient::openConfirm,
                 NeoAiJoinOfferClient::sendConsent,

@@ -48,4 +48,22 @@ class JindujunParticleSupportTest {
         assertTrue(JindujunParticleSupport.pointIndex(999, 3) >= 0);
         assertTrue(JindujunParticleSupport.pointIndex(999, 3) < n);
     }
+
+    @Test
+    void scaleIsTwoPointFive() {
+        assertEquals(2.5f, JindujunSupport.SCALE, 1.0e-4f);
+        assertEquals(1.35f * 2.5f, JindujunSupport.WIDTH, 1.0e-4f);
+        assertEquals(0.55f * 2.5f, JindujunSupport.HEIGHT, 1.0e-4f);
+        assertTrue(JindujunSupport.RIDER_Y_OFFSET > JindujunSupport.HEIGHT * 0.5d);
+        assertTrue(JindujunSupport.RIDER_Y_OFFSET <= JindujunSupport.HEIGHT + 0.05d);
+    }
+
+    @Test
+    void idleDespawnAfterFiftySixSeconds() {
+        assertEquals(56 * 20, JindujunSupport.IDLE_DESPAWN_TICKS);
+        assertEquals(0, JindujunSupport.nextIdleTicks(true, 100));
+        assertEquals(101, JindujunSupport.nextIdleTicks(false, 100));
+        assertFalse(JindujunSupport.shouldDespawnFromIdle(JindujunSupport.IDLE_DESPAWN_TICKS - 1));
+        assertTrue(JindujunSupport.shouldDespawnFromIdle(JindujunSupport.IDLE_DESPAWN_TICKS));
+    }
 }

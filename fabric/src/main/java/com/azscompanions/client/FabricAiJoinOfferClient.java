@@ -1,12 +1,15 @@
 package com.azscompanions.client;
 
 import com.azscompanions.ai.AiJoinOffer;
+import com.azscompanions.ai.ClientAiJoinConsent;
+import com.azscompanions.ai.ClientAiJoinConsentStore;
 import com.azscompanions.ai.ClientAiJoinOfferController;
 import com.azscompanions.network.FabricNetworkingClient;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.multiplayer.ServerData;
@@ -18,6 +21,8 @@ public final class FabricAiJoinOfferClient {
     }
 
     public static void register() {
+        ClientAiJoinConsent.configureStore(
+                FabricLoader.getInstance().getConfigDir().resolve(ClientAiJoinConsentStore.FILE_NAME));
         ClientAiJoinOfferController.configure(
                 FabricAiJoinOfferClient::openConfirm,
                 FabricAiJoinOfferClient::sendConsent,

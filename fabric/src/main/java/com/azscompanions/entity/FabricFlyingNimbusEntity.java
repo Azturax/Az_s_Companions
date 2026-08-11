@@ -34,6 +34,9 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
     private static final EntityDataAccessor<Optional<UUID>> DATA_OWNER =
             SynchedEntityData.defineId(FabricFlyingNimbusEntity.class, EntityDataSerializers.OPTIONAL_UUID);
 
+    /** Server ticks while unmounted; reset on ride / interact. */
+    private int idleTicks;
+
     public FabricFlyingNimbusEntity(EntityType<? extends FabricFlyingNimbusEntity> type, Level level) {
         super(type, level);
         this.setNoGravity(true);
@@ -53,6 +56,7 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
             return null;
         }
         cloud.setOwnerUUID(owner.getUUID());
+        cloud.idleTicks = 0;
         cloud.moveTo(owner.getX(), owner.getY() + 0.2d, owner.getZ(), owner.getYRot(), 0.0f);
         return cloud;
     }
@@ -103,9 +107,26 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
         callback.accept(passenger, getX(), getY() + JindujunSupport.RIDER_Y_OFFSET, getZ());
     }
 
+    /** Keep cloud yaw locked to the controlling rider's look (not a fixed world axis). */
+    private void syncYawFromRider() {
+        if (!(getControllingPassenger() instanceof Player player)) {
+            return;
+        }
+        float yaw = player.getYRot();
+        setYRot(yaw);
+        yRotO = yaw;
+        setXRot(player.getXRot() * 0.35f);
+        setRot(yaw, getXRot());
+        yBodyRot = yaw;
+        yBodyRotO = yaw;
+        yHeadRot = yaw;
+        yHeadRotO = yaw;
+    }
+
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!level().isClientSide && !player.isShiftKeyDown() && canAddPassenger(player)) {
+            idleTicks = 0;
             if (getOwnerUUID() == null) {
                 setOwnerUUID(player.getUUID());
             }
@@ -120,12 +141,7 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
     @Override
     public void travel(Vec3 travelVector) {
         if (isAlive() && isVehicle() && getControllingPassenger() instanceof Player player) {
-            setYRot(player.getYRot());
-            yRotO = getYRot();
-            setXRot(player.getXRot() * 0.35f);
-            setRot(getYRot(), getXRot());
-            yBodyRot = getYRot();
-            yHeadRot = getYRot();
+            syncYawFromRider();
 
             float strafe = player.xxa * 0.5f;
             float forward = player.zza;
@@ -162,9 +178,20 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
         super.tick();
         setNoGravity(true);
         fallDistance = 0.0f;
+        if (isVehicle()) {
+            syncYawFromRider();
+        }
+        if (!level().isClientSide) {
+            idleTicks = JindujunSupport.nextIdleTicks(isVehicle(), idleTicks);
+            if (JindujunSupport.shouldDespawnFromIdle(idleTicks)) {
+                discard();
+                return;
+            }
+        }
         if (!isVehicle() && level().isClientSide) {
             setPos(getX(), getY() + Math.sin(tickCount * 0.08d) * 0.002d, getZ());
         }
+        // Enchant stream only on this cloud entity (never passenger / companion / Bits).
         if (level().isClientSide) {
             var delta = getDeltaMovement();
             JindujunSupport.spawnEnchantStream(
@@ -199,6 +226,7 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
         if (owner != null) {
             tag.putUUID(JindujunSupport.NBT_OWNER, owner);
         }
+        tag.putInt(JindujunSupport.NBT_IDLE, idleTicks);
     }
 
     @Override
@@ -207,6 +235,7 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
         if (tag.hasUUID(JindujunSupport.NBT_OWNER)) {
             setOwnerUUID(tag.getUUID(JindujunSupport.NBT_OWNER));
         }
+        idleTicks = Math.max(0, tag.getInt(JindujunSupport.NBT_IDLE));
     }
 
     @Override

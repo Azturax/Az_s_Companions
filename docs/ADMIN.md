@@ -94,7 +94,7 @@ On join, players may see a yes/no confirm — it asks; it does not auto-connect:
 - **Dedicated / Use server LLM ON:** server syncs that a shared AI is available.
 - **Singleplayer / integrated:** if AI is still disabled, the client briefly probes local LiteLLM (`127.0.0.1:4000`), Ollama (`11434`), and LM Studio (`1234`).
 
-**Yes (local probe)** enables your local LLM and leaves Use server LLM **OFF**. **Yes (server offer)** opts hosts/admins into Use server LLM ON. **No** remembers dismissal for that server address for the client session — no spam; you can still set any local/remote LLM in AI Config.
+**Yes (local probe)** enables your local LLM and leaves Use server LLM **OFF**. **Yes (server offer)** opts hosts/admins into Use server LLM ON (saved in host AI config). **Yes/No** is remembered once per server key in client `config/azscompanions-ai-join-consent.json` — no re-prompt on later joins; change **Use server LLM** afterward only in AI Config.
 
 **Ask-only (0.3.12+):** companions reply via **`/ask`** / **`/az ask`** only. Admin toggles for `chatListenMode`, `enableAiActions`, and `nameListen` are removed; legacy config keys are ignored.
 

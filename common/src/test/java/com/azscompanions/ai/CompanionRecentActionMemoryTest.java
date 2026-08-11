@@ -90,6 +90,32 @@ class CompanionRecentActionMemoryTest {
     }
 
     @Test
+    void itemFindCooldownIsAboutTwoWeeks() {
+        assertEquals(14L * 24L * 60L * 60L * 1000L, CompanionRecentActionMemory.ITEM_FIND_COOLDOWN_MS);
+        assertEquals(14L * 24L * 60L * 60L * 20L, CompanionRecentActionMemory.ITEM_FIND_COOLDOWN_TICKS);
+
+        CompanionRecentActionMemory.testNowMs = 1_000_000L;
+        assertTrue(CompanionRecentActionMemory.record(
+                player, 100L, CompanionRecentActionKind.ITEM_FIND,
+                "player found diamond", "minecraft:diamond", true));
+        // Immediate second find blocked (wall-clock + tick cooldown)
+        assertFalse(CompanionRecentActionMemory.record(
+                player, 200L, CompanionRecentActionKind.ITEM_FIND,
+                "player found emerald", "minecraft:emerald", true));
+        // Still blocked just under 14 days later
+        CompanionRecentActionMemory.testNowMs = 1_000_000L + CompanionRecentActionMemory.ITEM_FIND_COOLDOWN_MS - 1L;
+        assertFalse(CompanionRecentActionMemory.record(
+                player, 300L, CompanionRecentActionKind.ITEM_FIND,
+                "player found gold", "minecraft:gold_ingot", true));
+        // Allowed after full 14-day wall-clock cooldown (and far gameTime past tick cool)
+        CompanionRecentActionMemory.testNowMs = 1_000_000L + CompanionRecentActionMemory.ITEM_FIND_COOLDOWN_MS;
+        assertTrue(CompanionRecentActionMemory.record(
+                player, 100L + CompanionRecentActionMemory.ITEM_FIND_COOLDOWN_TICKS,
+                CompanionRecentActionKind.ITEM_FIND,
+                "player found netherite", "minecraft:netherite_ingot", true));
+    }
+
+    @Test
     void notableHeuristics() {
         assertTrue(CompanionNotableItemSupport.isSword("minecraft:iron_sword"));
         assertTrue(CompanionNotableItemSupport.isNotablePickup("minecraft:diamond"));

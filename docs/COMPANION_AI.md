@@ -63,8 +63,10 @@ After joining, the client may open an **optional** yes/no screen. It asks; it do
 | **Local probe** | Integrated/SP only when AI is still disabled: TCP probe LiteLLM `:4000`, Ollama `:11434`, LM Studio `:1234` (and loopback configured `baseUrl`). |
 
 - **Yes (local probe)** — enable that local LLM for companion chat; **Use server LLM stays OFF** (personal). Tip mentions `/ask` and AI Config.
-- **Yes (server offer)** — accept for this server key (client session). Hosts/admins turn **Use server LLM** ON (shared endpoint).
-- **No** — dismiss for this server key until you reconnect under a new session key; nothing is enabled; you can still configure your own local/remote LLM in AI Config (SP/integrated).
+- **Yes (server offer)** — accept once for this server key (persisted on the client). Hosts/admins turn **Use server LLM** ON (shared endpoint in host AI config).
+- **No** — dismiss once for this server key (persisted); nothing is enabled; you can still configure your own local/remote LLM in AI Config (SP/integrated).
+
+The prompt asks **at most once** per server key (multiplayer IP, or `integrated` for SP/LAN). Choice is stored in client `config/azscompanions-ai-join-consent.json`. Later changes to **Use server LLM** are only via `/az admin` → AI Config — subsequent joins skip the consent screen.
 
 **Ask-only:** use **`/ask`** or **`/az ask`**. Auto chat listen, name-mention listen, and LLM world actions are removed (0.3.12+).
 
@@ -554,7 +556,7 @@ While an AI request is in flight, the owner (and stranger speaker when relevant)
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line (~25s when reacting to a recent event). Also grounds lines in **recent actions** (explosion, darkness→ask for light, notable finds, craft-ready, crafts like “NICE SWORD!”). |
+| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line (~25s when reacting to a recent event). Also grounds lines in **recent actions** (explosion, darkness→ask for light, notable finds ~**once per 14 days** real-time per owner, craft-ready, crafts like “NICE SWORD!”). |
 | `idleChatSecondsMin` | int | `75` | Min seconds between ambient lines; clamped **30–3600** |
 | `idleChatSecondsMax` | int | `180` | Max seconds (random in `[min,max]`); clamped **30–3600** |
 

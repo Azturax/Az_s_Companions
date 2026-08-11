@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 0.4.4
+
+### Changed
+- **Join-time LLM consent remembered:** Yes/No on the “use server LLM?” (or local-probe) prompt is saved per server key in client `config/azscompanions-ai-join-consent.json`, so the screen asks **at most once**. Host **Use server LLM** (`serverLlmOnly`) still lives in AI config and is changeable later only via `/az admin` → AI Config (no re-prompt on every join / JVM restart).
+- **Jindujun 2.5× size:** hitbox, shadow, Blockbench mesh render scale, and enchant stream offsets all use `JindujunSupport.SCALE` (2.5).
+- **Jindujun turns with rider:** while mounted, cloud `yRot` / body / head sync to the controlling player look yaw each tick (no locked world-axis facing).
+- **Jindujun sit offset:** passenger rides on the cloud top (`RIDER_Y_OFFSET` ≈ 88% of scaled height).
+- **Jindujun idle dismiss:** if left unridden for **56s** continuously, the cloud discards itself (timer resets on mount / ride / right-click mount; persisted in NBT).
+- **ITEM_FIND reactive chatter rarer:** "nice find" / notable-item reactions now use a **~14-day real-time** per-owner cooldown (`System.currentTimeMillis`, also ~24 192 000 ticks at 20 TPS). Explosion / darkness / craft paths unchanged.
+
+### Fixed
+- **Enchant trail only on Jindujun:** shaped `ENCHANT` stream spawns only from the nimbus entity tick at cloud/foot height — not on the player passenger, companions, or Bits (flight-aura leftovers already removed).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.4+1.21.1.jar` | `azscompanions-fabric-0.4.4+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.4+1.21.1.jar` | `azscompanions-fabric-cci-0.4.4+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.3
 
 ### Added

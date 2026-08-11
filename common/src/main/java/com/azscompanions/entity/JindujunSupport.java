@@ -9,6 +9,10 @@ public final class JindujunSupport {
     public static final String ENTITY_ID = "flying_nimbus";
     public static final String ITEM_ID = "jindujun_whistle";
     public static final String NBT_OWNER = "NimbusOwner";
+    public static final String NBT_IDLE = "NimbusIdleTicks";
+
+    /** Uniform size multiplier vs original 1× cloud (hitbox + render + particle stream). */
+    public static final float SCALE = 2.5f;
 
     /** Horizontal cruise speed while steered. */
     public static final double FLY_SPEED = 0.55d;
@@ -17,12 +21,19 @@ public final class JindujunSupport {
     /** Soft damp when no input. */
     public static final double IDLE_DAMP = 0.86d;
 
-    /** Cloud collision box. */
-    public static final float WIDTH = 1.35f;
-    public static final float HEIGHT = 0.55f;
+    /** Cloud collision box (1× base × {@link #SCALE}). */
+    public static final float WIDTH = 1.35f * SCALE;
+    public static final float HEIGHT = 0.55f * SCALE;
 
-    /** Rider sits atop the fluff. */
-    public static final double RIDER_Y_OFFSET = 0.48d;
+    /**
+     * Rider seat Y above entity feet — sits on the cloud top (sitting pose).
+     * Tuned for {@link #SCALE} so feet rest on the fluff, not floating or buried.
+     */
+    public static final double RIDER_Y_OFFSET = HEIGHT * 0.88d;
+
+    /** Unridden / untouched continuous time before the cloud dismisses itself. */
+    public static final int IDLE_DESPAWN_SECONDS = 56;
+    public static final int IDLE_DESPAWN_TICKS = IDLE_DESPAWN_SECONDS * 20;
 
     /** Archaeology brush chance in Trail Ruins (taiga only). Was 2%; kept very rare. */
     public static final float TRAIL_RUINS_LOOT_CHANCE = 0.005f;
@@ -30,9 +41,19 @@ public final class JindujunSupport {
     private JindujunSupport() {
     }
 
+    /** Advance idle counter while unmounted; reset to 0 while ridden. */
+    public static int nextIdleTicks(boolean hasPassenger, int idleTicks) {
+        return hasPassenger ? 0 : idleTicks + 1;
+    }
+
+    public static boolean shouldDespawnFromIdle(int idleTicks) {
+        return idleTicks >= IDLE_DESPAWN_TICKS;
+    }
+
     /**
      * Client-only helper: emit shaped {@code ENCHANT} particles for a ridden nimbus.
      * Loaders pass a spawn lambda that calls {@code level.addParticle(ParticleTypes.ENCHANT, ...)}.
+     * Origin is always the cloud entity — never the passenger.
      */
     @FunctionalInterface
     public interface EnchantParticleSpawner {
