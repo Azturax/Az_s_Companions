@@ -1,6 +1,7 @@
 package com.azscompanions.entity;
 
 import com.azscompanions.registry.FabricModEntities;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -163,6 +164,21 @@ public final class FabricFlyingNimbusEntity extends Mob implements PlayerRideabl
         fallDistance = 0.0f;
         if (!isVehicle() && level().isClientSide) {
             setPos(getX(), getY() + Math.sin(tickCount * 0.08d) * 0.002d, getZ());
+        }
+        if (level().isClientSide) {
+            var delta = getDeltaMovement();
+            JindujunSupport.spawnEnchantStream(
+                    isVehicle(),
+                    delta.x,
+                    delta.y,
+                    delta.z,
+                    tickCount,
+                    getX(),
+                    getY(),
+                    getZ(),
+                    getYRot(),
+                    (x, y, z, vx, vy, vz) ->
+                            level().addParticle(ParticleTypes.ENCHANT, x, y, z, vx, vy, vz));
         }
     }
 

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## 0.4.3
+
+### Added
+- **No natural despawn for owned companions / Bits:** owned companions and child Bits get vanilla persistence (`setPersistenceRequired`) plus scoreboard tag `azscompanions.nodespawn` on create/own/load (recruit, Bit spawn, charm summon, logout restore). Intentional discard (logout park, charm store, kill) unchanged. Fabric + NeoForge (+26.2).
+
+### Changed
+- **Jindujun visuals:** Desktop Blockbench cloud mesh + texture (`Jindujun.java` / `Jindujun.png`) replaces the billboard cloud. While ridden, only the nimbus shows a **shaped `ParticleTypes.ENCHANT` stream** (plugin-style cross/ladder silhouette behind the cloud at foot height — not in first-person face).
+- **Jindujun texture:** classic bright yellow / soft-gold fluffy Nimbus paint over the existing UV layout (replaces Blockbench face-debug colors).
+
+### Removed
+- **Flight ki aura bubbles and motion trails** for players / companions / Bits (and the old nimbus aura trail). Creative/elytra flight no longer draws the soft shell or afterimages.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.3+1.21.1.jar` | `azscompanions-fabric-0.4.3+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.3+1.21.1.jar` | `azscompanions-fabric-cci-0.4.3+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.2
 
 ### Added

@@ -2,9 +2,9 @@ package com.azscompanions;
 
 import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
+import com.azscompanions.client.model.JindujunModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
-import com.azscompanions.client.renderer.FlightAuraLayer;
 import com.azscompanions.client.renderer.FlyingNimbusRenderer;
 import com.azscompanions.client.renderer.KonAwareBedRenderer;
 import com.azscompanions.client.renderer.KonEarsLayer;
@@ -49,6 +49,7 @@ public final class AzsCompanionsClient {
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_WIDE, () -> FeminineCompanionModel.createBodyLayer(false));
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_SLIM, () -> FeminineCompanionModel.createBodyLayer(true));
         event.registerLayerDefinition(KonEarsModel.LAYER, KonEarsModel::createBodyLayer);
+        event.registerLayerDefinition(JindujunModel.LAYER, JindujunModel::createBodyLayer);
     }
 
     private void onAddLayers(EntityRenderersEvent.AddLayers event) {
@@ -56,7 +57,6 @@ public final class AzsCompanionsClient {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
                 renderer.addLayer(new KonEarsLayer(renderer, event.getEntityModels()));
-                renderer.addLayer(new FlightAuraLayer(renderer));
             }
         }
     }

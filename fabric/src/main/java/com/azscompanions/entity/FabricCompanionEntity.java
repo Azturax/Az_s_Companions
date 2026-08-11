@@ -262,6 +262,11 @@ public class FabricCompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (!level().isClientSide && level() instanceof ServerLevel serverLevel) {
+            if (getOwnerUuid() != null
+                    && (!isPersistenceRequired()
+                            || !getTags().contains(CompanionNoDespawnSupport.ENTITY_TAG))) {
+                applyOwnedNoDespawn();
+            }
             // Preserve player/CCI command modes; allow TASK while task queue is active.
             {
                 FabricCompanionMode mode = getMode();
@@ -1126,6 +1131,23 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     public void setOwnerUuid(UUID uuid) {
         entityData.set(DATA_OWNER, Optional.ofNullable(uuid));
+        if (uuid != null) {
+            applyOwnedNoDespawn();
+        }
+    }
+
+    /**
+     * Owned companions (and Bits) must not natural-despawn. Does not block intentional
+     * discard (logout park, charm store, kill).
+     */
+    public void applyOwnedNoDespawn() {
+        setPersistenceRequired();
+        addTag(CompanionNoDespawnSupport.ENTITY_TAG);
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return getOwnerUuid() == null && super.removeWhenFarAway(distanceToClosestPlayer);
     }
 
     public String getOwnerName() {
