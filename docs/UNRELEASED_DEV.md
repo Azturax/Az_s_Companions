@@ -4,9 +4,9 @@ Friendly local dig of everything in the tree that is **not yet a published GitHu
 
 | | |
 |---|---|
-| **Pending publish** | _(none — last ship was **v0.4.5**)_ |
-| **Last published tag** | **v0.4.5** |
-| **CHANGELOG** | Notes under `## Unreleased` (empty after 0.4.5) |
+| **Pending publish** | _(none — last ship was **v0.4.6**)_ |
+| **Last published tag** | **v0.4.6** |
+| **CHANGELOG** | Notes under `## Unreleased` (empty after 0.4.6) |
 | **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI). NeoForge **26.2** still not shipped. |
 
 Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do not treat as published.
@@ -19,6 +19,11 @@ _(empty)_
 
 ---
 
+## Shipped in 0.4.6 (reference)
+
+- **Jindujun sit gap:** `RIDER_Y_OFFSET` `0.32×SCALE` (~0.80) → `0.22×SCALE` (~0.55); feet slightly into cream deck.
+- **Jindujun spin:** yaw sync once in `travel` from rider look; no `*O` overwrite / no second sync in `tick`.
+
 ## Shipped in 0.4.5 (reference)
 
 - **Jindujun sit gap:** scale wraps Blockbench feet pivot; `RIDER_Y_OFFSET` ~0.80 so rider sits flush.
@@ -27,7 +32,7 @@ _(empty)_
 ## Shipped in 0.4.4 (reference)
 
 - **Jindujun polish:** 2.5× scale, rider yaw sync, sit-on-cloud offset, 56s idle despawn, cloud-only `ENCHANT` stream.
-- **ITEM_FIND** reactive chatter: ~14-day real-time per-owner cooldown.
+- **ITEM_FIND reactive chatter:** ~14-day real-time per-owner cooldown.
 - **Join-time LLM consent** remembered once per server key (`azscompanions-ai-join-consent.json`).
 
 ## Shipped in 0.4.3 (reference)
@@ -40,7 +45,7 @@ _(empty)_
 
 ## Still WIP / not in this publish
 
-- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.5 loader matrix.
+- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 0.4.6 loader matrix.
 - **`CompanionRecentActionHooks.java.wip`** — shared hooks draft still under a `.wip` name; live wiring is via loader event classes / mixins.
 - VoiceMod TTS bridge / Simple Voice Chat entity audio emission — still not shipped (detect-only / soft-compat as before).
 

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.4.6
+
+### Fixed
+- **Jindujun sit gap (again):** remaining air above the cream deck — `RIDER_Y_OFFSET` lowered from `0.32×SCALE` (~0.80) to `0.22×SCALE` (~0.55) so feet sit slightly into the top fluff.
+- **Jindujun violent spin:** yaw sync no longer overwrites previous-tick rot (`yRotO` / body / head) or re-applies in both `travel` and `tick`. Steering applies rider look yaw once per travel tick (normalized), keeping client lerp stable.
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.6+1.21.1.jar` | `azscompanions-fabric-0.4.6+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.6+1.21.1.jar` | `azscompanions-fabric-cci-0.4.6+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.5
 
 ### Fixed

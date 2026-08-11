@@ -109,22 +109,6 @@ public final class FlyingNimbusEntity extends Mob implements PlayerRideable {
         callback.accept(passenger, getX(), getY() + JindujunSupport.RIDER_Y_OFFSET, getZ());
     }
 
-    /** Keep cloud yaw locked to the controlling rider's look (not a fixed world axis). */
-    private void syncYawFromRider() {
-        if (!(getControllingPassenger() instanceof Player player)) {
-            return;
-        }
-        float yaw = player.getYRot();
-        setYRot(yaw);
-        yRotO = yaw;
-        setXRot(player.getXRot() * 0.35f);
-        setRot(yaw, getXRot());
-        yBodyRot = yaw;
-        yBodyRotO = yaw;
-        yHeadRot = yaw;
-        yHeadRotO = yaw;
-    }
-
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (!level().isClientSide && !player.isShiftKeyDown() && canAddPassenger(player)) {
@@ -143,7 +127,12 @@ public final class FlyingNimbusEntity extends Mob implements PlayerRideable {
     @Override
     public void travel(Vec3 travelVector) {
         if (isAlive() && isVehicle() && getControllingPassenger() instanceof Player player) {
-            syncYawFromRider();
+            // Once per travel tick from rider look — never overwrite *O rot or re-sync in tick().
+            float yaw = JindujunSupport.riderSteerYaw(player.getYRot());
+            setYRot(yaw);
+            setXRot(0.0f);
+            yBodyRot = yaw;
+            yHeadRot = yaw;
 
             float strafe = player.xxa * 0.5f;
             float forward = player.zza;
@@ -160,7 +149,7 @@ public final class FlyingNimbusEntity extends Mob implements PlayerRideable {
                 vertical += -player.getXRot() / 90.0d * JindujunSupport.VERTICAL_SPEED * 0.65d * forward;
             }
 
-            float yawRad = getYRot() * ((float) Math.PI / 180.0f);
+            float yawRad = yaw * ((float) Math.PI / 180.0f);
             double sin = Mth.sin(yawRad);
             double cos = Mth.cos(yawRad);
             double speed = JindujunSupport.FLY_SPEED;
@@ -183,9 +172,6 @@ public final class FlyingNimbusEntity extends Mob implements PlayerRideable {
         super.tick();
         setNoGravity(true);
         fallDistance = 0.0f;
-        if (isVehicle()) {
-            syncYawFromRider();
-        }
         if (!level().isClientSide) {
             idleTicks = JindujunSupport.nextIdleTicks(isVehicle(), idleTicks);
             if (JindujunSupport.shouldDespawnFromIdle(idleTicks)) {

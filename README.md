@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.4.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.4.5)
+- **Release:** [v0.4.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.4.6)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
@@ -17,10 +17,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.4.5+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.4.5+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.4.5+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.4.5+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.4.6+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.4.6+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.4.6+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.4.6+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -33,7 +33,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 **Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped yet — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (0.4.5)
+## Gameplay (0.4.6)
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
 - **Treasure loot:** Companion Charm (desert pyramids, 5%) + Jindujun Whistle (Trail Ruins archaeology, 0.5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)

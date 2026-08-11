@@ -26,11 +26,26 @@ public final class JindujunSupport {
     public static final float HEIGHT = 0.55f * SCALE;
 
     /**
-     * Rider seat Y above entity feet — flush on the Blockbench cloud deck.
-     * Deck top is ~0.375 blocks at 1× (6px); sit slightly into the fluff.
+     * Rider seat Y above entity feet — sit slightly into the Blockbench cream deck.
+     * Deck top is ~0.375 blocks at 1× (6px); prefer a hair under the surface vs air gap.
      * (Do not use {@link #HEIGHT} here — hitbox is taller than the mesh.)
      */
-    public static final double RIDER_Y_OFFSET = 0.32d * SCALE;
+    public static final double RIDER_Y_OFFSET = 0.22d * SCALE;
+
+    /**
+     * Normalize rider look yaw for steering / cloud facing.
+     * Callers must apply once per tick (travel only) and must not overwrite
+     * {@code yRotO}/{@code yBodyRotO}/{@code yHeadRotO} — that causes snap/spin.
+     */
+    public static float riderSteerYaw(float riderYRot) {
+        float yaw = riderYRot % 360.0f;
+        if (yaw >= 180.0f) {
+            yaw -= 360.0f;
+        } else if (yaw < -180.0f) {
+            yaw += 360.0f;
+        }
+        return yaw;
+    }
 
     /** Unridden / untouched continuous time before the cloud dismisses itself. */
     public static final int IDLE_DESPAWN_SECONDS = 56;

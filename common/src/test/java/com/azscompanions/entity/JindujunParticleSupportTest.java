@@ -54,9 +54,11 @@ class JindujunParticleSupportTest {
         assertEquals(2.5f, JindujunSupport.SCALE, 1.0e-4f);
         assertEquals(1.35f * 2.5f, JindujunSupport.WIDTH, 1.0e-4f);
         assertEquals(0.55f * 2.5f, JindujunSupport.HEIGHT, 1.0e-4f);
-        // Seat on mesh deck (~0.32×SCALE), not hitbox top (HEIGHT×0.88 left a large float gap).
-        assertEquals(0.32d * JindujunSupport.SCALE, JindujunSupport.RIDER_Y_OFFSET, 1.0e-4d);
+        // Seat slightly into mesh deck (~0.22×SCALE); 0.32×SCALE still left a visible air gap.
+        assertEquals(0.22d * JindujunSupport.SCALE, JindujunSupport.RIDER_Y_OFFSET, 1.0e-4d);
         assertTrue(JindujunSupport.RIDER_Y_OFFSET < JindujunSupport.HEIGHT * 0.7d);
+        assertEquals(10.0f, JindujunSupport.riderSteerYaw(370.0f), 1.0e-3f);
+        assertEquals(-10.0f, JindujunSupport.riderSteerYaw(-370.0f), 1.0e-3f);
     }
 
     @Test
