@@ -15,11 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WigglyDogPerkSupportTest {
     @Test
-    void eligibleIsMisterWigglyUuid() {
+    void eligibleMatchesMisterWigglyAndFlightUuid() {
         assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
+        assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
         assertEquals(UUID.fromString("5b0a2d0a-fd88-49b6-9138-d0103af9a0d5"),
                 AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID);
-        assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.WOLFY_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(null));
         assertFalse(WigglyDogPerkSupport.isEligible(UUID.randomUUID()));
@@ -43,7 +43,7 @@ class WigglyDogPerkSupportTest {
     }
 
     @Test
-    void defaultOffExceptEligibleOn() {
+    void defaultOffExceptMisterWigglyOn() {
         assertFalse(WigglyDogPerkSupport.DEFAULT_VISIBLE);
         assertEquals(1, WigglyDogPerkSupport.MAX_OWNED_DOGS);
         assertTrue(WigglyDogPerkSupport.defaultsVisible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
@@ -55,11 +55,11 @@ class WigglyDogPerkSupportTest {
     @Test
     void shownFromTagsUsesOwnerDefault() {
         UUID wiggly = AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID;
-        UUID other = AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID;
+        UUID flight = AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID;
         assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(), wiggly));
         assertTrue(WigglyDogPerkSupport.isShownFromTags(null, wiggly));
-        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(), other));
-        assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_SHOWN_TAG), other));
+        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(), flight));
+        assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_SHOWN_TAG), flight));
         assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG), wiggly));
         assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(
                 WigglyDogPerkSupport.PLAYER_SHOWN_TAG,

@@ -44,6 +44,28 @@ public final class MisterWigglySidekick {
         return ownerUuid != null && AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(ownerUuid);
     }
 
+    /** True when this owner currently has at least one living summoned companion. */
+    public static boolean hasSummonedCompanion(ServerPlayer player) {
+        if (player == null || !(player.level() instanceof ServerLevel level)) {
+            return false;
+        }
+        var server = level.getServer();
+        if (server == null) {
+            return false;
+        }
+        UUID owner = player.getUUID();
+        for (ServerLevel dim : server.getAllLevels()) {
+            for (var entity : dim.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(companion.getOwnerUuid())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** Ensure exactly one sidekick dog exists for this companion while summoned. */
     public static void ensureFor(CompanionEntity companion) {
         if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {

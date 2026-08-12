@@ -18,10 +18,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID} (Fabric).
+ * Toggleable Wiggly dog for Mister Wiggly ({@code 5b0a2d0a-…}, default ON) and the flight
+ * perk UUID ({@code 4274c47f-…}, default OFF) on Fabric.
  * Ground-follows when walking; floats only while the owner flies/elytra.
- * <p>
- * Defaults <strong>on</strong> for the eligible UUID; others cannot spawn it.
  * At most one owned toggle dog exists server-wide; extras are discarded each tick.
  */
 public final class WigglyDogPerk {

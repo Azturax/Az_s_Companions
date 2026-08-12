@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /**
  * UUID-gated perks (NeoForge):
- * flight (no auto-glow), toggle Wiggly for Mister Wiggly, and client-side Kon ears.
+ * flight (no auto-glow), toggle Wiggly (Mister Wiggly default ON; flight UUID opt-in), Kon ears.
  */
 public final class SpecialPlayerPerks {
     /** Soft hover offset above the owner's feet while flying. */

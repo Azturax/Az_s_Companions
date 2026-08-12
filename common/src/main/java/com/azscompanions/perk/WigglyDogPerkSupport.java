@@ -8,18 +8,21 @@ import java.util.UUID;
 import java.util.function.ToDoubleFunction;
 
 /**
- * Loader-agnostic helpers for the UUID-gated toggleable Wiggly dog perk
- * ({@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID}).
+ * Loader-agnostic helpers for the UUID-gated toggleable Wiggly dog perk.
  * <p>
- * Separate from the one-shot Wolfy companion grant. Mister Wiggly also has a
- * companion-following sidekick; this perk is the player-following toggle dog.
+ * Recipients:
+ * <ul>
+ *   <li>{@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID} — defaults <strong>ON</strong></li>
+ *   <li>{@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID} — defaults <strong>OFF</strong> (opt-in)</li>
+ * </ul>
+ * Separate from the Wolfy companion grant. On NeoForge, Mister Wiggly also has a
+ * companion-following sidekick; loaders may suppress the toggle dog while that
+ * sidekick is active so at most one Wiggly exists.
  * <p>
- * Global default is <strong>off</strong> ({@link #DEFAULT_VISIBLE}); the eligible
- * Wiggly recipient defaults <strong>on</strong> until they dismiss via toggle.
  * At most {@link #MAX_OWNED_DOGS} toggle dog may exist per eligible owner.
  */
 public final class WigglyDogPerkSupport {
-    /** Non-recipients / untoggled players: dog stays dismissed. */
+    /** Global fallback when no owner UUID is known: dog stays dismissed. */
     public static final boolean DEFAULT_VISIBLE = false;
 
     /** Hard cap: one toggle Wiggly per eligible owner (server-wide). */
@@ -32,6 +35,7 @@ public final class WigglyDogPerkSupport {
 
     /**
      * Legacy dismiss tag (pre-1.0.2). Presence still forces hidden; cleaned up on toggle.
+     * Required for default-ON recipients so empty tags do not re-show the dog.
      */
     public static final String PLAYER_HIDDEN_TAG = "azscompanions.wiggly_dog_hidden";
 
@@ -44,16 +48,23 @@ public final class WigglyDogPerkSupport {
     private WigglyDogPerkSupport() {
     }
 
-    /** Wiggly toggle dog recipient: Mister Wiggly ({@code 5b0a2d0a-…}). */
+    /**
+     * Toggle dog recipients: Mister Wiggly ({@code 5b0a2d0a-…}) and the flight perk UUID
+     * ({@code 4274c47f-…}).
+     */
     public static boolean isEligible(UUID uuid) {
-        return uuid != null && AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(uuid);
+        if (uuid == null) {
+            return false;
+        }
+        return AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(uuid)
+                || AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID.equals(uuid);
     }
 
     /**
-     * Eligible Wiggly owner defaults visible (ON); everyone else defaults OFF.
+     * Only Mister Wiggly defaults visible (ON). Flight-perk UUID and everyone else default OFF.
      */
     public static boolean defaultsVisible(UUID uuid) {
-        return isEligible(uuid);
+        return uuid != null && AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(uuid);
     }
 
     public static boolean isToggleDogName(String name) {

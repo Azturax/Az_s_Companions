@@ -1,67 +1,97 @@
 # Multi-version targets
 
-Az's Companions **1.0.0** ships production jars for **Minecraft 1.21.1** only (standalone + CCI for both loaders). Additional Minecraft lines are tracked here for follow-up ports.
+Az's Companions product line is developed on **Minecraft 1.21.1** (NeoForge + Fabric, standalone + CCI). Additional Minecraft / loader lines are tracked here.
 
-## Loader ↔ Minecraft mapping
+**Feature rule:** every shipped jar must carry the **current product feature set** from main (AI, inventory, Wiggly/UUID perks, dimension follow, gifts, loot config, logout park, no Jindujun/whistle, etc.). Omit a feature only when the MC/loader API makes it impossible — document omissions in release notes. Do **not** ship feature-stripped stubs as production jars.
 
-| User request | Minecraft | NeoForge | Fabric | Notes |
-|--------------|-----------|----------|--------|-------|
-| `1.20.1` | 1.20.1 | **None** in NeoForged releases Maven (Forge `47.x` recommended) | Fabric API `0.92.x+1.20.1` | Port deferred |
-| `1.21.11` → **1.21.1** | **1.21.1** | **21.1.248** | Fabric API `0.116.15+1.21.1` | **Shipped in 1.0.0** |
-| NeoForge `26.1.2` | **26.1.2** | **26.1.2.94** (check Maven) | Fabric API `0.155.2+26.1.2`, Java 25, unobfuscated | Port deferred |
-| NeoForge `26.2` | **26.2** | **26.2.0.59** | Fabric API `0.156.0+26.2`, Java 25, unobfuscated | Port in progress (`:neoforge-26`) — **not shipped** |
+## Loader ↔ Minecraft mapping (research Aug 2026)
 
-### NeoForge 26.2 ↔ Minecraft (confirmed)
+| User / target request | Minecraft | NeoForge | Fabric | CCI | Status |
+|-----------------------|-----------|----------|--------|-----|--------|
+| Production LTS | **1.21.1** | **21.1.248** | Fabric API `0.116.15+1.21.1` | **Yes** (1.13.0) | **Shipped** |
+| Latest CCI MC | **1.21.5** | **21.5.98** | Fabric API `0.128.2+1.21.5` | **Yes** (1.13.0) | **Blocked** — full forward port required |
+| `1.20.1` | **1.20.1** | **None** in NeoForged Maven | Fabric API `0.92.11+1.20.1` | Fabric **Yes** / NeoForge **No** / Forge **Yes** | **Blocked** — backport + no NeoForge |
+| NeoForge `26.1.2` | **26.1.2** | **26.1.2.95** | Fabric API exists (`0.155.x+26.1.2`) | **None** | **Blocked** — no module; Java 25 / unobfuscated |
+| NeoForge `26.2` | **26.2** | **26.2.0.59** | Fabric API `0.156.0+26.2` | **None** | **WIP** `:neoforge-26` — compiles with stubs; **not shipped** |
+
+### NeoForge calver notes
 
 Per [NeoForged versioning](https://docs.neoforged.net/docs/gettingstarted/versioning/):
 
-- Minecraft **26.2** is the second 2026 calver game drop (`year.release`).
-- NeoForge **26.2.0.x** targets that Minecraft line (major/minor = MC year/release; next digit is MC patch `0`; last digit is NeoForge build).
-- Latest checked on Maven (`maven.neoforged.net`, 2026-08-10): **26.2.0.59** (builds `26.2.0.57+` are non-`-beta`; earlier 26.2 builds were `*-beta`).
+| NeoForge line | Minecraft | Notes |
+|---------------|-----------|-------|
+| `21.1.x` | 1.21.1 | LTS production |
+| `21.5.x` | 1.21.5 | Latest CCI-capable NeoForge line |
+| `26.1.2.x` | **26.1.2** | Stable calver drop (Java 25, unobfuscated) |
+| `26.2.0.x` | **26.2** | Second 2026 drop (Java 25, unobfuscated) |
 
-This is **not** Minecraft 1.21.x. Do not confuse with NeoForge **21.1.x** (MC **1.21.1**) or **21.11.x** (MC **1.21.11**).
+Do **not** confuse NeoForge **26.2** with Minecraft **1.21.x**, or NeoForge **21.1** with **21.5**.
 
-### Port readiness (26.2)
-
-| Gate | Status |
-|------|--------|
-| Mainline 1.21.1 compiles (`:common` / `:neoforge` / `:fabric`) | **Yes** (verified) |
-| Unit tests (`:common:test`) | **Pass** |
-| Separate `:neoforge-26` module | **Present** — compiles locally; container/capability paths still unfinished |
-| Java 25 toolchain on build machine | Available |
-| CCI / iChunUtil for MC 26.2 on Modrinth | **None** (0 versions) |
-| Feature parity with 1.0.0 (AI, Behavior, CCI) | Incomplete — do **not** ship until parity / playable |
-
-**Decision:** keep shipping 1.21.1 via `buildAll`. Treat `:neoforge-26` as out of scope for releases until container APIs and gameplay parity are honest.
+There is **no** NeoForge `20.1.x` release. For MC **1.20.1**, Forge `47.x` is the supported Forge-family loader; NeoForge starts cleanly at 1.20.2+.
 
 ## CCI + iChunUtil pins (Modrinth, Aug 2026)
 
-| Minecraft | Loader | CCI version | CCI Modrinth id | iChunUtil | iChunUtil Modrinth id |
-|-----------|--------|-------------|-----------------|-----------|------------------------|
+| Minecraft | Loader | CCI | CCI Modrinth id | iChunUtil | iChunUtil Modrinth id |
+|-----------|--------|-----|-----------------|-----------|------------------------|
 | **1.21.1** | NeoForge | 1.13.0 | `AySbAgcO` | 1.0.3 | `OvIyyNh4` |
 | **1.21.1** | Fabric | 1.13.0 | `PERd6IT9` | 1.0.3 | `gfAOoiwe` |
+| **1.21.5** (latest CCI MC) | NeoForge | 1.13.0 | `WRDFe2RG` | 1.0.7 | `Hrl6YCrv` |
+| **1.21.5** | Fabric | 1.13.0 | `5wvklhb4` | 1.0.7 | `BEq7Tobw` |
 | **1.20.1** | Fabric | 1.13.0 | `7tk12xkN` | 1.0.3 | `JjEWQx5u` |
 | **1.20.1** | Forge | 1.13.0 | `nNaAlKHI` | 1.0.3 | `W6d0pCyu` |
 | **1.20.1** | NeoForge | **none** | — | **none** | — |
-| **26.1.2** | Fabric / NeoForge / Forge | **none** | — | **none** | — |
-| **26.2** | Fabric / NeoForge / Forge | **none** | — | **none** | — |
+| **26.1.2 / 26.2** | any | **none** | — | **none** | — |
 
-Do **not** reuse the 1.21.1 Modrinth version ids on other Minecraft versions — each MC/loader has its own file even when the CCI version number is also `1.13.0`.
+Do **not** reuse Modrinth version ids across Minecraft versions.
 
-When a MC line is ported later:
-- If CCI exists for that loader → ship `*-cci-0.x.y+<mc>.jar` pinned to the table above (re-check Modrinth at build time).
-- If CCI is missing → ship standalone only and document the gap (current situation for 26.x and 1.20.1 NeoForge).
+## Port readiness
 
-## Why other lines are deferred
+### 1.21.1 (shipped)
 
-- **26.1.2 / 26.2:** Unobfuscated Minecraft, Java 25, large API migration (entities, networking, rendering — including 26.1→26.2 Blaze3d/Vulkan primer changes) across ~160+ Java sources. No CCI builds on Modrinth yet. Prefer a **separate module** so 1.21.1 production jars stay untouched.
-- **1.20.1:** No NeoForge `20.1.x` releases; Fabric/Forge backports still need 1.20.1 registry/networking changes. CCI exists for Fabric + Forge only.
+| Gate | Status |
+|------|--------|
+| `:common` / `:neoforge` / `:fabric` / CCI editions | **Yes** |
+| Unit tests (`:common:test`) | **Pass** |
+| Feature parity with product 1.0.3 | **Yes** |
 
-## Shipped 1.0.0 jars (1.21.1 only)
+### NeoForge 26.2 (`:neoforge-26`)
 
-- `azscompanions-neoforge-1.0.0+1.21.1.jar`
-- `azscompanions-neoforge-cci-1.0.0+1.21.1.jar` (CCI 1.13.0 `AySbAgcO` + iChunUtil 1.0.3 `OvIyyNh4`)
-- `azscompanions-fabric-1.0.0+1.21.1.jar`
-- `azscompanions-fabric-cci-1.0.0+1.21.1.jar` (CCI 1.13.0 `PERd6IT9` + iChunUtil 1.0.3 `gfAOoiwe`)
+| Gate | Status |
+|------|--------|
+| Compiles on Java 25 | Locally verified previously |
+| Feature parity with 1.0.3 | **No** — renderer / mob-form / Kon ears / bed mesh / GLM / stats UI / some events still stubbed |
+| CCI | **None** on Modrinth |
 
-**NeoForge 26.2 jar:** *none* (module exists; not release-ready). Label when ready: e.g. `azscompanions-neoforge-1.x.y+26.2.jar`.
+**Decision:** do **not** ship until stubs are replaced with real gameplay parity (or release notes list every omission and QA accepts them). Prefer fixing render/API gaps over publishing a hollow jar.
+
+### NeoForge 26.1.2
+
+No module yet. Same Java 25 / unobfuscated / AvatarRenderState migration class as 26.2. Plan: clone `:neoforge-26` → `:neoforge-26-1` with `neo_26_1_version=26.1.2.95` after 26.2 parity is honest. CCI: none.
+
+### Minecraft 1.21.5 (latest CCI)
+
+Needs a **full forward port** of loader modules (networking, rendering, registries) from 1.21.1 → 1.21.5 under NeoForge **21.5.x** / Fabric API **0.128.x**. CCI + iChunUtil pins are ready (table above). Until that port lands, ship CCI editions only on **1.21.1**.
+
+### Minecraft 1.20.1
+
+Needs a **full backport** (data components / networking / registries differ). Fabric + Forge CCI exist; **NeoForge does not**. Ship Fabric (+ optional Forge) when ported; document NeoForge as unavailable.
+
+## Gradle tasks
+
+```bash
+./gradlew buildAll          # 1.21.1: fabric, fabric-cci, neoforge, neoforge-cci
+./gradlew buildNeoForge26   # 26.2 WIP — not part of release until parity
+```
+
+## Shipped jar naming
+
+Pattern: `azscompanions-<loader>[-cci]-<mod_version>+<minecraft_version>.jar`
+
+Example (1.0.3 / 1.21.1):
+
+- `azscompanions-neoforge-1.0.3+1.21.1.jar`
+- `azscompanions-neoforge-cci-1.0.3+1.21.1.jar`
+- `azscompanions-fabric-1.0.3+1.21.1.jar`
+- `azscompanions-fabric-cci-1.0.3+1.21.1.jar`
+
+Release tagging follows history: single product tag `v1.0.3` with all successful MC/loader jars attached (not per-MC tags unless a line ships on a different cadence later).

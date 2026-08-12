@@ -18,11 +18,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID}.
- * Ground-follows when the owner walks; floats beside them only while they fly/elytra.
- * Separate from the Wolfy companion grant; Mister Wiggly also has a companion sidekick.
+ * Toggleable Wiggly dog for Mister Wiggly ({@code 5b0a2d0a-…}, default ON) and the flight
+ * perk UUID ({@code 4274c47f-…}, default OFF). Ground-follows when walking; floats only
+ * while the owner flies/elytra. Separate from the Wolfy grant.
  * <p>
- * Defaults <strong>on</strong> for the eligible UUID; others cannot spawn it.
+ * While Mister Wiggly has a summoned companion, the companion sidekick owns the single
+ * Wiggly slot (toggle dog is despawned) so at most one Wiggly exists.
  * At most one owned toggle dog exists server-wide; extras are discarded each tick.
  */
 public final class WigglyDogPerk {
@@ -34,6 +35,12 @@ public final class WigglyDogPerk {
             return;
         }
         if (!WigglyDogPerkSupport.isEligible(player.getUUID())) {
+            return;
+        }
+        // Prefer companion-of-companion sidekick so Mister Wiggly never has two Wigglys.
+        if (MisterWigglySidekick.isWigglyOwner(player.getUUID())
+                && MisterWigglySidekick.hasSummonedCompanion(player)) {
+            despawnAll(player);
             return;
         }
         if (!isShown(player)) {

@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v1.0.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.2)
+- **Release:** [v1.0.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.3)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
@@ -17,10 +17,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-1.0.2+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-1.0.2+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-1.0.2+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-1.0.2+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-1.0.3+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-1.0.3+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-1.0.3+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-1.0.3+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -31,13 +31,13 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 3. Drop the matching edition jar into `mods/`
 4. **CCI editions only** — also install CCI **1.13.0** + iChunUtil **1.0.3** for the **same loader** (see [docs/CCI.md](docs/CCI.md))
 
-**Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
+**Other Minecraft lines** (1.21.5 latest-CCI, 1.20.1, NeoForge **26.1.2** / **26.2**): not shipped — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (1.0.2)
+## Gameplay (1.0.3)
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
 - **Treasure loot:** Companion Charm in desert pyramids (5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)
-- **UUID perks:** Wolfy grant only (`7c97…`); survival flight (`4274…`); Wiggly toggle dog default **ON** for Mister Wiggly (`5b0a…`), hard-capped to one; `/az wiggly` or keybind to dismiss
+- **UUID perks:** Wolfy grant only (`7c97…`); survival flight + Wiggly toggle opt-in (`4274…`); Mister Wiggly (`5b0a…`) Wiggly **default ON** (sidekick while companion out, else player toggle) — hard-capped to one; `/az wiggly` or keybind to dismiss
 - **No natural despawn:** owned companions / Bits get persistence + tag `azscompanions.nodespawn`
 - **Flower gifts**, logout park / login restore, form coat arrows, minecart-like sit pose
 - Cat scare creepers / wolf scare skeletons; wander mob play; ride-along when you mount
@@ -53,7 +53,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 ### Known limitations
 
-- **NeoForge 26.2** (`:neoforge-26`) is a work-in-progress port — **no jar** in this release
+- **NeoForge 26.2** (`:neoforge-26`) / **26.1.2** / **1.21.5** / **1.20.1** ports — **no jars** in this release (see [MULTI_VERSION.md](docs/MULTI_VERSION.md))
 - VoiceMod TTS / Simple Voice Chat entity audio emission — detect-only soft-compat (not full TTS bridge)
 - Old saves with removed features (Glowing Orb form, Jindujun whistle/nimbus) migrate or simply no longer spawn those items/entities
 
@@ -63,7 +63,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 ./gradlew buildAll
 ```
 
-Outputs under `*/build/libs/azscompanions-*-1.0.2+1.21.1.jar` (four editions). NeoForge 26.2 uses `./gradlew buildNeoForge26` and is not part of `buildAll`.
+Outputs under `*/build/libs/azscompanions-*-1.0.3+1.21.1.jar` (four editions). NeoForge 26.2 uses `./gradlew buildNeoForge26` and is not part of `buildAll`.
 
 ## License
 

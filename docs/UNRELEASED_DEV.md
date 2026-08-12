@@ -4,29 +4,24 @@ Friendly local dig of everything in the tree that is **not yet a published GitHu
 
 | | |
 |---|---|
-| **Pending publish** | _(none — last ship was **v1.0.0**)_ |
-| **Last published tag** | **v1.0.0** |
-| **CHANGELOG** | Notes under `## Unreleased` (empty after 1.0.0) |
-| **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI). NeoForge **26.2** still not shipped. |
+| **Pending publish** | **v1.0.3** (Wiggly perk polish + multi-version research docs) |
+| **Last published tag** | **v1.0.2** |
+| **CHANGELOG** | Notes under `## 1.0.3` |
+| **Loaders this ship** | NeoForge + Fabric **1.21.1** (+ CCI). Other MC lines blocked — see [MULTI_VERSION.md](MULTI_VERSION.md). |
 
 Snapshot for local dig / release prep. Not a Modrinth/GitHub release note — do not treat as published.
 
 ---
 
-## In Unreleased (not published)
+## In 1.0.3 (pending publish)
 
-_(empty)_
-
----
-
-## Shipped in 1.0.0 (reference)
-
-- First stable **1.0.0** product release for MC **1.21.1** (four jars).
-- Docs/copy polish; teamfight hint uses `/az`; WIP shared-hooks draft quarantined under `docs/dev/`.
-- Jindujun / whistle remain removed (as of 0.4.7).
+- Mister Wiggly Wiggly default ON + flight UUID opt-in; one-dog hard cap / companion sidekick preference
+- Docs: multi-version mapping for 1.21.5 (latest CCI), 1.20.1, NeoForge 26.1.2 / 26.2
 
 ## Still WIP / not in this publish
 
-- **NeoForge 26.2** (`:neoforge-26`) — port continues; **no jar** in the 1.0.0 loader matrix. Some container/capability paths are still stubbed.
-- **`docs/dev/CompanionRecentActionHooks.java.wip`** — shared hooks draft; live wiring is via loader event classes / mixins.
-- VoiceMod TTS bridge / Simple Voice Chat entity audio emission — still not shipped (detect-only / soft-compat as before).
+- **NeoForge 26.2** (`:neoforge-26`) — compile currently broken after main sync; render/capability stubs remain — **no jar**
+- **NeoForge 26.1.2** — no module yet
+- **Minecraft 1.21.5** (latest CCI MC) — full forward port required
+- **Minecraft 1.20.1** — full backport required; no NeoForge `20.1.x` on Maven
+- VoiceMod TTS bridge / Simple Voice Chat entity audio emission — still detect-only
