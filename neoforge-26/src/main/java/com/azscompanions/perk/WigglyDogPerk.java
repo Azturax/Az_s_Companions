@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID} (NeoForge 26.2).
+ * Toggleable Wiggly dog for {@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID} (NeoForge 26.2).
  * Ground-follows when walking; floats only while the owner flies/elytra.
  * <p>
- * Default <strong>off</strong> (opt-in via toggle). At most one owned toggle dog
- * exists server-wide; extras are discarded each tick.
+ * Defaults <strong>on</strong> for the eligible UUID; others cannot spawn it.
+ * At most one owned toggle dog exists server-wide; extras are discarded each tick.
  */
 public final class WigglyDogPerk {
     private WigglyDogPerk() {
@@ -86,8 +86,15 @@ public final class WigglyDogPerk {
     public static boolean isShown(ServerPlayer player) {
         var data = player.getPersistentData();
         boolean hidden = data.getBooleanOr(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG, false);
-        boolean shown = data.getBooleanOr(WigglyDogPerkSupport.PLAYER_SHOWN_TAG, WigglyDogPerkSupport.DEFAULT_VISIBLE);
-        return WigglyDogPerkSupport.isShownFromPersistentFlags(true, shown, true, hidden);
+        if (hidden) {
+            return false;
+        }
+        // Absent shown key → recipient default (ON for Mister Wiggly, OFF otherwise).
+        boolean shown = data.getBooleanOr(
+                WigglyDogPerkSupport.PLAYER_SHOWN_TAG,
+                WigglyDogPerkSupport.defaultsVisible(player.getUUID()));
+        return WigglyDogPerkSupport.isShownFromPersistentFlags(
+                true, shown, true, false, player.getUUID());
     }
 
     public static boolean isHidden(ServerPlayer player) {
@@ -95,7 +102,7 @@ public final class WigglyDogPerk {
     }
 
     private static void setShown(ServerPlayer player, boolean shown) {
-        player.getPersistentData().remove(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
+        player.getPersistentData().putBoolean(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG, !shown);
         player.getPersistentData().putBoolean(WigglyDogPerkSupport.PLAYER_SHOWN_TAG, shown);
     }
 

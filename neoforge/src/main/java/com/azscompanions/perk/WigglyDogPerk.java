@@ -18,12 +18,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID}.
+ * Toggleable Wiggly dog for {@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID}.
  * Ground-follows when the owner walks; floats beside them only while they fly/elytra.
- * Separate from the Wolfy companion grant and Mister Wiggly's companion sidekick.
+ * Separate from the Wolfy companion grant; Mister Wiggly also has a companion sidekick.
  * <p>
- * Default <strong>off</strong> (opt-in via {@code /az wiggly} or keybind). At most one
- * owned toggle dog exists server-wide; extras are discarded each tick.
+ * Defaults <strong>on</strong> for the eligible UUID; others cannot spawn it.
+ * At most one owned toggle dog exists server-wide; extras are discarded each tick.
  */
 public final class WigglyDogPerk {
     private WigglyDogPerk() {
@@ -85,7 +85,7 @@ public final class WigglyDogPerk {
     }
 
     public static boolean isShown(ServerPlayer player) {
-        return WigglyDogPerkSupport.isShownFromTags(player.getTags());
+        return WigglyDogPerkSupport.isShownFromTags(player.getTags(), player.getUUID());
     }
 
     public static boolean isHidden(ServerPlayer player) {
@@ -93,11 +93,13 @@ public final class WigglyDogPerk {
     }
 
     private static void setShown(ServerPlayer player, boolean shown) {
-        player.removeTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
         if (shown) {
+            player.removeTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
             player.addTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
         } else {
             player.removeTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
+            // Required so default-ON recipients stay dismissed (empty tags ⇒ defaultsVisible).
+            player.addTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
         }
     }
 

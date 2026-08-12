@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /**
  * UUID-gated perks (Fabric):
- * flight + toggle Wiggly (no auto-glow), and client-side Kon ears cosmetic (see {@link #hasKonEars}).
+ * flight (no auto-glow), toggle Wiggly for Mister Wiggly, and client-side Kon ears.
  */
 public final class SpecialPlayerPerks {
     /** Soft hover offset above the owner's feet while flying. */
@@ -59,7 +59,7 @@ public final class SpecialPlayerPerks {
                 abilities.mayfly = true;
                 player.onUpdateAbilities();
             }
-            // Flight + Wiggly only — auto-glow removed for this UUID.
+            // Flight only — auto-glow removed for this UUID. Wiggly dog is Mister Wiggly's perk.
             clearGlow(player);
         }
         WolfyCompanionPerk.ensureFor(player);

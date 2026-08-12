@@ -7,9 +7,10 @@
 Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 
 ### Fixed
-- **Wiggly toggle dog (`4274...`):** no longer auto-spawns by default; opt-in via `/az wiggly` or the Wiggly keybind (scoreboard tag `azscompanions.wiggly_dog_shown`)
+- **Wiggly toggle dog:** recipient is Mister Wiggly (`5b0a2d0a-...`); defaults **ON** for that UUID, **OFF** for everyone else; dismiss via `/az wiggly` or keybind
 - **Wiggly multi-spawn:** server-wide hard cap of **one** owned toggle dog; extras are culled each tick (fixes piles from the old 96-block find-or-spawn loop)
 - **Mister Wiggly sidekick:** same one-dog cull / server-wide lookup when the companion teleports far away
+- **Special perk (`4274...`):** keeps survival flight only (no longer owns the toggle Wiggly dog)
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |

@@ -14,8 +14,9 @@ public final class AzsCompanionsConstants {
     public static final String MAX_MINECRAFT = "26.2";
 
     /**
-     * Special perk player: survival flight, flying companion, and toggleable Wiggly dog.
-     * No auto-glowing (glow removed for this UUID).
+     * Special perk player: survival flight and flying companion.
+     * No auto-glowing (glow removed for this UUID). Toggle Wiggly dog is separate
+     * ({@link #MISTER_WIGGLY_PLAYER_UUID}).
      */
     public static final UUID SPECIAL_PERK_PLAYER_UUID =
             UUID.fromString("4274c47f-d61f-4850-bf29-9e5c185db4ac");
@@ -55,8 +56,9 @@ public final class AzsCompanionsConstants {
     public static final String WOLFY_COMPANION_NAME = "Wolfy";
 
     /**
-     * Toggleable player-following dog for {@link #SPECIAL_PERK_PLAYER_UUID} (pink collar).
+     * Toggleable player-following dog for {@link #MISTER_WIGGLY_PLAYER_UUID} (pink collar).
      * Flies only while the owner is actively flying — same rule as special companions.
+     * Defaults ON for that UUID; hard-capped to one dog.
      */
     public static final String TOGGLE_WIGGLY_DOG_NAME = "Wiggly";
 

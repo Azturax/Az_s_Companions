@@ -9,17 +9,17 @@ import java.util.function.ToDoubleFunction;
 
 /**
  * Loader-agnostic helpers for the UUID-gated toggleable Wiggly dog perk
- * ({@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID}).
+ * ({@link AzsCompanionsConstants#MISTER_WIGGLY_PLAYER_UUID}).
  * <p>
- * Separate from the one-shot Wolfy companion grant and from Mister Wiggly's
- * companion-following sidekick.
+ * Separate from the one-shot Wolfy companion grant. Mister Wiggly also has a
+ * companion-following sidekick; this perk is the player-following toggle dog.
  * <p>
- * Visibility is <strong>opt-in</strong> ({@link #DEFAULT_VISIBLE} = {@code false}):
- * the dog only appears after the player toggles it on ({@code /az wiggly} or keybind).
+ * Global default is <strong>off</strong> ({@link #DEFAULT_VISIBLE}); the eligible
+ * Wiggly recipient defaults <strong>on</strong> until they dismiss via toggle.
  * At most {@link #MAX_OWNED_DOGS} toggle dog may exist per eligible owner.
  */
 public final class WigglyDogPerkSupport {
-    /** New installs / untoggled players: dog stays dismissed until explicitly shown. */
+    /** Non-recipients / untoggled players: dog stays dismissed. */
     public static final boolean DEFAULT_VISIBLE = false;
 
     /** Hard cap: one toggle Wiggly per eligible owner (server-wide). */
@@ -27,13 +27,11 @@ public final class WigglyDogPerkSupport {
 
     /**
      * When present on the player (scoreboard tag / persistent flag), the toggle dog is shown.
-     * Absence = hidden ({@link #DEFAULT_VISIBLE}).
      */
     public static final String PLAYER_SHOWN_TAG = "azscompanions.wiggly_dog_shown";
 
     /**
      * Legacy dismiss tag (pre-1.0.2). Presence still forces hidden; cleaned up on toggle.
-     * Historically absence of this tag meant shown — that default is inverted.
      */
     public static final String PLAYER_HIDDEN_TAG = "azscompanions.wiggly_dog_hidden";
 
@@ -46,8 +44,16 @@ public final class WigglyDogPerkSupport {
     private WigglyDogPerkSupport() {
     }
 
+    /** Wiggly toggle dog recipient: Mister Wiggly ({@code 5b0a2d0a-…}). */
     public static boolean isEligible(UUID uuid) {
-        return uuid != null && AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID.equals(uuid);
+        return uuid != null && AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(uuid);
+    }
+
+    /**
+     * Eligible Wiggly owner defaults visible (ON); everyone else defaults OFF.
+     */
+    public static boolean defaultsVisible(UUID uuid) {
+        return isEligible(uuid);
     }
 
     public static boolean isToggleDogName(String name) {
@@ -59,32 +65,34 @@ public final class WigglyDogPerkSupport {
 
     /**
      * Scoreboard-tag visibility (Fabric / NeoForge 1.21.1).
-     * Legacy {@link #PLAYER_HIDDEN_TAG} wins over shown; otherwise requires {@link #PLAYER_SHOWN_TAG}.
+     * Legacy {@link #PLAYER_HIDDEN_TAG} forces off; {@link #PLAYER_SHOWN_TAG} forces on;
+     * otherwise {@link #defaultsVisible(UUID)}.
      */
-    public static boolean isShownFromTags(Collection<String> tags) {
-        if (tags == null || tags.isEmpty()) {
-            return DEFAULT_VISIBLE;
-        }
-        if (tags.contains(PLAYER_HIDDEN_TAG)) {
+    public static boolean isShownFromTags(Collection<String> tags, UUID ownerUuid) {
+        if (tags != null && tags.contains(PLAYER_HIDDEN_TAG)) {
             return false;
         }
-        return tags.contains(PLAYER_SHOWN_TAG);
+        if (tags != null && tags.contains(PLAYER_SHOWN_TAG)) {
+            return true;
+        }
+        return defaultsVisible(ownerUuid);
     }
 
     /**
      * Persistent-data visibility (NeoForge 26.2).
-     * Explicit hidden wins; otherwise requires an explicit shown=true flag.
+     * Explicit hidden wins; explicit shown uses the flag; else {@link #defaultsVisible(UUID)}.
      */
     public static boolean isShownFromPersistentFlags(
             boolean hasShownKey, boolean shown,
-            boolean hasHiddenKey, boolean hidden) {
+            boolean hasHiddenKey, boolean hidden,
+            UUID ownerUuid) {
         if (hasHiddenKey && hidden) {
             return false;
         }
         if (hasShownKey) {
             return shown;
         }
-        return DEFAULT_VISIBLE;
+        return defaultsVisible(ownerUuid);
     }
 
     /**

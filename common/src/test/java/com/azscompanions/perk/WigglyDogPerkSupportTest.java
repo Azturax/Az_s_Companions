@@ -15,10 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WigglyDogPerkSupportTest {
     @Test
-    void eligibleMatchesSpecialPerkUuid() {
-        assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
+    void eligibleIsMisterWigglyUuid() {
+        assertTrue(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
+        assertEquals(UUID.fromString("5b0a2d0a-fd88-49b6-9138-d0103af9a0d5"),
+                AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID);
+        assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.WOLFY_PLAYER_UUID));
-        assertFalse(WigglyDogPerkSupport.isEligible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
         assertFalse(WigglyDogPerkSupport.isEligible(null));
         assertFalse(WigglyDogPerkSupport.isEligible(UUID.randomUUID()));
     }
@@ -41,29 +43,39 @@ class WigglyDogPerkSupportTest {
     }
 
     @Test
-    void defaultOffAndHardCap() {
+    void defaultOffExceptEligibleOn() {
         assertFalse(WigglyDogPerkSupport.DEFAULT_VISIBLE);
         assertEquals(1, WigglyDogPerkSupport.MAX_OWNED_DOGS);
+        assertTrue(WigglyDogPerkSupport.defaultsVisible(AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID));
+        assertFalse(WigglyDogPerkSupport.defaultsVisible(AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
+        assertFalse(WigglyDogPerkSupport.defaultsVisible(UUID.randomUUID()));
+        assertFalse(WigglyDogPerkSupport.defaultsVisible(null));
     }
 
     @Test
-    void shownFromTagsRequiresExplicitShown() {
-        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of()));
-        assertFalse(WigglyDogPerkSupport.isShownFromTags(null));
-        assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_SHOWN_TAG)));
-        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG)));
+    void shownFromTagsUsesOwnerDefault() {
+        UUID wiggly = AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID;
+        UUID other = AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID;
+        assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(), wiggly));
+        assertTrue(WigglyDogPerkSupport.isShownFromTags(null, wiggly));
+        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(), other));
+        assertTrue(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_SHOWN_TAG), other));
+        assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG), wiggly));
         assertFalse(WigglyDogPerkSupport.isShownFromTags(Set.of(
                 WigglyDogPerkSupport.PLAYER_SHOWN_TAG,
-                WigglyDogPerkSupport.PLAYER_HIDDEN_TAG)));
+                WigglyDogPerkSupport.PLAYER_HIDDEN_TAG), wiggly));
     }
 
     @Test
-    void shownFromPersistentFlagsDefaultOff() {
-        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(false, false, false, false));
-        assertTrue(WigglyDogPerkSupport.isShownFromPersistentFlags(true, true, false, false));
-        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(true, false, false, false));
-        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(true, true, true, true));
-        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(false, false, true, true));
+    void shownFromPersistentFlagsUsesOwnerDefault() {
+        UUID wiggly = AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID;
+        assertTrue(WigglyDogPerkSupport.isShownFromPersistentFlags(false, false, false, false, wiggly));
+        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(
+                false, false, false, false, AzsCompanionsConstants.SPECIAL_PERK_PLAYER_UUID));
+        assertTrue(WigglyDogPerkSupport.isShownFromPersistentFlags(true, true, false, false, wiggly));
+        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(true, false, false, false, wiggly));
+        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(true, true, true, true, wiggly));
+        assertFalse(WigglyDogPerkSupport.isShownFromPersistentFlags(false, false, true, true, wiggly));
     }
 
     @Test

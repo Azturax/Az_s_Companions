@@ -37,7 +37,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
 - **Treasure loot:** Companion Charm in desert pyramids (5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)
-- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + survival flight, no glow (`4274…`) — **Wiggly dog default OFF**; toggle with `/az wiggly` or keybind (at most one dog)
+- **UUID perks:** Wolfy grant only (`7c97…`); survival flight (`4274…`); Wiggly toggle dog default **ON** for Mister Wiggly (`5b0a…`), hard-capped to one; `/az wiggly` or keybind to dismiss
 - **No natural despawn:** owned companions / Bits get persistence + tag `azscompanions.nodespawn`
 - **Flower gifts**, logout park / login restore, form coat arrows, minecart-like sit pose
 - Cat scare creepers / wolf scare skeletons; wander mob play; ride-along when you mount
