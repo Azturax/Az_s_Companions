@@ -1511,6 +1511,7 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     /** @deprecated Prefer {@link #storeAllLivingChildren()} so Bits can be called back. */
+    @Deprecated
     public void despawnChildCompanions() {
         storeAllLivingChildren();
     }

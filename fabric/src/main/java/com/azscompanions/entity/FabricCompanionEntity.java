@@ -1290,6 +1290,8 @@ public class FabricCompanionEntity extends PathfinderMob {
         return child;
     }
 
+    /** Prefer {@link #storeAllLivingChildren()} so Bits can be called back. */
+    @Deprecated
     public void despawnChildCompanions() {
         storeAllLivingChildren();
     }

@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 1.0.0
+
+First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
+
+### Product
+- **Companions:** Charm summon/store, Follow / Stay / Sit / Wander, Customize (forms + coat variants, proportions, activity skins), inventory, night sleep, Kon Bed, child Bits
+- **Worldplay:** desert-pyramid Companion Charm loot (`world.enableLoot`), flower gifts, logout park / login restore, dimension follow (vanilla + modded), swim follow, ride-along mounts, wander mob play, cat/wolf scare, chunk tickets
+- **Combat / perks:** fixed netherite-sword melee, UUID Wolfy / Wiggly (+ survival flight) perks, team fights (CCI / `/az teamfight`)
+- **Optional AI:** `/ask` · `/az ask`, ambient + reactive chatter, persona onboarding, admin LLM profiles + join consent — [COMPANION_AI.md](docs/COMPANION_AI.md)
+- **CCI editions:** streamer-chat companions when CCI + iChunUtil are installed — [CCI.md](docs/CCI.md)
+- **Soft-compat:** FTB, map icons, dynamic lights, Simple Voice Chat detect — [COMPAT.md](docs/COMPAT.md)
+
+### Changed (from 0.4.7)
+- **Docs / copy:** README and version docs describe **1.0.0**; teamfight hint prefers primary `/az teamfight on` (alias `/azscompanions` still works)
+- **Housekeeping:** unfinished shared-hooks draft moved to `docs/dev/` (live wiring remains in loader event classes)
+
+### Not shipped
+- NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar
+- Removed earlier experiments stay gone: Jindujun / Flying Nimbus / whistle, Glowing Orb form, flight ki aura
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-1.0.0+1.21.1.jar` | `azscompanions-fabric-1.0.0+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.0+1.21.1.jar` | `azscompanions-fabric-cci-1.0.0+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.7
 
 ### Removed

@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v0.4.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.4.7)
+- **Release:** [v1.0.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.0)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
@@ -17,10 +17,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-0.4.7+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-0.4.7+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-0.4.7+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-0.4.7+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-1.0.0+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-1.0.0+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-1.0.0+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-1.0.0+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -31,14 +31,13 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 3. Drop the matching edition jar into `mods/`
 4. **CCI editions only** — also install CCI **1.13.0** + iChunUtil **1.0.3** for the **same loader** (see [docs/CCI.md](docs/CCI.md))
 
-**Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped yet — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
+**Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (0.4.7)
+## Gameplay (1.0.0)
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
-- **Treasure loot:** Companion Charm (desert pyramids, 5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)
-- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + flight, no glow (`4274…`)
-- **No Jindujun / Flying Nimbus / whistle** (removed in 0.4.7)
+- **Treasure loot:** Companion Charm in desert pyramids (5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)
+- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + survival flight, no glow (`4274…`)
 - **No natural despawn:** owned companions / Bits get persistence + tag `azscompanions.nodespawn`
 - **Flower gifts**, logout park / login restore, form coat arrows, minecart-like sit pose
 - Cat scare creepers / wolf scare skeletons; wander mob play; ride-along when you mount
@@ -50,8 +49,13 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 - **Admin:** `/az admin` · `/az ai config` (ops / host / whitelist) — editable LLM profiles + opt-in `serverLlmOnly` (Use server LLM, default OFF); save AI file — [ADMIN.md](docs/ADMIN.md) · [COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Commands:** primary root `/az` (alias `/azscompanions`); `/az wiggly` for UUID toggle dog
 - **CCI:** full manual **[CCI Documentation](docs/CCI.md)** — CCI-summoned companions use streamer chat; AI when configured
-- Soft-compat: Simple Voice Chat + dynamic lights — [COMPAT.md](docs/COMPAT.md)
-- **No Glowing Orb** (removed; old saves migrate to Player form); **no flight aura** bubbles/trails
+- Soft-compat: Simple Voice Chat + dynamic lights + FTB/map hooks — [COMPAT.md](docs/COMPAT.md)
+
+### Known limitations
+
+- **NeoForge 26.2** (`:neoforge-26`) is a work-in-progress port — **no jar** in this release
+- VoiceMod TTS / Simple Voice Chat entity audio emission — detect-only soft-compat (not full TTS bridge)
+- Old saves with removed features (Glowing Orb form, Jindujun whistle/nimbus) migrate or simply no longer spawn those items/entities
 
 ## Build
 
@@ -59,7 +63,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 ./gradlew buildAll
 ```
 
-Outputs under `*/build/libs/azscompanions-*-0.4.5+1.21.1.jar`.
+Outputs under `*/build/libs/azscompanions-*-1.0.0+1.21.1.jar` (four editions). NeoForge 26.2 uses `./gradlew buildNeoForge26` and is not part of `buildAll`.
 
 ## License
 

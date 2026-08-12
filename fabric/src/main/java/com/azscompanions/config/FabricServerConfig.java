@@ -23,7 +23,7 @@ public final class FabricServerConfig {
      * CCI {@code maxChildren=}/{@code childCap=} overrides per entity (hard max 64).
      */
     public static final int MAX_CHILD_COMPANIONS_PER_LEADER = 3;
-    /** If true, new team-fight sessions start enabled (normally use /azscompanions teamfight on). */
+    /** If true, new team-fight sessions start enabled (normally use /az teamfight on). */
     public static final boolean TEAMFIGHT_ENABLED_BY_DEFAULT = false;
     /**
      * Interaction amount per child companion (CCI {@code amount=} ÷ this = spawn count).

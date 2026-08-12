@@ -50,7 +50,7 @@ public final class ServerConfig {
 
         builder.push("teamfight");
         TEAMFIGHT_ENABLED_BY_DEFAULT = builder
-                .comment("If true, team fights start enabled on server boot (normally use /azscompanions teamfight on).")
+                .comment("If true, team fights start enabled on server boot (normally use /az teamfight on).")
                 .define("enabledByDefault", false);
         SUPPORT_AMOUNT_PER_COMPANION = builder
                 .comment("CCI interaction amount per child (amount= ÷ this = spawn count). Example: amount=500 with 100 → 5 children. Not a max cap.")

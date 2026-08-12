@@ -55,7 +55,7 @@
   "message.azscompanions.child_spawned": "A child appeared: %s",
   "message.azscompanions.teamfight_on": "Team fights ON — scoreboard live. CCI bits/subs spawns active.",
   "message.azscompanions.teamfight_off": "Team fights OFF — scoreboard hidden. Bits/subs spawns idle.",
-  "message.azscompanions.teamfight_disabled": "Team fights are off. Use /azscompanions teamfight on",
+  "message.azscompanions.teamfight_disabled": "Team fights are off. Use /az teamfight on",
   "message.azscompanions.not_owner": "That's not your companion.",
   "message.azscompanions.mode_follow": "Following you.",
   "message.azscompanions.mode_stay": "Staying put.",
