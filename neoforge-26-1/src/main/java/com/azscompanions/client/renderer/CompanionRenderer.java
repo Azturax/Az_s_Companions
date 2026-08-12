@@ -7,12 +7,27 @@ import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionMode;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ArmorModelSet;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.layers.CapeLayer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
+import net.minecraft.client.renderer.entity.layers.WingsLayer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.core.ClientAsset;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.PlayerModelType;
+import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * NeoForge 26.2 companion renderer (AvatarRenderState / submit pipeline).
- * Feminine mesh + proportions are live; armor/cape layers and mob-form rendering remain pending.
+ * Supports feminine proportions, equipment layers, player skins/capes, and delegated mob forms.
  */
 public final class CompanionRenderer
         extends MobRenderer<CompanionEntity, CompanionRenderState, FeminineCompanionModel> {
@@ -22,7 +37,6 @@ public final class CompanionRenderer
 
     private final FeminineCompanionModel wideModel;
     private final FeminineCompanionModel slimModel;
-    @SuppressWarnings("unused") // reserved until SubmitNodeCollector mob-form port lands
     private final CompanionMobFormRenderer formRenderer;
 
     public CompanionRenderer(EntityRendererProvider.Context context) {
@@ -30,6 +44,16 @@ public final class CompanionRenderer
         this.wideModel = this.getModel();
         this.slimModel = new FeminineCompanionModel(context.bakeLayer(FeminineCompanionModel.LAYER_SLIM), true);
         this.formRenderer = new CompanionMobFormRenderer(context);
+        this.addLayer(new HumanoidArmorLayer(
+                this,
+                ArmorModelSet.bake(ModelLayers.PLAYER_ARMOR, context.getModelSet(), part -> new PlayerModel(part, false)),
+                context.getEquipmentRenderer()));
+        this.addLayer(new ItemInHandLayer(this));
+        this.addLayer(new WingsLayer(this, context.getModelSet(), context.getEquipmentRenderer()));
+        this.addLayer((net.minecraft.client.renderer.entity.layers.RenderLayer) new CapeLayer(
+                (net.minecraft.client.renderer.entity.RenderLayerParent) this,
+                context.getModelSet(),
+                context.getEquipmentAssets()));
     }
 
     @Override
@@ -40,6 +64,8 @@ public final class CompanionRenderer
     @Override
     public void extractRenderState(CompanionEntity entity, CompanionRenderState state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, partialTick, this.itemModelResolver);
+        state.source = entity;
 
         CompanionForm form = entity.getForm();
         boolean slim = entity.isSlimArms();
@@ -86,11 +112,44 @@ public final class CompanionRenderer
         state.passengerSitPose = mode == CompanionMode.SIT && form.usesPassengerSitPose();
         state.skinTexture = CompanionSkinTextures.resolve(entity);
         state.capeTexture = CompanionSkinTextures.resolveCape(entity);
+        ClientAsset.Texture body = new ClientAsset.DownloadedTexture(
+                state.skinTexture != null ? state.skinTexture : FALLBACK_SKIN, "");
+        ClientAsset.Texture cape = state.capeTexture == null
+                ? null
+                : new ClientAsset.DownloadedTexture(state.capeTexture, "");
+        state.skin = new PlayerSkin(
+                body, cape, cape, slim ? PlayerModelType.SLIM : PlayerModelType.WIDE, false);
+        state.showCape = cape != null;
+        state.showHat = true;
+        state.showJacket = true;
+        state.showLeftPants = true;
+        state.showRightPants = true;
+        state.showLeftSleeve = true;
+        state.showRightSleeve = true;
+        if (!showArmor) {
+            state.headEquipment = ItemStack.EMPTY;
+            state.chestEquipment = ItemStack.EMPTY;
+            state.legsEquipment = ItemStack.EMPTY;
+            state.feetEquipment = ItemStack.EMPTY;
+        }
         state.scale = scale;
 
         // Swap slim/wide before model setupAnim during submit.
         this.model = slim ? slimModel : wideModel;
         this.shadowRadius = form.isPlayer() ? 0.5f * scale : 0.4f * scale;
+    }
+
+    @Override
+    public void submit(
+            CompanionRenderState state,
+            PoseStack poseStack,
+            SubmitNodeCollector submitNodeCollector,
+            CameraRenderState camera) {
+        if (state.form != null && !state.form.isPlayer()) {
+            formRenderer.submit(state.source, state.form, state.partialTick, poseStack, submitNodeCollector, camera);
+            return;
+        }
+        super.submit(state, poseStack, submitNodeCollector, camera);
     }
 
     @Override

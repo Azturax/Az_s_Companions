@@ -168,8 +168,11 @@ public class CompanionEntity extends PathfinderMob {
     private int stuckTicks;
     private Vec3 lastPos = Vec3.ZERO;
     private String voiceProfile = "kon_soft";
+    /** Last-known owner profile name for hosted-world UUID remapping. */
+    private String ownerName = "";
     private String pronouns = "she/her";
     private String behaviorStyle = "gentle";
+    private boolean chunkLoadingEnabled = true;
     /** Once Kon-identity bed grant has been given to the owner. */
     private boolean konBedGranted;
     /** Transient playful “turn evil” countdown (ticks). Not persisted. */
@@ -1265,6 +1268,7 @@ public class CompanionEntity extends PathfinderMob {
 
     public void setOwner(Player player) {
         setOwnerUuid(player.getUUID());
+        setOwnerName(player.getGameProfile().name());
         trustedPlayers.add(player.getUUID());
     }
 
@@ -1360,6 +1364,25 @@ public class CompanionEntity extends PathfinderMob {
             return UUID.fromString(raw);
         } catch (IllegalArgumentException ex) {
             return null;
+        }
+    }
+
+    public String getOwnerName() {
+        return ownerName == null ? "" : ownerName;
+    }
+
+    public void setOwnerName(@Nullable String name) {
+        ownerName = name == null ? "" : name.trim();
+    }
+
+    public boolean isChunkLoadingEnabled() {
+        return chunkLoadingEnabled;
+    }
+
+    public void setChunkLoadingEnabled(boolean enabled) {
+        chunkLoadingEnabled = enabled;
+        if (!enabled && !level().isClientSide()) {
+            com.azscompanions.world.CompanionChunkTickets.release(this);
         }
     }
 
@@ -1935,6 +1958,10 @@ public class CompanionEntity extends PathfinderMob {
         if (owner != null) {
             output.store("Owner", UUIDUtil.CODEC, owner);
         }
+        if (!getOwnerName().isBlank()) {
+            output.putString("OwnerName", getOwnerName());
+        }
+        output.putBoolean("ChunkLoading", chunkLoadingEnabled);
         if (leaderUuid != null) {
             output.store("LeaderUuid", UUIDUtil.CODEC, leaderUuid);
         }
@@ -2010,6 +2037,8 @@ public class CompanionEntity extends PathfinderMob {
             }
         }
         input.read("Owner", UUIDUtil.CODEC).ifPresent(this::setOwnerUuid);
+        setOwnerName(input.getStringOr("OwnerName", ""));
+        chunkLoadingEnabled = input.getBooleanOr("ChunkLoading", true);
         leaderUuid = input.read("LeaderUuid", UUIDUtil.CODEC).orElse(null);
         fightSpawn = input.getBooleanOr("FightSpawn", false);
         entityData.set(DATA_DEFINITION, input.getStringOr("Definition", entityData.get(DATA_DEFINITION)));

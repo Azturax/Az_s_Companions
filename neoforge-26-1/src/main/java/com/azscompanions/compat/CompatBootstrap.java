@@ -7,6 +7,10 @@ import com.azscompanions.compat.optional.FtbCompatModule;
 import com.azscompanions.compat.optional.StorageCompatModule;
 import com.azscompanions.compat.optional.TechCompatModule;
 import com.azscompanions.compat.optional.VoiceChatCompatModule;
+import com.azscompanions.compat.dynamiclights.DynamicLightsCompatModule;
+import com.azscompanions.compat.fancyanim.FancyAnimCompatModule;
+import com.azscompanions.compat.hosted.HostedWorldCompatModule;
+import com.azscompanions.compat.map.MapCompatModule;
 import net.neoforged.fml.ModList;
 
 /**
@@ -30,6 +34,10 @@ public final class CompatBootstrap {
         // Always probe: Simple Voice Chat (`voicechat`) and optional `voicemod` awareness.
         VoiceChatCompatModule.bootstrap();
         FtbCompatModule.bootstrap();
+        MapCompatModule.bootstrap();
+        FancyAnimCompatModule.bootstrap();
+        DynamicLightsCompatModule.bootstrap();
+        HostedWorldCompatModule.bootstrap();
 
         // Always register vanilla furnace fuel helper as a machine handler example.
         CompanionApi.registerMachineHandler(new VanillaFurnaceMachineHandler());

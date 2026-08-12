@@ -21,7 +21,7 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -822,7 +822,17 @@ public final class CompanionCreatorScreen extends Screen {
 
         graphics.fill(previewX - 2, previewY - 2, previewX + PREVIEW_W + 2, previewY + previewH + 2, 0x66000000);
         try {
-            // Entity preview deferred for NeoForge 26.2 InventoryScreen API.
+            net.minecraft.client.gui.screens.inventory.InventoryScreen.extractEntityInInventoryFollowsMouse(
+                    graphics,
+                    previewX,
+                    previewY,
+                    previewX + PREVIEW_W,
+                    previewY + previewH,
+                    Math.max(24, Math.min(PREVIEW_W, previewH) / 2),
+                    0.0625f,
+                    mouseX,
+                    mouseY,
+                    companion);
         } catch (Throwable ignored) {
             graphics.text(font, "Preview", previewX + PREVIEW_W / 2, previewY + previewH / 2, TEXT_LABEL);
         }

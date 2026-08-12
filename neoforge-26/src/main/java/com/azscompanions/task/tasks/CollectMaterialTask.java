@@ -22,6 +22,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 
 import javax.annotation.Nullable;
@@ -185,12 +186,12 @@ public final class CollectMaterialTask extends CompanionTask {
             fail("container_forbidden");
             return TaskTickResult.FAILED;
         }
-        // Block item-handler capability lookup deferred for NeoForge 26.2 API shift.
-        IItemHandler handler = null;
-        if (handler == null) {
+        var resourceHandler = level.getCapability(Capabilities.Item.BLOCK, chestPos, null);
+        if (resourceHandler == null) {
             fail("not_a_container");
             return TaskTickResult.FAILED;
         }
+        IItemHandler handler = IItemHandler.of(resourceHandler);
         CompanionInventory inv = companion.getCompanionInventory();
         boolean moved = false;
         for (int i = 0; i < CompanionInventory.BACKPACK_SIZE; i++) {

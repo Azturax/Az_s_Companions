@@ -1,6 +1,7 @@
 package com.azscompanions.client.model;
 
 import com.azscompanions.AzsCompanions;
+import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -10,20 +11,17 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 
-/**
- * Small fox/Kon-style ears parented to the player head (mesh only — layer submit pending).
- */
-public final class KonEarsModel {
+/** Small fox/Kon-style ears parented to the player head. */
+public final class KonEarsModel extends EntityModel<AvatarRenderState> {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, "kon_ears"), "main");
     public static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AzsCompanions.MOD_ID, "textures/entity/kon_ears.png");
 
-    private final ModelPart root;
-
     public KonEarsModel(ModelPart root) {
-        this.root = root;
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -55,7 +53,4 @@ public final class KonEarsModel {
         return LayerDefinition.create(mesh, 16, 16);
     }
 
-    public ModelPart root() {
-        return root;
-    }
 }

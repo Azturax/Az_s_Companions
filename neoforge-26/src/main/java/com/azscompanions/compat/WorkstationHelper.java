@@ -40,7 +40,23 @@ public final class WorkstationHelper {
      * Full shaped/shapeless matching can be expanded later without changing the task API.
      */
     public static boolean tryConsumeIngredients(CompanionEntity companion, Recipe<?> recipe, ServerLevel level) {
-        // Recipe ingredient enumeration API moved in 26.2 — skip consumption for now.
-        return false;
+        for (Ingredient ingredient : recipe.placementInfo().ingredients()) {
+            if (ingredient.isEmpty()) {
+                continue;
+            }
+            boolean found = false;
+            for (int i = 0; i < companion.getCompanionInventory().getSlots(); i++) {
+                ItemStack stack = companion.getCompanionInventory().getStackInSlot(i);
+                if (!stack.isEmpty() && ingredient.test(stack)) {
+                    stack.shrink(1);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
     }
 }

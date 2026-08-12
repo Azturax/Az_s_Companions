@@ -71,9 +71,8 @@ public final class CompanionGameEvents {
         }
     }
 
-    /** Bed home clearing deferred — BlockEvent.BreakEvent API pending NeoForge 26.2 confirm. */
-    // @SubscribeEvent
-    // public static void onBlockBroken(...) { ... }
+    // NeoForge 26.2.0.59 exposes no BlockEvent.BreakEvent; bed-home clearing
+    // remains unavailable until the replacement post-break event is published.
 
     @SubscribeEvent
     public static void onItemPickup(ItemEntityPickupEvent.Post event) {

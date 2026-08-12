@@ -9,21 +9,26 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.TagValueOutput;
 import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public final class CompanionCharmItem extends Item {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -100,7 +105,12 @@ public final class CompanionCharmItem extends Item {
         }
     }
 
-    // inventoryTick signature changed in 26.2; single-charm enforcement runs on use/bind paths.
+    @Override
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+        if (entity instanceof Player player) {
+            enforceSingleCharm(player);
+        }
+    }
 
     public static void enforceSingleCharm(Player player) {
         boolean kept = false;
@@ -127,5 +137,16 @@ public final class CompanionCharmItem extends Item {
         }
     }
 
-    // TooltipDisplay API changed in 26.2; hover text deferred.
+    @Override
+    public void appendHoverText(
+            ItemStack stack,
+            TooltipContext context,
+            TooltipDisplay display,
+            Consumer<Component> tooltip,
+            TooltipFlag flag) {
+        tooltip.accept(Component.translatable("item.azscompanions.companion_charm.desc"));
+        if (CharmData.isBound(stack)) {
+            tooltip.accept(Component.translatable("item.azscompanions.companion_charm.bound"));
+        }
+    }
 }

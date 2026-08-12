@@ -40,13 +40,13 @@ tasks.register('buildAll1201') {
 
 tasks.register('buildNeoForge26') {
     group = 'build'
-    description = 'Build NeoForge standalone jar for Minecraft 26.2 (WIP — not a release gate)'
+    description = 'Build NeoForge standalone jar for Minecraft 26.2 (no CCI)'
     dependsOn ':neoforge-26:build'
 }
 
 tasks.register('buildNeoForge261') {
     group = 'build'
-    description = 'Build NeoForge standalone jar for Minecraft 26.1.2 (WIP — not a release gate)'
+    description = 'Build NeoForge standalone jar for Minecraft 26.1.2 (no CCI)'
     dependsOn ':neoforge-26-1:build'
 }
 

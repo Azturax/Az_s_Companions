@@ -44,11 +44,12 @@ public final class DepositTask extends CompanionTask {
             fail("container_forbidden");
             return TaskTickResult.FAILED;
         }
-        IItemHandler handler = ((net.neoforged.neoforge.items.IItemHandler) null) /* capability deferred */;
-        if (handler == null) {
+        var resourceHandler = level.getCapability(Capabilities.Item.BLOCK, chestPos, null);
+        if (resourceHandler == null) {
             fail("not_a_container");
             return TaskTickResult.FAILED;
         }
+        IItemHandler handler = IItemHandler.of(resourceHandler);
         boolean movedAny = false;
         for (int i = 0; i < companion.getCompanionInventory().BACKPACK_SIZE; i++) {
             ItemStack stack = companion.getCompanionInventory().getStackInSlot(i);

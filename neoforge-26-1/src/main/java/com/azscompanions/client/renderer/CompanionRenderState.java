@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 /** Render-state payload for companions (AvatarRenderState / NeoForge 26.2). */
 public final class CompanionRenderState extends AvatarRenderState {
+    @Nullable
+    public com.azscompanions.entity.CompanionEntity source;
     public CompanionForm form = CompanionForm.PLAYER;
     public CompanionMode mode = CompanionMode.FOLLOW;
     public boolean slimArms;

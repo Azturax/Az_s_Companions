@@ -8,11 +8,11 @@ Az's Companions product line is developed on **Minecraft 1.21.1** (NeoForge + Fa
 
 | User / target request | Minecraft | NeoForge / Forge | Fabric | CCI | Status |
 |-----------------------|-----------|------------------|--------|-----|--------|
-| Production LTS | **1.21.1** | NeoForge **21.1.248** | Fabric API `0.116.15+1.21.1` | **Yes** (1.13.0) | **Shipped** |
-| Latest CCI MC | **1.21.5** | NeoForge **21.5.98** | Fabric API `0.128.2+1.21.5` | **Yes** (1.13.0) | **Shipped** |
-| `1.20.1` | **1.20.1** | **Forge 47.4.22** (no NeoForge 20.1) | Fabric API `0.92.11+1.20.1` | Fabric + Forge **Yes** | **Shipped** |
-| NeoForge `26.1.2` | **26.1.2** | **26.1.2.95** | Fabric API exists | **None** | **WIP** — not shipped |
-| NeoForge `26.2` | **26.2** | **26.2.0.59** | Fabric API `0.156.0+26.2` | **None** | **WIP** — not shipped |
+| Production LTS | **1.21.1** | NeoForge **21.1.248** | Fabric API `0.116.15+1.21.1` | **Yes** (1.13.0) | **Shipped** (`v1.0.4`) |
+| Latest CCI MC | **1.21.5** | NeoForge **21.5.98** | Fabric API `0.128.2+1.21.5` | **Yes** (1.13.0) | **Shipped** (`v1.0.4`) |
+| `1.20.1` | **1.20.1** | **Forge 47.4.22** (no NeoForge 20.1) | Fabric API `0.92.11+1.20.1` | Fabric + Forge **Yes** | **Shipped** (`v1.0.4`) |
+| NeoForge `26.1.2` | **26.1.2** | **26.1.2.95** | Fabric API exists | **None** | **Shipped** (`v1.0.5`, standalone) |
+| NeoForge `26.2` | **26.2** | **26.2.0.59** | Fabric API `0.156.0+26.2` | **None** | **Shipped** (`v1.0.5`, standalone) |
 
 ### NeoForge calver notes
 
@@ -69,9 +69,16 @@ Do **not** reuse Modrinth version ids across Minecraft versions.
 
 **Honest omissions (1.20.1 Fabric + Forge):** JourneyMap soft-dep (API jar needs JVM 21+); wolf body armor (`AnimalArmorItem` / `BODY`); `Attributes.SCALE` (scale via entity data); nametag attachment → BB-height offset. See `fabric-1.20.1/NOTES.md` and `forge-1.20.1/NOTES.md`.
 
-### NeoForge 26.2 (`:neoforge-26`) / 26.1.2 (`:neoforge-26-1`)
+### NeoForge 26.2 (`:neoforge-26`) / 26.1.2 (`:neoforge-26-1`) — shipped in v1.0.5
 
-Compiles for local/dev use. Residual gaps (armor/elytra/cape SubmitNodeCollector, mob forms, Kon ears/bed, container caps, HUD hooks, etc.) — **do not ship**. Details earlier in this file / prior release notes.
+| Gate | Status |
+|------|--------|
+| `:neoforge-26` / `:neoforge-26-1` | **Yes** (standalone jars) |
+| Pins | NeoForge **26.2.0.59** / **26.1.2.95**; Java **25**; unobfuscated |
+| CCI | **None** for 26.1.2 / 26.2 |
+| Feature parity | **Yes** (AvatarRenderState / SubmitNodeCollector / GuiGraphicsExtractor ports) |
+
+**Honest omissions (26.x):** no CCI; no JourneyMap API jar; deposit chest world outlines (selection still works); bed-home clear on block break (no `BlockEvent.BreakEvent`); GameTests unregistered. See `neoforge-26/NOTES.md` and `neoforge-26-1/NOTES.md`.
 
 ## Gradle tasks
 
@@ -79,12 +86,14 @@ Compiles for local/dev use. Residual gaps (armor/elytra/cape SubmitNodeCollector
 ./gradlew buildAll          # 1.21.1: fabric, fabric-cci, neoforge, neoforge-cci
 ./gradlew buildAll215       # 1.21.5: fabric, fabric-cci, neoforge, neoforge-cci
 ./gradlew buildAll1201      # 1.20.1: fabric, fabric-cci, forge, forge-cci
-./gradlew buildNeoForge26   # 26.2 WIP — not part of release
-./gradlew buildNeoForge261  # 26.1.2 WIP — not part of release
+./gradlew buildNeoForge26   # 26.2 standalone
+./gradlew buildNeoForge261  # 26.1.2 standalone
 ```
 
 ## Shipped jar naming
 
 Pattern: `azscompanions-<loader>[-cci]-<mod_version>+<minecraft_version>.jar`
 
-Release tagging: single product tag `v1.0.4` with all successful MC/loader jars attached.
+Release tagging:
+- `v1.0.4` — 1.21.1 / 1.21.5 / 1.20.1 (12 jars)
+- `v1.0.5` — NeoForge **26.1.2** + **26.2** standalone (2 jars); prior MC lines remain on `v1.0.4`

@@ -4,19 +4,17 @@ import com.azscompanions.AzsCompanions;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
-/**
- * AI thinking HUD — RenderGuiEvent graphics API moved in 26.2; tick-driven redraw deferred.
- * Overlay remains callable once a stable GuiGraphicsExtractor hook is wired.
- */
 @EventBusSubscriber(modid = AzsCompanions.MOD_ID, value = Dist.CLIENT)
 public final class CompanionAiThinkingHudEvents {
     private CompanionAiThinkingHudEvents() {
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
-        // Intentionally empty until RenderGuiEvent.Post graphics accessor is confirmed for 26.2.
+    public static void onRenderGui(RenderGuiEvent.Post event) {
+        CompanionAiThinkingHudOverlay.render(
+                event.getGuiGraphics(),
+                event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 }

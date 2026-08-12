@@ -8,8 +8,11 @@ import com.azscompanions.client.screen.CompanionPersonaScreen;
 import com.azscompanions.client.screen.CompanionStatsScreen;
 import com.azscompanions.client.voice.ClientVoiceController;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.deposit.ClientDepositSelection;
 import com.azscompanions.network.packet.CompanionAiThinkingPacket;
+import com.azscompanions.network.packet.CompanionAiJoinOfferPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
+import com.azscompanions.network.packet.DepositSelectionSyncPacket;
 import com.azscompanions.network.packet.OpenAzAdminPacket;
 import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
 import com.azscompanions.network.packet.OpenCompanionMenuPacket;
@@ -42,6 +45,8 @@ public final class ClientNetworkHandlers {
         registrar.playToClient(OpenAzAdminPacket.TYPE, OpenAzAdminPacket.STREAM_CODEC, ClientNetworkHandlers::handleOpenAdmin);
         registrar.playToClient(TeamFightHudPacket.TYPE, TeamFightHudPacket.STREAM_CODEC, ClientNetworkHandlers::handleTeamFightHud);
         registrar.playToClient(CompanionAiThinkingPacket.TYPE, CompanionAiThinkingPacket.STREAM_CODEC, ClientNetworkHandlers::handleAiThinking);
+        registrar.playToClient(DepositSelectionSyncPacket.TYPE, DepositSelectionSyncPacket.STREAM_CODEC, ClientNetworkHandlers::handleDepositSelection);
+        registrar.playToClient(CompanionAiJoinOfferPacket.TYPE, CompanionAiJoinOfferPacket.STREAM_CODEC, ClientNetworkHandlers::handleAiJoinOffer);
     }
 
     private static void handleDialogue(CompanionDialoguePacket packet, IPayloadContext context) {
@@ -136,5 +141,14 @@ public final class ClientNetworkHandlers {
     private static void handleAiThinking(CompanionAiThinkingPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> ClientCompanionAiHud.apply(
                 packet.active(), packet.companionName(), packet.timeoutSeconds(), packet.progress()));
+    }
+
+    private static void handleDepositSelection(DepositSelectionSyncPacket packet, IPayloadContext context) {
+        context.enqueueWork(() -> ClientDepositSelection.apply(packet.payload()));
+    }
+
+    private static void handleAiJoinOffer(CompanionAiJoinOfferPacket packet, IPayloadContext context) {
+        context.enqueueWork(() ->
+                com.azscompanions.client.NeoAiJoinOfferClient.onOffer(packet.toOffer()));
     }
 }

@@ -38,8 +38,8 @@ public final class ContainerAccessApi {
         if (state.is(ModTags.Blocks.BLACKLISTED_BLOCKS)) {
             return false;
         }
-        if (!state.is(ModTags.Blocks.ALLOWED_CONTAINERS)) {
-            // Block item-handler capability lookup deferred for NeoForge 26.2 API shift.
+        if (!state.is(ModTags.Blocks.ALLOWED_CONTAINERS)
+                && level.getCapability(Capabilities.Item.BLOCK, pos, null) == null) {
             return false;
         }
         if (ProtectionHelper.isProtectedBlock(level, pos, companion.getOwner())) {

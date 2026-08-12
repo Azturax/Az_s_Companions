@@ -57,11 +57,12 @@ public final class MachineUseTask extends CompanionTask {
                 return TaskTickResult.RUNNING;
             }
         }
-        IItemHandler items = ((net.neoforged.neoforge.items.IItemHandler) null) /* capability deferred */;
-        if (items == null) {
+        var resourceHandler = level.getCapability(Capabilities.Item.BLOCK, machinePos, null);
+        if (resourceHandler == null) {
             fail("unsupported_machine");
             return TaskTickResult.FAILED;
         }
+        IItemHandler items = IItemHandler.of(resourceHandler);
         // Fallback: move one fuel/input stack into the machine.
         for (int i = 0; i < companion.getCompanionInventory().BACKPACK_SIZE; i++) {
             var stack = companion.getCompanionInventory().getStackInSlot(i);

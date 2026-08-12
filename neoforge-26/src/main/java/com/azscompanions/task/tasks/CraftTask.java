@@ -33,12 +33,31 @@ public final class CraftTask extends CompanionTask {
         return this;
     }
 
+    private static ItemStack resolveRecipeResult(ServerLevel level, RecipeHolder<?> holder) {
+        var displays = holder.value().display();
+        if (displays.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return displays.getFirst().result().resolveForFirstStack(
+                net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level));
+    }
+
     /** Resolve first crafting recipe that outputs {@code itemId} (e.g. minecraft:stick). */
     public CraftTask forResultItem(ServerLevel level, Identifier itemId) {
         if (itemId == null) {
             return this;
         }
-        /* Recipe enumeration deferred for NeoForge 26.2. */
+        for (RecipeHolder<?> holder : level.getServer().getRecipeManager().getRecipes()) {
+            ItemStack result = resolveRecipeResult(level, holder);
+            if (result.isEmpty()) {
+                continue;
+            }
+            Identifier key = BuiltInRegistries.ITEM.getKey(result.getItem());
+            if (itemId.equals(key)) {
+                this.recipeId = holder.id().identifier();
+                return this;
+            }
+        }
         return this;
     }
 
@@ -63,9 +82,29 @@ public final class CraftTask extends CompanionTask {
             fail("no_recipe");
             return TaskTickResult.FAILED;
         }
-        // Recipe ResourceKey / assemble APIs moved in NeoForge 26.2 — craft task deferred.
-        fail("recipe_api_deferred");
-        return TaskTickResult.FAILED;
+        Optional<RecipeHolder<?>> recipe = level.getServer().getRecipeManager().byKey(
+                net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId));
+        if (recipe.isEmpty()) {
+            fail("recipe_missing");
+            return TaskTickResult.FAILED;
+        }
+        ItemStack result = resolveRecipeResult(level, recipe.get()).copy();
+        if (result.isEmpty()) {
+            fail("empty_result");
+            return TaskTickResult.FAILED;
+        }
+        // MVP: require the player to have staged ingredients in companion inventory; consume one matching tag stack.
+        if (!WorkstationHelper.tryConsumeIngredients(companion, recipe.get().value(), level)) {
+            fail("missing_ingredients");
+            return TaskTickResult.FAILED;
+        }
+        ItemStack leftover = companion.getCompanionInventory().insertItemAuto(result, false);
+        if (!leftover.isEmpty()) {
+            fail("inventory_full");
+            return TaskTickResult.FAILED;
+        }
+        setProgress(100);
+        return TaskTickResult.COMPLETED;
     }
 
     @Override

@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 1.0.5
+
+NeoForge **26.x** ship: full product feature parity on **Minecraft 26.1.2** and **26.2** (standalone only — no CCI builds for these MC versions).
+
+### Added
+- **Minecraft 26.2** — NeoForge **26.2.0.59** (`:neoforge-26`), Java 25 / unobfuscated
+- **Minecraft 26.1.2** — NeoForge **26.1.2.95** (`:neoforge-26-1`), Java 25 / unobfuscated
+- Ports: AvatarRenderState / SubmitNodeCollector render (armor, cape, wings, hands, mob forms, Kon ears/bed), GuiGraphicsExtractor HUDs, capabilities containers/furnaces, craft/workstation recipes, logout/dimension/deposit/AI-join/chunk-ticket features
+
+### Honest omissions (26.x only)
+- **No CCI** / iChunUtil for 26.1.2 or 26.2
+- JourneyMap soft-dep plugin (no compatible MC 26 API jar); generic map compat remains
+- Deposit chest world outlines (selection still works)
+- Bed-home clear on block break (no `BlockEvent.BreakEvent` on pinned API)
+- GameTests unregistered against 26.x gametest API
+
+### Loaders
+| Minecraft | Standalone | CCI |
+|-----------|------------|-----|
+| **26.2** | NeoForge | — |
+| **26.1.2** | NeoForge | — |
+| **1.21.1 / 1.21.5 / 1.20.1** | unchanged — use **v1.0.4** jars | as in 1.0.4 |
+
+Jar pattern: `azscompanions-neoforge-1.0.5+26.2.jar`, `azscompanions-neoforge-1.0.5+26.1.2.jar` on tag `v1.0.5`.
+
 ## 1.0.4
 
 Multi-version release: full feature parity across **1.21.1**, **1.21.5**, and **1.20.1** (standalone + CCI where CCI exists).
@@ -16,8 +41,8 @@ Multi-version release: full feature parity across **1.21.1**, **1.21.5**, and **
 - Wolf body armor / `EquipmentSlot.BODY`; `Attributes.SCALE` (entity-data scale); nametag attachment → BB-height offset
 - Fabric: damage recent-action via `ALLOW_DAMAGE`; Forge: event-bus recent-action (no mixins)
 
-### Not shipped
-- NeoForge **26.1.2** / **26.2** — WIP compile modules only; residual render/API gaps — **no public jars**
+### Not shipped (superseded by 1.0.5)
+- NeoForge **26.1.2** / **26.2** — see **1.0.5**
 
 ### Loaders
 | Minecraft | Standalone | CCI |

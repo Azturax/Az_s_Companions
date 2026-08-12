@@ -15,6 +15,7 @@ import com.azscompanions.loot.CompanionLootSupport;
 import com.azscompanions.network.ModNetworking;
 import com.azscompanions.event.CompanionAiChatEvents;
 import com.azscompanions.event.CompanionGameEvents;
+import com.azscompanions.event.DepositSelectionEvents;
 import com.azscompanions.event.TeamFightGameEvents;
 import com.azscompanions.registry.ModBlockEntities;
 import com.azscompanions.registry.ModBlocks;
@@ -28,6 +29,7 @@ import com.azscompanions.registry.ModRecipeTypes;
 import com.azscompanions.registry.ModSounds;
 import com.azscompanions.task.TaskRegistry;
 import com.azscompanions.util.ModVersionCompat;
+import com.azscompanions.world.CompanionChunkTickets;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -37,6 +39,8 @@ import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
@@ -68,16 +72,22 @@ public final class AzsCompanions {
         modBus.addListener(ModNetworking::register);
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(this::onModConfig);
+        modBus.addListener(CompanionChunkTickets::register);
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        // Reload listeners: AddReloadListenerEvent pending NeoForge 26.2 event rename\r\n        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
+        NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
         NeoForge.EVENT_BUS.addListener(this::onServerStopped);
         NeoForge.EVENT_BUS.register(CompanionGameEvents.class);
         NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionRecentActionEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
+        NeoForge.EVENT_BUS.register(DepositSelectionEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionLogoutEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionDimensionTravelEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionCreeperCatScareEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionSkeletonWolfScareEvents.class);
+        com.azscompanions.ai.NeoAiJoinOfferEvents.bootstrap();
 
         container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         container.registerConfig(ModConfig.Type.COMMON, AiConfig.SPEC, AiConfig.FILE_NAME);
@@ -91,6 +101,11 @@ public final class AzsCompanions {
         }
         if (event.getConfig().getSpec() == AiConfig.SPEC) {
             CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
+        }
+        if (event.getConfig().getSpec() == ClientConfig.SPEC) {
+            com.azscompanions.compat.map.MapCompatModule.trySyncClientSettings();
+            com.azscompanions.compat.fancyanim.FancyAnimCompatModule.trySyncClientSettings();
+            com.azscompanions.compat.dynamiclights.DynamicLightsCompatModule.trySyncClientSettings();
         }
     }
 
@@ -108,9 +123,14 @@ public final class AzsCompanions {
     private void onRegisterCommands(RegisterCommandsEvent event) {
         CompanionCommands.register(event.getDispatcher());
         DebugCommands.register(event.getDispatcher());
+        com.azscompanions.deposit.DepositCommands.register(event.getDispatcher());
     }
 
-    private void onAddReloadListenersPlaceholder() { /* companion definitions still register via BuiltinCompanions */ }
+    private void onAddReloadListeners(AddServerReloadListenersEvent event) {
+        event.addListener(
+                Identifier.fromNamespaceAndPath(MOD_ID, "companion_definitions"),
+                new CompanionDefinitionReloadListener());
+    }
 
     private void onServerStarting(ServerStartingEvent event) {
         CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());
@@ -118,9 +138,39 @@ public final class AzsCompanions {
         LOGGER.info("Az's Companions loaded on server — companions per player={} — {}",
                 ServerConfig.MAX_COMPANIONS_PER_PLAYER.get(),
                 CompanionAiRuntime.get().statusLine());
+        var ids = com.azscompanions.task.GatherItemCatalog.newBuffer();
+        for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+            var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+            if (key != null && item != net.minecraft.world.item.Items.AIR) {
+                ids.add(key.toString());
+            }
+        }
+        com.azscompanions.task.GatherItemCatalog.refresh(ids);
+
+        var recipes = com.azscompanions.task.CraftRecipeCatalog.newBuffer();
+        var displayContext = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(
+                event.getServer().overworld());
+        for (var holder : event.getServer().getRecipeManager().getRecipes()) {
+            var displays = holder.value().display();
+            if (displays.isEmpty()) {
+                continue;
+            }
+            var result = displays.getFirst().result().resolveForFirstStack(displayContext);
+            if (result.isEmpty()) {
+                continue;
+            }
+            var itemKey = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(result.getItem());
+            if (itemKey != null) {
+                recipes.computeIfAbsent(itemKey.toString(), key -> new java.util.ArrayList<>())
+                        .add(holder.id().identifier().toString());
+            }
+        }
+        com.azscompanions.task.CraftRecipeCatalog.refresh(recipes);
     }
 
     private void onServerStopped(ServerStoppedEvent event) {
         CompanionAiRuntime.get().clearServerContext();
+        com.azscompanions.ai.CompanionRecentActionMemory.clearAll();
+        com.azscompanions.ai.CompanionInventoryWatchSupport.clearAll();
     }
 }
