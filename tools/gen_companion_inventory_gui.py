@@ -1,4 +1,14 @@
-"""Generate azscompanions companion_inventory.png aligned to menu slot coords."""
+"""Generate azscompanions companion_inventory.png aligned to menu slot coords.
+
+Visual target (companion inventory reference + Az's Companions panel language):
+- Light-grey (#C6C6C6) raised panels with white top/left + dark bottom/right bevel
+- Flat light-grey slot fills with dark top/left and white bottom/right grid bevels
+- Layout: armor+shield column, 3x9 storage, 9-slot companion hotbar, gap, player inv
+"""
+from __future__ import annotations
+
+import os
+
 from PIL import Image
 
 W, H = 194, 220
@@ -6,20 +16,22 @@ TEX = 256
 img = Image.new("RGBA", (TEX, TEX), (0, 0, 0, 0))
 px = img.load()
 
-C6 = (198, 198, 198, 255)
-DARK = (55, 55, 55, 255)
-LIGHT = (255, 255, 255, 255)
-MID = (139, 139, 139, 255)
+C6 = (198, 198, 198, 255)  # panel + slot fill (reference)
+DARK = (55, 55, 55, 255)  # outer shadow / slot top-left
+LIGHT = (255, 255, 255, 255)  # highlight
+MID = (139, 139, 139, 255)  # soft inner panel shade
+TRANSPARENT = (0, 0, 0, 0)
 
 
-def fill_rect(x0, y0, x1, y1, color):
+def fill_rect(x0: int, y0: int, x1: int, y1: int, color: tuple[int, int, int, int]) -> None:
     for y in range(y0, y1):
         for x in range(x0, x1):
             if 0 <= x < TEX and 0 <= y < TEX:
                 px[x, y] = color
 
 
-def draw_panel(x0, y0, x1, y1):
+def draw_panel(x0: int, y0: int, x1: int, y1: int) -> None:
+    """Raised light-grey panel matching the companion-inventory reference bevel."""
     fill_rect(x0, y0, x1, y1, C6)
     for x in range(x0, x1):
         px[x, y1 - 1] = DARK
@@ -37,39 +49,43 @@ def draw_panel(x0, y0, x1, y1):
     fill_rect(x0 + 2, y0 + 2, x0 + 3, y1 - 2, MID)
     fill_rect(x0 + 3, y0 + 3, x1 - 3, y1 - 3, C6)
 
-
-def draw_slot(sx, sy):
-    # Vanilla-like 18x18 slot well
-    fill_rect(sx, sy, sx + 18, sy + 18, DARK)
-    fill_rect(sx + 1, sy + 1, sx + 17, sy + 17, MID)
+def draw_slot(sx: int, sy: int) -> None:
+    """18x18 slot with light-grey fill + inset bevel (shared borders on 18px grid)."""
+    fill_rect(sx, sy, sx + 18, sy + 18, C6)
     for x in range(sx, sx + 18):
         px[x, sy] = DARK
         px[x, sy + 17] = LIGHT
     for y in range(sy, sy + 18):
-        px[sx, sy + y - sy] = DARK
-        px[sx + 17, sy + y - sy] = LIGHT
+        px[sx, y] = DARK
+        px[sx + 17, y] = LIGHT
     px[sx + 17, sy] = MID
     px[sx, sy + 17] = MID
     px[sx + 17, sy + 17] = LIGHT
-    fill_rect(sx + 1, sy + 1, sx + 17, sy + 17, (8, 8, 8, 255))
+    # Flat light-grey well — never black (prior bug)
+    fill_rect(sx + 1, sy + 1, sx + 17, sy + 17, C6)
 
 
+# --- Companion panel (0,0)-(194,112) ---
 COMP_BOTTOM = 112
 draw_panel(0, 0, W, COMP_BOTTOM)
 
 ARMOR_X, STORAGE_X, STORAGE_Y = 8, 26, 18
 HOTBAR_Y = 76
 
+# Equipment column: helmet → boots → shield
 for i in range(5):
     draw_slot(ARMOR_X - 1, STORAGE_Y - 1 + i * 18)
 
+# 3x9 storage
 for row in range(3):
     for col in range(9):
         draw_slot(STORAGE_X - 1 + col * 18, STORAGE_Y - 1 + row * 18)
 
+# Companion hotbar under storage (aligned with feet row, 4px lower)
 for col in range(9):
     draw_slot(STORAGE_X - 1 + col * 18, HOTBAR_Y - 1)
 
+# --- Player inventory panel ---
 PLAYER_INV_Y = COMP_BOTTOM + 12 + 11  # 135
 player_x = STORAGE_X - 8  # 18
 player_y = PLAYER_INV_Y - 12  # 123
@@ -82,22 +98,30 @@ for row in range(3):
 for col in range(9):
     draw_slot(STORAGE_X - 1 + col * 18, PLAYER_INV_Y + 58 - 1)
 
-# Transparent gap + side voids
+# Transparent gap between panels + side voids beside player panel
 for y in range(COMP_BOTTOM, player_y):
     for x in range(W):
-        px[x, y] = (0, 0, 0, 0)
+        px[x, y] = TRANSPARENT
 for y in range(player_y + player_h, H):
     for x in range(W):
-        px[x, y] = (0, 0, 0, 0)
+        px[x, y] = TRANSPARENT
 for y in range(player_y, player_y + player_h):
     for x in range(0, player_x):
-        px[x, y] = (0, 0, 0, 0)
+        px[x, y] = TRANSPARENT
     for x in range(player_x + player_w, W):
-        px[x, y] = (0, 0, 0, 0)
+        px[x, y] = TRANSPARENT
 
-out = r"common\src\main\resources\assets\azscompanions\textures\gui\companion_inventory.png"
-import os
-
+out = os.path.join(
+    "common",
+    "src",
+    "main",
+    "resources",
+    "assets",
+    "azscompanions",
+    "textures",
+    "gui",
+    "companion_inventory.png",
+)
 os.makedirs(os.path.dirname(out), exist_ok=True)
 img.save(out, "PNG")
 print("wrote", out, img.size, "PLAYER_INV_Y", PLAYER_INV_Y)

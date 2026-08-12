@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 1.0.1
+
+Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
+
+### Fixed / Polish
+- **Companion inventory GUI:** blit uses explicit **256×256** atlas size (Fabric + NeoForge) so UV mapping matches `companion_inventory.png`
+- **GUI generator:** `tools/gen_companion_inventory_gui.py` clarified for light-grey beveled panels / slot grid
+
+### Docs
+- Added Modrinth/CurseForge paste-ready copy: `docs/STORE_DESCRIPTION.md`
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-1.0.1+1.21.1.jar` | `azscompanions-fabric-1.0.1+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.1+1.21.1.jar` | `azscompanions-fabric-cci-1.0.1+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 1.0.0
 
 First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).

@@ -10,7 +10,8 @@ import net.minecraft.world.entity.player.Inventory;
 
 /**
  * Companion inventory: armor+shield column, storage, 9-slot hotbar, gapped player inv.
- * Background texture matches slot coordinates exactly; vanilla armor/shield empty icons remain.
+ * Background: light-grey beveled panels + light slot grid ({@code companion_inventory.png}).
+ * Vanilla armor/shield empty icons remain.
  */
 public final class CompanionInventoryScreen extends AbstractContainerScreen<CompanionInventoryMenu> {
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(
@@ -28,7 +29,8 @@ public final class CompanionInventoryScreen extends AbstractContainerScreen<Comp
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+        // Explicit 256×256 atlas size so UV mapping matches companion_inventory.png.
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
     @Override
