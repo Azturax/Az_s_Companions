@@ -11,8 +11,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.phys.AABB;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -50,7 +50,7 @@ public final class MisterWigglySidekick {
         if (!isWigglyOwner(owner)) {
             return;
         }
-        Wolf existing = findSidekickNear(level, companion);
+        Wolf existing = findOrCullSidekick(level, companion);
         if (existing != null && existing.isAlive()) {
             existing.setOrderedToSit(false);
             syncScale(existing, companion);
@@ -67,7 +67,7 @@ public final class MisterWigglySidekick {
         if (!isWigglyOwner(companion.getOwnerUuid())) {
             return;
         }
-        Wolf dog = findSidekickNear(level, companion);
+        Wolf dog = findOrCullSidekick(level, companion);
         if (dog != null && dog.isAlive()) {
             syncScale(dog, companion);
         }
@@ -91,26 +91,54 @@ public final class MisterWigglySidekick {
         if (companion.level().isClientSide || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
-        AABB box = companion.getBoundingBox().inflate(96.0d);
-        List<Wolf> nearby = level.getEntitiesOfClass(Wolf.class, box, MisterWigglySidekick::isSidekick);
-        for (Wolf wolf : nearby) {
-            CompoundTag data = wolf.getPersistentData();
-            if (data.hasUUID(TAG_FOLLOW) && companion.getUUID().equals(data.getUUID(TAG_FOLLOW))) {
-                wolf.discard();
+        var server = level.getServer();
+        if (server == null) {
+            return;
+        }
+        UUID follow = companion.getUUID();
+        for (ServerLevel dim : server.getAllLevels()) {
+            for (var entity : dim.getAllEntities()) {
+                if (entity instanceof Wolf wolf && isSidekick(wolf)) {
+                    CompoundTag data = wolf.getPersistentData();
+                    if (data.hasUUID(TAG_FOLLOW) && follow.equals(data.getUUID(TAG_FOLLOW))) {
+                        wolf.discard();
+                    }
+                }
             }
         }
     }
 
-    private static Wolf findSidekickNear(ServerLevel level, CompanionEntity companion) {
-        AABB box = companion.getBoundingBox().inflate(96.0d);
-        List<Wolf> nearby = level.getEntitiesOfClass(Wolf.class, box, MisterWigglySidekick::isSidekick);
-        for (Wolf wolf : nearby) {
-            CompoundTag data = wolf.getPersistentData();
-            if (data.hasUUID(TAG_FOLLOW) && companion.getUUID().equals(data.getUUID(TAG_FOLLOW))) {
-                return wolf;
+    /** Keep one sidekick for this companion across loaded entities; discard extras. */
+    private static Wolf findOrCullSidekick(ServerLevel level, CompanionEntity companion) {
+        var server = level.getServer();
+        if (server == null) {
+            return null;
+        }
+        UUID follow = companion.getUUID();
+        List<Wolf> owned = new ArrayList<>();
+        for (ServerLevel dim : server.getAllLevels()) {
+            for (var entity : dim.getAllEntities()) {
+                if (entity instanceof Wolf wolf && wolf.isAlive() && isSidekick(wolf)) {
+                    CompoundTag data = wolf.getPersistentData();
+                    if (data.hasUUID(TAG_FOLLOW) && follow.equals(data.getUUID(TAG_FOLLOW))) {
+                        owned.add(wolf);
+                    }
+                }
             }
         }
-        return null;
+        if (owned.isEmpty()) {
+            return null;
+        }
+        Wolf keep = WigglyDogPerkSupport.pickOneToKeep(owned, wolf -> {
+            double dimPenalty = wolf.level() == level ? 0.0d : 1.0e12d;
+            return dimPenalty + wolf.distanceToSqr(companion);
+        });
+        for (Wolf wolf : owned) {
+            if (wolf != keep) {
+                wolf.discard();
+            }
+        }
+        return keep;
     }
 
     private static boolean isSidekick(Wolf wolf) {

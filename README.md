@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft **1.21.1** (NeoForge + Fabric). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v1.0.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.1)
+- **Release:** [v1.0.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.2)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
@@ -17,10 +17,10 @@ Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
 
 | Loader | Module | Jar | Notes |
 |--------|--------|-----|-------|
-| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-1.0.1+1.21.1.jar` | Default — no CCI |
-| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-1.0.1+1.21.1.jar` | Needs CCI + iChunUtil |
-| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-1.0.1+1.21.1.jar` | Default — no CCI |
-| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-1.0.1+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
+| **NeoForge** (standalone) | `:neoforge` | `azscompanions-neoforge-1.0.2+1.21.1.jar` | Default — no CCI |
+| **NeoForge** (CCI) | `:neoforge-cci` | `azscompanions-neoforge-cci-1.0.2+1.21.1.jar` | Needs CCI + iChunUtil |
+| **Fabric** (standalone) | `:fabric` | `azscompanions-fabric-1.0.2+1.21.1.jar` | Default — no CCI |
+| **Fabric** (CCI) | `:fabric-cci` | `azscompanions-fabric-cci-1.0.2+1.21.1.jar` | Needs Fabric CCI + iChunUtil |
 
 Install **one** Az's Companions jar per loader — never standalone + CCI together.
 
@@ -33,11 +33,11 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 
 **Other Minecraft lines** (including NeoForge **26.2** → Minecraft **26.2**): not shipped — see [docs/MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
-## Gameplay (1.0.1)
+## Gameplay (1.0.2)
 
 - Companion Charm, Follow/Stay/Sit/Wander (command menu + **K** keybind), Customize, inventory, night sleep
 - **Treasure loot:** Companion Charm in desert pyramids (5%). Disable with `world.enableLoot=false` — NeoForge `azscompanions-common.toml` / Fabric `azscompanions-common.json` (default on)
-- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + survival flight, no glow (`4274…`)
+- **UUID perks:** Wolfy grant only (`7c97…`); Wiggly toggle + survival flight, no glow (`4274…`) — **Wiggly dog default OFF**; toggle with `/az wiggly` or keybind (at most one dog)
 - **No natural despawn:** owned companions / Bits get persistence + tag `azscompanions.nodespawn`
 - **Flower gifts**, logout park / login restore, form coat arrows, minecart-like sit pose
 - Cat scare creepers / wolf scare skeletons; wander mob play; ride-along when you mount
@@ -63,7 +63,7 @@ Install **one** Az's Companions jar per loader — never standalone + CCI togeth
 ./gradlew buildAll
 ```
 
-Outputs under `*/build/libs/azscompanions-*-1.0.1+1.21.1.jar` (four editions). NeoForge 26.2 uses `./gradlew buildNeoForge26` and is not part of `buildAll`.
+Outputs under `*/build/libs/azscompanions-*-1.0.2+1.21.1.jar` (four editions). NeoForge 26.2 uses `./gradlew buildNeoForge26` and is not part of `buildAll`.
 
 ## License
 

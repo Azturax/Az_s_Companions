@@ -11,9 +11,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,6 +21,9 @@ import java.util.UUID;
  * Toggleable Wiggly dog for {@link AzsCompanionsConstants#SPECIAL_PERK_PLAYER_UUID}.
  * Ground-follows when the owner walks; floats beside them only while they fly/elytra.
  * Separate from the Wolfy companion grant and Mister Wiggly's companion sidekick.
+ * <p>
+ * Default <strong>off</strong> (opt-in via {@code /az wiggly} or keybind). At most one
+ * owned toggle dog exists server-wide; extras are discarded each tick.
  */
 public final class WigglyDogPerk {
     private WigglyDogPerk() {
@@ -33,11 +36,11 @@ public final class WigglyDogPerk {
         if (!WigglyDogPerkSupport.isEligible(player.getUUID())) {
             return;
         }
-        if (isHidden(player)) {
+        if (!isShown(player)) {
             despawnAll(player);
             return;
         }
-        Wolf dog = findNear(level, player);
+        Wolf dog = findOrCullOwned(player);
         if (dog == null || !dog.isAlive()) {
             dog = spawn(level, player);
             if (dog == null) {
@@ -69,8 +72,8 @@ public final class WigglyDogPerk {
         if (player == null || !WigglyDogPerkSupport.isEligible(player.getUUID())) {
             return false;
         }
-        boolean show = isHidden(player);
-        setHidden(player, !show);
+        boolean show = !isShown(player);
+        setShown(player, show);
         if (show) {
             tick(player);
             player.displayClientMessage(Component.translatable("message.azscompanions.wiggly_dog_shown"), true);
@@ -81,28 +84,56 @@ public final class WigglyDogPerk {
         return show;
     }
 
-    public static boolean isHidden(ServerPlayer player) {
-        return player.getTags().contains(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
+    public static boolean isShown(ServerPlayer player) {
+        return WigglyDogPerkSupport.isShownFromTags(player.getTags());
     }
 
-    private static void setHidden(ServerPlayer player, boolean hidden) {
-        if (hidden) {
-            player.addTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
+    public static boolean isHidden(ServerPlayer player) {
+        return !isShown(player);
+    }
+
+    private static void setShown(ServerPlayer player, boolean shown) {
+        player.removeTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
+        if (shown) {
+            player.addTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
         } else {
-            player.removeTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
+            player.removeTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
         }
     }
 
-    private static Wolf findNear(ServerLevel level, ServerPlayer player) {
+    /**
+     * Server-wide: keep at most one owned toggle dog (closest in the player's dimension
+     * preferred, else any closest). Discard extras so teleport/unload cannot multi-spawn.
+     */
+    private static Wolf findOrCullOwned(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return null;
+        }
         UUID owner = player.getUUID();
-        AABB box = player.getBoundingBox().inflate(96.0d);
-        List<Wolf> nearby = level.getEntitiesOfClass(Wolf.class, box, WigglyDogPerk::isToggleDog);
-        for (Wolf wolf : nearby) {
-            if (owner.equals(ownerOf(wolf))) {
-                return wolf;
+        List<Wolf> owned = new ArrayList<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof Wolf wolf && wolf.isAlive() && isToggleDog(wolf)
+                        && owner.equals(ownerOf(wolf))) {
+                    owned.add(wolf);
+                }
             }
         }
-        return null;
+        if (owned.isEmpty()) {
+            return null;
+        }
+        ServerLevel playerLevel = (ServerLevel) player.level();
+        Wolf keep = WigglyDogPerkSupport.pickOneToKeep(owned, wolf -> {
+            double dimPenalty = wolf.level() == playerLevel ? 0.0d : 1.0e12d;
+            return dimPenalty + wolf.distanceToSqr(player);
+        });
+        for (Wolf wolf : owned) {
+            if (wolf != keep) {
+                wolf.discard();
+            }
+        }
+        return keep;
     }
 
     private static void despawnAll(ServerPlayer player) {
@@ -134,6 +165,11 @@ public final class WigglyDogPerk {
     }
 
     private static Wolf spawn(ServerLevel level, ServerPlayer player) {
+        // Refuse if another owned dog already exists (race / same-tick).
+        Wolf existing = findOrCullOwned(player);
+        if (existing != null && existing.isAlive()) {
+            return existing;
+        }
         Wolf wolf = EntityType.WOLF.create(level);
         if (wolf == null) {
             return null;

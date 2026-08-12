@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 1.0.2
+
+Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
+
+### Fixed
+- **Wiggly toggle dog (`4274...`):** no longer auto-spawns by default; opt-in via `/az wiggly` or the Wiggly keybind (scoreboard tag `azscompanions.wiggly_dog_shown`)
+- **Wiggly multi-spawn:** server-wide hard cap of **one** owned toggle dog; extras are culled each tick (fixes piles from the old 96-block find-or-spawn loop)
+- **Mister Wiggly sidekick:** same one-dog cull / server-wide lookup when the companion teleports far away
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-1.0.2+1.21.1.jar` | `azscompanions-fabric-1.0.2+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.2+1.21.1.jar` | `azscompanions-fabric-cci-1.0.2+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) -- port in progress; no jar shipped.
+
 ## 1.0.1
 
 Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
