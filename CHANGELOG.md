@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 1.0.4
+
+Multi-version release: full feature parity across **1.21.1**, **1.21.5**, and **1.20.1** (standalone + CCI where CCI exists).
+
+### Added
+- **Minecraft 1.21.5** — NeoForge **21.5.98** + Fabric API **0.128.2+1.21.5**, standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.7**)
+- **Minecraft 1.20.1** — Fabric + **Forge 47.4.22** (no NeoForge 20.1), standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.3**)
+- Gradle tasks: `buildAll215`, `buildAll1201`; pins in `gradle.properties` and [MULTI_VERSION.md](docs/MULTI_VERSION.md)
+
+### Honest omissions (1.20.1 only)
+- JourneyMap soft-dep (API jar needs JVM 21+)
+- Wolf body armor / `EquipmentSlot.BODY`; `Attributes.SCALE` (entity-data scale); nametag attachment → BB-height offset
+- Fabric: damage recent-action via `ALLOW_DAMAGE`; Forge: event-bus recent-action (no mixins)
+
+### Not shipped
+- NeoForge **26.1.2** / **26.2** — WIP compile modules only; residual render/API gaps — **no public jars**
+
+### Loaders
+| Minecraft | Standalone | CCI |
+|-----------|------------|-----|
+| **1.21.1** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric | Forge + Fabric |
+
+Jar pattern: `azscompanions-<loader>[-cci]-1.0.4+<mc>.jar` (12 shippable jars on tag `v1.0.4`).
+
 ## 1.0.3
 
 Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).

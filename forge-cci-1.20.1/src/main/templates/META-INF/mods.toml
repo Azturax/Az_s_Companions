@@ -1,0 +1,64 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/Azturax/Az_s_Companions/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Az"
+description='''
+Az's Companions (CCI edition) for Minecraft 1.20.1 Forge.
+
+Same companion gameplay as the standalone Forge jar, plus hard dependency on
+iChun's Content Creator Integration (CCI) and iChunUtil for stream-event
+interop (IMC outcomes, companion greet/say/follow).
+
+Install this jar OR the standalone Forge jar — not both.
+Requires Content Creator Integration and iChunUtil.
+NeoForge is not available for 1.20.1.
+All characters are explicitly adult, wholesome, and non-sexual.
+'''
+
+[[dependencies.${mod_id}]]
+modId="forge"
+mandatory=true
+versionRange="${forge_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="contentcreatorintegration"
+mandatory=true
+versionRange="${cci_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="ichunutil"
+mandatory=true
+versionRange="${ichunutil_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="journeymap"
+mandatory=false
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="voicechat"
+mandatory=false
+versionRange="*"
+ordering="NONE"
+side="BOTH"

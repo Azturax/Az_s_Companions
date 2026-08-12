@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "Az's Companions — wholesome adult AI companions for Minecraft. Charm summon, customize, chat, follow, and bed sleep. One companion per player. Minecraft 1.21.1.",
+  "authors": [
+    "Az"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Azturax/Az_s_Companions",
+    "sources": "https://github.com/Azturax/Az_s_Companions",
+    "issues": "https://github.com/Azturax/Az_s_Companions/issues"
+  },
+  "license": "${mod_license}",
+  "icon": "assets/azscompanions/textures/item/companion_charm.png",
+  "environment": "*",
+  "accessWidener": "azscompanions.accesswidener",
+  "mixins": [
+    "azscompanions.mixins.json"
+  ],
+  "entrypoints": {
+    "main": [
+      "com.azscompanions.AzsCompanionsFabric"
+    ],
+    "client": [
+      "com.azscompanions.AzsCompanionsFabricClient"
+    ],
+    "journeymap": [
+      "com.azscompanions.compat.map.jm.FabricJourneyMapCompanionPlugin"
+    ]
+  },
+  "depends": {
+    "fabricloader": "${fabric_loader_range}",
+    "minecraft": "${fabric_minecraft_range}",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "journeymap": "*",
+    "xaerominimap": "*",
+    "xaeroworldmap": "*",
+    "ftbchunks": "*",
+    "essential": "*",
+    "e4mc": "*",
+    "world-host": "*",
+    "lambdynlights": "*",
+    "ryoamiclights": "*",
+    "voicechat": "*",
+    "voicemod": "*"
+  },
+  "custom": {
+    "azscompanions:support": {
+      "minecraft": "1.21.1",
+      "loaders": ["fabric", "neoforge"]
+    }
+  }
+}

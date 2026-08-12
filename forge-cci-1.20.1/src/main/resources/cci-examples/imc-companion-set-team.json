@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_set_team",
+  "message": "$username"
+}

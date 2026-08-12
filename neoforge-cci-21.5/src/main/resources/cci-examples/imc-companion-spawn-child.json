@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_interaction",
+  "message": "amount=500;user=$username;form=chicken;team=red;maxChildren=8"
+}

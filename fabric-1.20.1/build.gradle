@@ -1,0 +1,87 @@
+// Minecraft 1.20.1 Fabric port.
+// NeoForge has NO 1.20.1 line — this module ships Fabric only for the Fabric loader.
+// Source of truth: :fabric (1.21.1) backported to pre–data-component / legacy networking APIs.
+plugins {
+    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = "${rootProject.archives_name}-fabric"
+}
+
+version = "${rootProject.mod_version}+${rootProject.minecraft_1_20_1_version}"
+group = rootProject.mod_group_id
+
+repositories {
+    maven { url = "https://maven.fabricmc.net/" }
+    mavenCentral()
+    maven { url = "https://maven.blamejared.com/" }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_1_20_1_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_1_20_1_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_1_20_1_api_version}"
+
+    implementation project(':common')
+    // JourneyMap API jar requires JVM 21+; omit compile-time JM soft-dep on 1.20.1 (Java 17).
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/azscompanions.accesswidener")
+    runs {
+        client {
+            client()
+            configName = "Fabric 1.20.1 Client"
+            ideConfigGenerated = true
+        }
+        server {
+            server()
+            configName = "Fabric 1.20.1 Server"
+            ideConfigGenerated = true
+        }
+    }
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", rootProject.minecraft_1_20_1_version
+    inputs.property "fabric_loader_version", rootProject.fabric_1_20_1_loader_version
+
+    filesMatching("fabric.mod.json") {
+        expand([
+                version               : project.version,
+                minecraft_version     : rootProject.minecraft_1_20_1_version,
+                fabric_loader_version : rootProject.fabric_1_20_1_loader_version,
+                fabric_loader_range   : rootProject.fabric_loader_range,
+                fabric_minecraft_range: rootProject.fabric_1_20_1_minecraft_range,
+                mod_id                : rootProject.mod_id,
+                mod_name              : rootProject.mod_name,
+                mod_license           : rootProject.mod_license,
+        ])
+    }
+}
+
+sourceSets.main.resources {
+    srcDir(rootProject.file('common/src/main/resources'))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+java {
+    withSourcesJar()
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
+    from(project(':common').sourceSets.main.output.classesDirs)
+}

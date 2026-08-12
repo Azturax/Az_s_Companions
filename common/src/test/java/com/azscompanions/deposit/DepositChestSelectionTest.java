@@ -42,6 +42,6 @@ final class DepositChestSelectionTest {
         DepositSelectionSnapshot decoded = DepositSelectionSnapshot.decode(encoded);
         assertTrue(decoded.selecting());
         assertEquals(1, decoded.chests().size());
-        assertEquals(2, decoded.chests().getFirst().x());
+        assertEquals(2, decoded.chests().get(0).x());
     }
 }

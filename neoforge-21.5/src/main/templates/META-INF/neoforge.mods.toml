@@ -1,0 +1,123 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/Azturax/Az_s_Companions/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Az"
+description='''
+Az's Companions adds wholesome adult AI companions for Minecraft.
+Find a Companion Charm, summon your companion, customize them, chat nearby,
+and let them follow you home to a bed.
+
+NeoForge jar for Minecraft 1.21.1 (Fabric jar available separately).
+All characters are explicitly adult, wholesome, and non-sexual.
+One companion per player on multiplayer servers.
+'''
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+# Production pin: NeoForge 21.1.x (Minecraft 1.21.1). NeoForge 26.2 is a separate port.
+versionRange="${neo_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+# Production pin: Minecraft 1.21.1 only (see docs/MULTI_VERSION.md for 26.2 plans)
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+# Optional map mods — soft-dep (mod loads without them)
+[[dependencies.${mod_id}]]
+modId="journeymap"
+type="optional"
+versionRange="[1.21.1-6.0.0,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="xaerominimap"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="xaeroworldmap"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="ftbchunks"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+# Optional hosted-world / invite-friends mods (Essential, e4mc, World Host)
+[[dependencies.${mod_id}]]
+modId="essential"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="e4mc"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="world-host"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+# Optional dynamic lighting (client) — soft-dep
+[[dependencies.${mod_id}]]
+modId="lambdynlights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="ryoamiclights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="dynamiclights"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="CLIENT"
+
+# Optional proximity voice (Simple Voice Chat) — soft-dep; ref NeoForge 1.21.1 pin 2.6.21
+[[dependencies.${mod_id}]]
+modId="voicechat"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="voicemod"
+type="optional"
+versionRange="*"
+ordering="NONE"
+side="BOTH"

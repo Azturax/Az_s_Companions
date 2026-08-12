@@ -1,0 +1,90 @@
+package com.azscompanions.compat.map.jm;
+
+import com.azscompanions.AzsCompanions;
+import com.azscompanions.compat.map.CompanionMapEntity;
+import com.azscompanions.compat.map.MapCompat;
+import com.azscompanions.compat.map.MapCompatSettings;
+import com.azscompanions.entity.CompanionEntity;
+import journeymap.api.v2.client.IClientAPI;
+import journeymap.api.v2.client.IClientPlugin;
+import journeymap.api.v2.client.entity.WrappedEntity;
+import journeymap.api.v2.client.event.EntityRadarUpdateEvent;
+import journeymap.api.v2.client.event.EntityRegistrationEvent;
+import journeymap.api.v2.common.JourneyMapPlugin;
+import journeymap.api.v2.common.event.ClientEventRegistry;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Soft JourneyMap plugin. Loaded only when JourneyMap is present (annotation discovery).
+ * Do not reference this class from mandatory init paths that would classload JM types when absent —
+ * {@link com.azscompanions.compat.map.MapCompatModule} only logs the class name when JM is loaded.
+ */
+@JourneyMapPlugin(apiVersion = "2.0.0")
+public final class JourneyMapCompanionPlugin implements IClientPlugin {
+    private static final ResourceLocation COMPANION_ICON =
+            new ResourceLocation(AzsCompanions.MOD_ID, "textures/entity_icon/companion.png");
+
+    @Override
+    public String getModId() {
+        return AzsCompanions.MOD_ID;
+    }
+
+    @Override
+    public void initialize(IClientAPI api) {
+        ClientEventRegistry.ENTITY_REGISTRATION_EVENT.subscribe(AzsCompanions.MOD_ID, this::onRegisterEntities);
+        ClientEventRegistry.ENTITY_RADAR_UPDATE_EVENT.subscribe(AzsCompanions.MOD_ID, this::onRadarUpdate);
+        AzsCompanions.LOGGER.info("JourneyMap companion plugin initialized");
+    }
+
+    private void onRegisterEntities(EntityRegistrationEvent event) {
+        // PathfinderMob companions are already tracked as passive; register explicitly as villager/NPC style.
+        event.addVillagerEntity(CompanionEntity.class);
+    }
+
+    private void onRadarUpdate(EntityRadarUpdateEvent event) {
+        WrappedEntity wrapped = event.getWrappedEntity();
+        Entity entity = wrapped.getEntityRef() == null ? null : wrapped.getEntityRef().get();
+        if (!CompanionMapEntity.isCompanion(entity) && !(entity instanceof CompanionEntity)) {
+            return;
+        }
+        boolean child = entity instanceof CompanionEntity companion
+                ? companion.isChildCompanion()
+                : CompanionMapEntity.isChildCompanion(entity);
+        if (!MapCompat.shouldShowOnMap(child)) {
+            event.cancel();
+            wrapped.setDisable(true);
+            return;
+        }
+        MapCompatSettings settings = MapCompat.settings();
+        wrapped.setColor(settings.iconColorArgb());
+        wrapped.setLabelColor(settings.iconColorArgb());
+        wrapped.setEntityIconLocation(COMPANION_ICON);
+        if (settings.showNameOnMap()) {
+            String name = entity instanceof CompanionEntity companion
+                    ? companion.getChatDisplayName()
+                    : CompanionMapEntity.displayName(entity);
+            wrapped.setCustomName(Component.literal(name));
+        }
+        if (settings.showOwnerOnMap()) {
+            String owner = CompanionMapEntity.ownerNameHint(entity);
+            List<Component> tips = new ArrayList<>();
+            if (wrapped.getEntityToolTips() != null) {
+                tips.addAll(wrapped.getEntityToolTips());
+            }
+            if (owner != null && !owner.isBlank()) {
+                tips.add(Component.literal("Owner: " + owner));
+            }
+            if (child) {
+                tips.add(Component.literal("Bit"));
+            }
+            if (!tips.isEmpty()) {
+                wrapped.setEntityToolTips(tips);
+            }
+        }
+    }
+}

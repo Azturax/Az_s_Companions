@@ -7,8 +7,14 @@ base {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    // Java 17 bytecode so 1.20.1 (Java 17) and newer loaders can all load :common classes.
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
     withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
 }
 
 dependencies {

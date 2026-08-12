@@ -1,0 +1,4 @@
+accessWidener	v2	named
+
+# Creeper cat-scare injects an AvoidEntityGoal on spawn.
+accessible	field	net/minecraft/world/entity/Mob	goalSelector	Lnet/minecraft/world/entity/ai/goal/GoalSelector;

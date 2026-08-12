@@ -60,7 +60,7 @@ public final class CraftRecipeCatalog {
         if (list == null || list.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(list.getFirst());
+        return Optional.of(list.get(0));
     }
 
     public static List<String> recipesForResult(String itemId) {

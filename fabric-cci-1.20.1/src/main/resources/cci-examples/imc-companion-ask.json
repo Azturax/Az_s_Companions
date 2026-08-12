@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_ask",
+  "message": "message=Thanks $username! What should we craft next?"
+}

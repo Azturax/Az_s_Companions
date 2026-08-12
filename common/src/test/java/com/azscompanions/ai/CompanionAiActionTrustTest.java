@@ -29,7 +29,7 @@ class CompanionAiActionTrustTest {
         );
         List<CompanionAiAction> out = CompanionAiActionTrust.STRANGER.filter(in);
         assertEquals(1, out.size());
-        assertEquals(CompanionAiActionNames.DANCE, out.getFirst().name());
+        assertEquals(CompanionAiActionNames.DANCE, out.get(0).name());
     }
 
     @Test

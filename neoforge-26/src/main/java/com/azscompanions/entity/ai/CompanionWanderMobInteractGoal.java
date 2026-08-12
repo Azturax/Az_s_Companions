@@ -157,7 +157,12 @@ public final class CompanionWanderMobInteractGoal extends Goal {
     private void applyKnockback(double strength) {
         double[] dir = CompanionMobBehaviorSupport.knockbackDir(
                 companion.getX(), companion.getZ(), target.getX(), target.getZ());
-        target.knockback(strength, -dir[0], -dir[1]);
+        target.knockback(
+                strength,
+                -dir[0],
+                -dir[1],
+                companion.damageSources().mobAttack(companion),
+                0.0f);
     }
 
     private LivingEntity findTarget() {

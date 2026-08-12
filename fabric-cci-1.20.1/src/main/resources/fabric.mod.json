@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "Az's Companions CCI edition for Fabric 1.20.1 \u2014 charm companion plus hard dependency on iChun Content Creator Integration for stream-driven greet/say/wave/follow/sit/stay. Install this jar OR the standalone Fabric jar \u2014 not both.",
+  "authors": [
+    "Az"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Azturax/Az_s_Companions",
+    "sources": "https://github.com/Azturax/Az_s_Companions",
+    "issues": "https://github.com/Azturax/Az_s_Companions/issues"
+  },
+  "license": "${mod_license}",
+  "icon": "assets/azscompanions/textures/item/companion_charm.png",
+  "environment": "*",
+  "accessWidener": "azscompanions.accesswidener",
+  "entrypoints": {
+    "main": [
+      "com.azscompanions.AzsCompanionsFabric",
+      "com.azscompanions.compat.cci.FabricCciBootstrap"
+    ],
+    "client": [
+      "com.azscompanions.AzsCompanionsFabricClient",
+      "com.azscompanions.compat.cci.FabricCciClientBootstrap"
+    ]
+  },
+  "mixins": [
+    "azscompanions.mixins.json",
+    "azscompanions-cci.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": "${fabric_loader_range}",
+    "minecraft": "${fabric_minecraft_range}",
+    "java": ">=17",
+    "fabric-api": "*",
+    "contentcreatorintegration": ">=${cci_version}",
+    "ichunutil": ">=${ichunutil_version}"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "journeymap": "*",
+    "xaerominimap": "*",
+    "xaeroworldmap": "*",
+    "ftbchunks": "*",
+    "lambdynlights": "*",
+    "ryoamiclights": "*",
+    "voicechat": "*",
+    "voicemod": "*"
+  },
+  "custom": {
+    "azscompanions:support": {
+      "minecraft": "1.20.1",
+      "loaders": [
+        "fabric"
+      ],
+      "edition": "cci"
+    }
+  }
+}

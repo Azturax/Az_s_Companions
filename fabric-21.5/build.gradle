@@ -1,0 +1,87 @@
+plugins {
+    id 'fabric-loom' version '1.10-SNAPSHOT'
+    id 'maven-publish'
+}
+
+base {
+    archivesName = "${rootProject.archives_name}-fabric"
+}
+
+version = "${rootProject.mod_version}+${rootProject.minecraft_21_5_version}"
+group = rootProject.mod_group_id
+
+repositories {
+    maven { url = "https://maven.fabricmc.net/" }
+    mavenCentral()
+    maven { url = "https://maven.blamejared.com/" }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_21_5_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_21_5_api_version}"
+
+    implementation project(':common')
+    // Soft-dep API — plain compileOnly avoids Loom remapping the JM API jar.
+    compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/azscompanions.accesswidener")
+    runs {
+        client {
+            client()
+            configName = "Fabric 1.21.5 Client"
+            ideConfigGenerated = true
+        }
+        server {
+            server()
+            configName = "Fabric 1.21.5 Server"
+            ideConfigGenerated = true
+        }
+    }
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", rootProject.minecraft_21_5_version
+    inputs.property "fabric_loader_version", rootProject.fabric_loader_version
+
+    filesMatching("fabric.mod.json") {
+        expand([
+                version               : project.version,
+                minecraft_version     : rootProject.minecraft_21_5_version,
+                fabric_loader_version : rootProject.fabric_loader_version,
+                fabric_loader_range   : rootProject.fabric_loader_range,
+                fabric_minecraft_range: rootProject.fabric_21_5_minecraft_range,
+                mod_id                : rootProject.mod_id,
+                mod_name              : rootProject.mod_name,
+                mod_license           : rootProject.mod_license,
+        ])
+    }
+}
+
+// Include shared common resources in the Fabric jar
+sourceSets.main.resources {
+    srcDir(rootProject.file('common/src/main/resources'))
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+java {
+    withSourcesJar()
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
+    // Bundle :common classes into the mod jar.
+    from(project(':common').sourceSets.main.output.classesDirs)
+}

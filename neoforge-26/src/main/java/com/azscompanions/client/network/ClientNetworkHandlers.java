@@ -108,7 +108,11 @@ public final class ClientNetworkHandlers {
                         null,
                         packet.whoAmI(),
                         packet.whatAmIDoing(),
-                        packet.howWillIBe()));
+                        packet.howWillIBe(),
+                        packet.childCount(),
+                        packet.ownedCount(),
+                        packet.charmStatus(),
+                        packet.aiStatus()));
             }
         });
     }

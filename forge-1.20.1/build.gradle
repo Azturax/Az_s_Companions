@@ -1,0 +1,114 @@
+// Minecraft 1.20.1 Forge 47.4.x port.
+// NeoForge has NO 1.20.1 line — ship Forge (not NeoForge). Uses net.neoforged.moddev.legacyforge.
+// Source of truth: :neoforge (1.21.1) adapted to Forge 1.20.1 / MDG legacyforge.
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.143'
+    id 'idea'
+}
+
+base {
+    archivesName = "${rootProject.archives_name}-forge"
+}
+
+version = "${rootProject.mod_version}+${rootProject.minecraft_1_20_1_version}"
+group = rootProject.mod_group_id
+
+def commonResourcesDir = rootProject.file('common/src/main/resources')
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+    srcDir(commonResourcesDir)
+    exclude("**/*.bbmodel")
+    exclude("src/generated/**/.cache")
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+legacyForge {
+    version = "${rootProject.minecraft_1_20_1_version}-${rootProject.forge_1_20_1_version}"
+    validateAccessTransformers = true
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        data {
+            data()
+            programArguments.addAll '--mod', rootProject.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath(),
+                    '--existing', commonResourcesDir.getAbsolutePath()
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${rootProject.mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    implementation project(':common')
+    // JourneyMap API omitted on 1.20.1 (JVM 21+)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('jar', Jar).configure {
+    from(project(':common').sourceSets.main.output.classesDirs)
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : rootProject.minecraft_1_20_1_version,
+            minecraft_version_range: rootProject.minecraft_1_20_1_version_range,
+            forge_version          : rootProject.forge_1_20_1_version,
+            forge_version_range    : '[47,)',
+            loader_version_range   : '[47,)',
+            mod_id                 : rootProject.mod_id,
+            mod_name               : rootProject.mod_name,
+            mod_license            : rootProject.mod_license,
+            mod_version            : rootProject.mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+legacyForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

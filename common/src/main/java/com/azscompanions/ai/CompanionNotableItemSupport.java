@@ -210,7 +210,7 @@ public final class CompanionNotableItemSupport {
             return Optional.empty();
         }
         hits.sort((a, b) -> Integer.compare(craftWatchScore(b), craftWatchScore(a)));
-        return Optional.of(hits.getFirst());
+        return Optional.of(hits.get(0));
     }
 
     private static int craftWatchScore(String resultId) {

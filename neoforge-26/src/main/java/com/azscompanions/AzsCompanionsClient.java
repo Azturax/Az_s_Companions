@@ -32,7 +32,7 @@ public final class AzsCompanionsClient {
 
     private void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(ClientVoiceController::init);
-        AzsCompanions.LOGGER.info("Az's Companions client ready (NeoForge 26.2 — minimal renderer)");
+        AzsCompanions.LOGGER.info("Az's Companions client ready (NeoForge 26.2 — feminine mesh; armor/mob-form pending)");
     }
 
     private void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {

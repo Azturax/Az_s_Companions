@@ -15,17 +15,24 @@ CCI connects Twitch (or Streamlabs / StreamElements) events to in-game outcomes 
 
 | Jar | Use when |
 |-----|----------|
-| `azscompanions-neoforge-cci-*.jar` | NeoForge + CCI + iChunUtil |
-| `azscompanions-fabric-cci-*.jar` | Fabric + CCI + iChunUtil |
-| `azscompanions-neoforge-*.jar` / `azscompanions-fabric-*.jar` | **Standalone** — no CCI bridge |
+| `azscompanions-neoforge-cci-*.jar` | NeoForge + CCI + iChunUtil (1.21.1 / 1.21.5) |
+| `azscompanions-fabric-cci-*.jar` | Fabric + CCI + iChunUtil (1.21.1 / 1.21.5 / 1.20.1) |
+| `azscompanions-forge-cci-*.jar` | Forge + CCI + iChunUtil (**1.20.1 only**) |
+| `azscompanions-*-*.jar` (no `-cci`) | **Standalone** — no CCI bridge |
 
 Install **one** Az's Companions jar only — never standalone + CCI together.
 
 **IMC mod id:** `azscompanions`
 
+Match **Minecraft version + loader** for CCI and iChunUtil. Full Modrinth version-id table: [MULTI_VERSION.md](MULTI_VERSION.md).
+
 ---
 
 ## 2. Prerequisites
+
+Pins differ by Minecraft line — **do not** mix Modrinth version ids across MC versions.
+
+### Minecraft 1.21.1 (default product line)
 
 | Requirement | Version |
 |-------------|---------|
@@ -40,17 +47,26 @@ Install **one** Az's Companions jar only — never standalone + CCI together.
 | [CCI 1.13.0](https://modrinth.com/mod/content-creator-integration) | [AySbAgcO](https://modrinth.com/mod/content-creator-integration/version/AySbAgcO) | [PERd6IT9](https://modrinth.com/mod/content-creator-integration/version/PERd6IT9) |
 | [iChunUtil 1.0.3](https://modrinth.com/mod/ichunutil) | [OvIyyNh4](https://modrinth.com/mod/ichunutil/version/OvIyyNh4) | [gfAOoiwe](https://modrinth.com/mod/ichunutil/version/gfAOoiwe) |
 
-Do **not** use 1.21.3+ / 1.21.5 CCI jars with this project.
+### Minecraft 1.21.5
+
+| Mod | NeoForge | Fabric |
+|-----|----------|--------|
+| CCI 1.13.0 | [WRDFe2RG](https://modrinth.com/mod/content-creator-integration/version/WRDFe2RG) | [5wvklhb4](https://modrinth.com/mod/content-creator-integration/version/5wvklhb4) |
+| iChunUtil **1.0.7** | [Hrl6YCrv](https://modrinth.com/mod/ichunutil/version/Hrl6YCrv) | [BEq7Tobw](https://modrinth.com/mod/ichunutil/version/BEq7Tobw) |
+
+### Minecraft 1.20.1 (Forge or Fabric — no NeoForge)
+
+| Mod | Forge | Fabric |
+|-----|-------|--------|
+| CCI 1.13.0 | [nNaAlKHI](https://modrinth.com/mod/content-creator-integration/version/nNaAlKHI) | [7tk12xkN](https://modrinth.com/mod/content-creator-integration/version/7tk12xkN) |
+| iChunUtil **1.0.3** | [W6d0pCyu](https://modrinth.com/mod/ichunutil/version/W6d0pCyu) | [JjEWQx5u](https://modrinth.com/mod/ichunutil/version/JjEWQx5u) |
 
 ---
 
 ## 3. Install (step-by-step)
 
-1. Install Minecraft **1.21.1** + NeoForge **or** Fabric.
-2. Drop into `mods/`:
-   - CCI **1.13.0**
-   - iChunUtil **1.0.3**
-   - **One** Az's Companions **CCI** jar
+1. Install your target Minecraft (**1.21.1**, **1.21.5**, or **1.20.1**) + matching loader (NeoForge / Fabric / Forge).
+2. Drop into `mods/` the **matching-line** CCI + iChunUtil (table above) and **one** Az's Companions **CCI** jar.
 3. Launch once (client or integrated server). Confirm logs show CCI bridge / AI status line.
 4. Open the **CCI Editor**, connect Twitch (or SE/SL).
 5. Create an Event → add **IMC** outcome:

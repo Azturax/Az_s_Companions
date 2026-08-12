@@ -1,0 +1,270 @@
+
+==== Entity ====
+  public static final int FREEZE_HURT_FREQUENCY;
+  public boolean hurtMarked;
+  public void lavaHurt();
+  public boolean isInWater();
+  public boolean isInWaterOrRain();
+  public void moveRelative(float, net.minecraft.world.phys.Vec3);
+  public final void hurt(net.minecraft.world.damagesource.DamageSource, float);
+  public final boolean hurtOrSimulate(net.minecraft.world.damagesource.DamageSource, float);
+  public abstract boolean hurtServer(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource, float);
+  public boolean hurtClient(net.minecraft.world.damagesource.DamageSource);
+  public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(net.minecraft.server.level.ServerLevel, net.minecraft.world.level.ItemLike);
+  public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(net.minecraft.server.level.ServerLevel, net.minecraft.world.level.ItemLike, int);
+  public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack, float);
+  public void animateHurt(float);
+  public net.minecraft.world.entity.Entity teleport(net.minecraft.world.level.portal.TeleportTransition);
+  public void teleportSetPosition(net.minecraft.world.entity.PositionMoveRotation, java.util.Set<net.minecraft.world.entity.Relative>);
+  public net.minecraft.world.phys.Vec3 getRelativePortalPosition(net.minecraft.core.Direction$Axis, net.minecraft.BlockUtil$FoundRectangle);
+  public boolean canTeleport(net.minecraft.world.level.Level, net.minecraft.world.level.Level);
+  public boolean teleportTo(net.minecraft.server.level.ServerLevel, double, double, double, java.util.Set<net.minecraft.world.entity.Relative>, float, float, boolean);
+  public void teleportTo(double, double, double);
+  public void teleportRelative(double, double, double);
+
+==== LivingEntity ====
+  public static final int PLAYER_HURT_EXPERIENCE_TIME;
+  public int hurtTime;
+  public int hurtDuration;
+  public net.minecraft.world.entity.LivingEntity getLastHurtByMob();
+  public net.minecraft.world.entity.player.Player getLastHurtByPlayer();
+  public int getLastHurtByMobTimestamp();
+  public void setLastHurtByPlayer(net.minecraft.world.entity.player.Player, int);
+  public void setLastHurtByPlayer(java.util.UUID, int);
+  public void setLastHurtByMob(net.minecraft.world.entity.LivingEntity);
+  public net.minecraft.world.entity.LivingEntity getLastHurtMob();
+  public int getLastHurtMobTimestamp();
+  public void setLastHurtMob(net.minecraft.world.entity.Entity);
+  public boolean hurtServer(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource, float);
+  public float getHurtDir();
+  public void animateHurt(float);
+  public void hurtArmor(net.minecraft.world.damagesource.DamageSource, float);
+  public void hurtHelmet(net.minecraft.world.damagesource.DamageSource, float);
+  public boolean doHurtTarget(net.minecraft.server.level.ServerLevel, net.minecraft.world.entity.Entity);
+  public boolean isInvulnerableTo(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource);
+  public int getLastHurtByPlayerMemoryTime();
+
+==== Mob ====
+  public boolean wantsToPickUp(net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack);
+  public boolean doHurtTarget(net.minecraft.server.level.ServerLevel, net.minecraft.world.entity.Entity);
+
+==== CompoundTag ====
+  public boolean contains(java.lang.String);
+  public java.util.Optional<java.lang.Integer> getInt(java.lang.String);
+  public int getIntOr(java.lang.String, int);
+  public java.util.Optional<java.lang.Float> getFloat(java.lang.String);
+  public float getFloatOr(java.lang.String, float);
+  public java.util.Optional<java.lang.String> getString(java.lang.String);
+  public java.lang.String getStringOr(java.lang.String, java.lang.String);
+  public java.util.Optional<int[]> getIntArray(java.lang.String);
+  public java.util.Optional<net.minecraft.nbt.CompoundTag> getCompound(java.lang.String);
+  public net.minecraft.nbt.CompoundTag getCompoundOrEmpty(java.lang.String);
+  public java.util.Optional<net.minecraft.nbt.ListTag> getList(java.lang.String);
+  public net.minecraft.nbt.ListTag getListOrEmpty(java.lang.String);
+  public java.util.Optional<java.lang.Boolean> getBoolean(java.lang.String);
+  public boolean getBooleanOr(java.lang.String, boolean);
+  public <T> void store(java.lang.String, com.mojang.serialization.Codec<T>, T);
+  public <T> void storeNullable(java.lang.String, com.mojang.serialization.Codec<T>, T);
+  public <T> void store(java.lang.String, com.mojang.serialization.Codec<T>, com.mojang.serialization.DynamicOps<net.minecraft.nbt.Tag>, T);
+  public <T> void storeNullable(java.lang.String, com.mojang.serialization.Codec<T>, com.mojang.serialization.DynamicOps<net.minecraft.nbt.Tag>, T);
+  public <T> void store(com.mojang.serialization.MapCodec<T>, T);
+  public <T> void store(com.mojang.serialization.MapCodec<T>, com.mojang.serialization.DynamicOps<net.minecraft.nbt.Tag>, T);
+  public <T> java.util.Optional<T> read(java.lang.String, com.mojang.serialization.Codec<T>);
+  public <T> java.util.Optional<T> read(java.lang.String, com.mojang.serialization.Codec<T>, com.mojang.serialization.DynamicOps<net.minecraft.nbt.Tag>);
+  public <T> java.util.Optional<T> read(com.mojang.serialization.MapCodec<T>);
+  public <T> java.util.Optional<T> read(com.mojang.serialization.MapCodec<T>, com.mojang.serialization.DynamicOps<net.minecraft.nbt.Tag>);
+
+==== EntityDataSerializers ====
+Compiled from "EntityDataSerializers.java"
+public class net.minecraft.network.syncher.EntityDataSerializers {
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.Byte> BYTE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.Integer> INT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.Long> LONG;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.Float> FLOAT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.String> STRING;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.network.chat.Component> COMPONENT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.Optional<net.minecraft.network.chat.Component>> OPTIONAL_COMPONENT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.item.ItemStack> ITEM_STACK;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.level.block.state.BlockState> BLOCK_STATE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.Optional<net.minecraft.world.level.block.state.BlockState>> OPTIONAL_BLOCK_STATE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.lang.Boolean> BOOLEAN;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.particles.ParticleOptions> PARTICLE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.List<net.minecraft.core.particles.ParticleOptions>> PARTICLES;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Rotations> ROTATIONS;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.BlockPos> BLOCK_POS;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.Optional<net.minecraft.core.BlockPos>> OPTIONAL_BLOCK_POS;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Direction> DIRECTION;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.Optional<net.minecraft.world.entity.EntityReference<net.minecraft.world.entity.LivingEntity>>> OPTIONAL_LIVING_ENTITY_REFERENCE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.Optional<net.minecraft.core.GlobalPos>> OPTIONAL_GLOBAL_POS;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.nbt.CompoundTag> COMPOUND_TAG;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.entity.npc.VillagerData> VILLAGER_DATA;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<java.util.OptionalInt> OPTIONAL_UNSIGNED_INT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.entity.Pose> POSE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.CatVariant>> CAT_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.ChickenVariant>> CHICKEN_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.CowVariant>> COW_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.wolf.WolfVariant>> WOLF_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.wolf.WolfSoundVariant>> WOLF_SOUND_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.frog.FrogVariant>> FROG_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.animal.PigVariant>> PIG_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.core.Holder<net.minecraft.world.entity.decoration.PaintingVariant>> PAINTING_VARIANT;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.entity.animal.armadillo.Armadillo$ArmadilloState> ARMADILLO_STATE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<net.minecraft.world.entity.animal.sniffer.Sniffer$State> SNIFFER_STATE;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<org.joml.Vector3f> VECTOR3;
+  public static final net.minecraft.network.syncher.EntityDataSerializer<org.joml.Quaternionf> QUATERNION;
+  public static void registerSerializer(net.minecraft.network.syncher.EntityDataSerializer<?>);
+  public static net.minecraft.network.syncher.EntityDataSerializer<?> getSerializer(int);
+  public static int getSerializedId(net.minecraft.network.syncher.EntityDataSerializer<?>);
+}
+
+==== InteractionResult ====
+Compiled from "InteractionResult.java"
+public interface net.minecraft.world.InteractionResult {
+  public static final net.minecraft.world.InteractionResult$Success SUCCESS;
+  public static final net.minecraft.world.InteractionResult$Success SUCCESS_SERVER;
+  public static final net.minecraft.world.InteractionResult$Success CONSUME;
+  public static final net.minecraft.world.InteractionResult$Fail FAIL;
+  public static final net.minecraft.world.InteractionResult$Pass PASS;
+  public static final net.minecraft.world.InteractionResult$TryEmptyHandInteraction TRY_WITH_EMPTY_HAND;
+  public default boolean consumesAction();
+}
+
+==== Item ====
+  public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level, net.minecraft.world.entity.player.Player, net.minecraft.world.InteractionHand);
+
+==== EntityReference ====
+Compiled from "EntityReference.java"
+public class net.minecraft.world.entity.EntityReference<StoredEntityType extends net.minecraft.world.level.entity.UniquelyIdentifyable> {
+  public static <Type extends net.minecraft.world.level.entity.UniquelyIdentifyable> com.mojang.serialization.Codec<net.minecraft.world.entity.EntityReference<Type>> codec();
+  public static <Type extends net.minecraft.world.level.entity.UniquelyIdentifyable> net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, net.minecraft.world.entity.EntityReference<Type>> streamCodec();
+  public net.minecraft.world.entity.EntityReference(StoredEntityType);
+  public net.minecraft.world.entity.EntityReference(java.util.UUID);
+  public java.util.UUID getUUID();
+  public StoredEntityType getEntity(net.minecraft.world.level.entity.UUIDLookup<? super StoredEntityType>, java.lang.Class<StoredEntityType>);
+  public boolean matches(StoredEntityType);
+  public void store(net.minecraft.nbt.CompoundTag, java.lang.String);
+  public static <StoredEntityType extends net.minecraft.world.level.entity.UniquelyIdentifyable> StoredEntityType get(net.minecraft.world.entity.EntityReference<StoredEntityType>, net.minecraft.world.level.entity.UUIDLookup<? super StoredEntityType>, java.lang.Class<StoredEntityType>);
+  public static <StoredEntityType extends net.minecraft.world.level.entity.UniquelyIdentifyable> net.minecraft.world.entity.EntityReference<StoredEntityType> read(net.minecraft.nbt.CompoundTag, java.lang.String);
+  public static <StoredEntityType extends net.minecraft.world.level.entity.UniquelyIdentifyable> net.minecraft.world.entity.EntityReference<StoredEntityType> readWithOldOwnerConversion(net.minecraft.nbt.CompoundTag, java.lang.String, net.minecraft.world.level.Level);
+}
+
+==== Relative ====
+Compiled from "Relative.java"
+public final class net.minecraft.world.entity.Relative extends java.lang.Enum<net.minecraft.world.entity.Relative> {
+  public static final net.minecraft.world.entity.Relative X;
+  public static final net.minecraft.world.entity.Relative Y;
+  public static final net.minecraft.world.entity.Relative Z;
+  public static final net.minecraft.world.entity.Relative Y_ROT;
+  public static final net.minecraft.world.entity.Relative X_ROT;
+  public static final net.minecraft.world.entity.Relative DELTA_X;
+  public static final net.minecraft.world.entity.Relative DELTA_Y;
+  public static final net.minecraft.world.entity.Relative DELTA_Z;
+  public static final net.minecraft.world.entity.Relative ROTATE_DELTA;
+  public static final java.util.Set<net.minecraft.world.entity.Relative> ALL;
+  public static final java.util.Set<net.minecraft.world.entity.Relative> ROTATION;
+  public static final java.util.Set<net.minecraft.world.entity.Relative> DELTA;
+  public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, java.util.Set<net.minecraft.world.entity.Relative>> SET_STREAM_CODEC;
+  public static net.minecraft.world.entity.Relative[] values();
+  public static net.minecraft.world.entity.Relative valueOf(java.lang.String);
+  public static java.util.Set<net.minecraft.world.entity.Relative> union(java.util.Set<net.minecraft.world.entity.Relative>...);
+  public static java.util.Set<net.minecraft.world.entity.Relative> unpack(int);
+  public static int pack(java.util.Set<net.minecraft.world.entity.Relative>);
+}
+
+==== PlayerRenderState ====
+Compiled from "PlayerRenderState.java"
+public class net.minecraft.client.renderer.entity.state.PlayerRenderState extends net.minecraft.client.renderer.entity.state.HumanoidRenderState {
+  public net.minecraft.client.resources.PlayerSkin skin;
+  public float capeFlap;
+  public float capeLean;
+  public float capeLean2;
+  public int arrowCount;
+  public int stingerCount;
+  public int useItemRemainingTicks;
+  public boolean isSpectator;
+  public boolean showHat;
+  public boolean showJacket;
+  public boolean showLeftPants;
+  public boolean showRightPants;
+  public boolean showLeftSleeve;
+  public boolean showRightSleeve;
+  public boolean showCape;
+  public float fallFlyingTimeInTicks;
+  public boolean shouldApplyFlyingYRot;
+  public float flyingYRot;
+  public boolean swinging;
+  public net.minecraft.network.chat.Component scoreText;
+  public net.minecraft.world.entity.animal.Parrot$Variant parrotOnLeftShoulder;
+  public net.minecraft.world.entity.animal.Parrot$Variant parrotOnRightShoulder;
+  public int id;
+  public java.lang.String name;
+  public final net.minecraft.client.renderer.item.ItemStackRenderState heldOnHead;
+  public net.minecraft.client.renderer.entity.state.PlayerRenderState();
+  public float fallFlyingScale();
+}
+
+==== LivingEntityRenderer ====
+Compiled from "LivingEntityRenderer.java"
+public abstract class net.minecraft.client.renderer.entity.LivingEntityRenderer<T extends net.minecraft.world.entity.LivingEntity, S extends net.minecraft.client.renderer.entity.state.LivingEntityRenderState, M extends net.minecraft.client.model.EntityModel<? super S>> extends net.minecraft.client.renderer.entity.EntityRenderer<T, S> implements net.minecraft.client.renderer.entity.RenderLayerParent<S, M> {
+  public net.minecraft.client.renderer.entity.LivingEntityRenderer(net.minecraft.client.renderer.entity.EntityRendererProvider$Context, M, float);
+  public M getModel();
+  public void render(S, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int);
+  public abstract net.minecraft.resources.ResourceLocation getTextureLocation(S);
+  public static int getOverlayCoords(net.minecraft.client.renderer.entity.state.LivingEntityRenderState, float);
+  public static boolean isEntityUpsideDown(net.minecraft.world.entity.LivingEntity);
+  public void extractRenderState(T, S, float);
+  public void extractRenderState(net.minecraft.world.entity.Entity, net.minecraft.client.renderer.entity.state.EntityRenderState, float);
+  public void render(net.minecraft.client.renderer.entity.state.EntityRenderState, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int);
+}
+
+==== WingsLayer ====
+Compiled from "WingsLayer.java"
+public class net.minecraft.client.renderer.entity.layers.WingsLayer<S extends net.minecraft.client.renderer.entity.state.HumanoidRenderState, M extends net.minecraft.client.model.EntityModel<S>> extends net.minecraft.client.renderer.entity.layers.RenderLayer<S, M> {
+  public net.minecraft.client.renderer.entity.layers.WingsLayer(net.minecraft.client.renderer.entity.RenderLayerParent<S, M>, net.minecraft.client.model.geom.EntityModelSet, net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, S, float, float);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, net.minecraft.client.renderer.entity.state.EntityRenderState, float, float);
+}
+
+==== HumanoidArmorLayer ====
+Compiled from "HumanoidArmorLayer.java"
+public class net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer<S extends net.minecraft.client.renderer.entity.state.HumanoidRenderState, M extends net.minecraft.client.model.HumanoidModel<S>, A extends net.minecraft.client.model.HumanoidModel<S>> extends net.minecraft.client.renderer.entity.layers.RenderLayer<S, M> {
+  public net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer(net.minecraft.client.renderer.entity.RenderLayerParent<S, M>, A, A, net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer);
+  public net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer(net.minecraft.client.renderer.entity.RenderLayerParent<S, M>, A, A, A, A, net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer);
+  public static boolean shouldRender(net.minecraft.world.item.ItemStack, net.minecraft.world.entity.EquipmentSlot);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, S, float, float);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, net.minecraft.client.renderer.entity.state.EntityRenderState, float, float);
+}
+
+==== ItemInHandLayer ====
+Compiled from "ItemInHandLayer.java"
+public class net.minecraft.client.renderer.entity.layers.ItemInHandLayer<S extends net.minecraft.client.renderer.entity.state.ArmedEntityRenderState, M extends net.minecraft.client.model.EntityModel<S> & net.minecraft.client.model.ArmedModel> extends net.minecraft.client.renderer.entity.layers.RenderLayer<S, M> {
+  public net.minecraft.client.renderer.entity.layers.ItemInHandLayer(net.minecraft.client.renderer.entity.RenderLayerParent<S, M>);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, S, float, float);
+  public void render(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.MultiBufferSource, int, net.minecraft.client.renderer.entity.state.EntityRenderState, float, float);
+}
+
+==== UUIDUtil ====
+Compiled from "UUIDUtil.java"
+public final class net.minecraft.core.UUIDUtil {
+  public static final com.mojang.serialization.Codec<java.util.UUID> CODEC;
+  public static final com.mojang.serialization.Codec<java.util.Set<java.util.UUID>> CODEC_SET;
+  public static final com.mojang.serialization.Codec<java.util.Set<java.util.UUID>> CODEC_LINKED_SET;
+  public static final com.mojang.serialization.Codec<java.util.UUID> STRING_CODEC;
+  public static final com.mojang.serialization.Codec<java.util.UUID> AUTHLIB_CODEC;
+  public static final com.mojang.serialization.Codec<java.util.UUID> LENIENT_CODEC;
+  public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, java.util.UUID> STREAM_CODEC;
+  public static final int UUID_BYTES;
+  public static java.util.UUID uuidFromIntArray(int[]);
+  public static int[] uuidToIntArray(java.util.UUID);
+  public static byte[] uuidToByteArray(java.util.UUID);
+  public static java.util.UUID readUUID(com.mojang.serialization.Dynamic<?>);
+  public static java.util.UUID createOfflinePlayerUUID(java.lang.String);
+  public static com.mojang.authlib.GameProfile createOfflineProfile(java.lang.String);
+}
+
+==== Wolf ====
+
+==== DataComponents EQUIPPABLE ====
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.food.FoodProperties> FOOD;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.equipment.Equippable> EQUIPPABLE;
