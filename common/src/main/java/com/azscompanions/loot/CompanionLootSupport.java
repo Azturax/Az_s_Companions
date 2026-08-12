@@ -5,7 +5,7 @@ package com.azscompanions.loot;
  * NeoForge GLM JSON must mirror these floats.
  * <p>
  * Master switch: config key {@code world.enableLoot} (default {@link #DEFAULT_ENABLE_LOOT}).
- * When false, all mod treasure loot injectors no-op (desert pyramid charm, trail ruins whistle, etc.).
+ * When false, all mod treasure loot injectors no-op (desert pyramid charm, etc.).
  */
 public final class CompanionLootSupport {
     /**

@@ -2,10 +2,8 @@ package com.azscompanions;
 
 import com.azscompanions.client.ModKeyMappings;
 import com.azscompanions.client.model.FeminineCompanionModel;
-import com.azscompanions.client.model.JindujunModel;
 import com.azscompanions.client.model.KonEarsModel;
 import com.azscompanions.client.renderer.CompanionRenderer;
-import com.azscompanions.client.renderer.FlyingNimbusRenderer;
 import com.azscompanions.client.renderer.KonAwareBedRenderer;
 import com.azscompanions.client.screen.CompanionInventoryScreen;
 import com.azscompanions.client.screen.CompanionManagementScreen;
@@ -41,12 +39,10 @@ public final class AzsCompanionsClient {
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_WIDE, () -> FeminineCompanionModel.createBodyLayer(false));
         event.registerLayerDefinition(FeminineCompanionModel.LAYER_SLIM, () -> FeminineCompanionModel.createBodyLayer(true));
         event.registerLayerDefinition(KonEarsModel.LAYER, KonEarsModel::createBodyLayer);
-        event.registerLayerDefinition(JindujunModel.LAYER, JindujunModel::createBodyLayer);
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.COMPANION.get(), CompanionRenderer::new);
-        event.registerEntityRenderer(ModEntities.FLYING_NIMBUS.get(), FlyingNimbusRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.KON_BED.get(), KonAwareBedRenderer::new);
     }
 

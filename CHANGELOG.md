@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.4.7
+
+### Removed
+- **Jindujun / Flying Nimbus** — rideable cloud entity, Blockbench mesh/renderer, enchant particle stream, textures, and all registration hooks (NeoForge, Fabric, NeoForge 26.2).
+- **Jindujun Whistle** — summon/dismiss item, creative-tab entry, Trail Ruins archaeology loot injection (Fabric pool + NeoForge taiga GLM), lang strings, and related tests.
+
+### Changed
+- **Treasure loot:** `world.enableLoot` now only gates Companion Charm desert-pyramid injection (whistle loot gone).
+
+### Loaders
+| Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
+|-----------|----------|--------|--------------|------------|
+| **1.21.1** | `azscompanions-neoforge-0.4.7+1.21.1.jar` | `azscompanions-fabric-0.4.7+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.7+1.21.1.jar` | `azscompanions-fabric-cci-0.4.7+1.21.1.jar` |
+
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) — port in progress; no jar shipped.
+
 ## 0.4.6
 
 ### Fixed

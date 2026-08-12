@@ -340,7 +340,6 @@ Structure / archaeology loot from this mod (not soft-deps — always registered 
 | Injection | Where | Chance |
 |-----------|--------|--------|
 | Companion Charm | Desert pyramid chests | 5% |
-| Jindujun Whistle | Trail Ruins rare archaeology | 0.5% (NeoForge GLM also scopes taiga) |
 
 ### Config
 

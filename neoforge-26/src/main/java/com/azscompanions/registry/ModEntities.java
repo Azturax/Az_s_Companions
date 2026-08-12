@@ -2,8 +2,6 @@ package com.azscompanions.registry;
 
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.entity.CompanionEntity;
-import com.azscompanions.entity.FlyingNimbusEntity;
-import com.azscompanions.entity.JindujunSupport;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -25,22 +23,10 @@ public final class ModEntities {
                             .updateInterval(3)
                             .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, "companion"))));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<FlyingNimbusEntity>> FLYING_NIMBUS =
-            ENTITY_TYPES.register(JindujunSupport.ENTITY_ID, () ->
-                    EntityType.Builder.of(FlyingNimbusEntity::new, MobCategory.MISC)
-                            .sized(JindujunSupport.WIDTH, JindujunSupport.HEIGHT)
-                            .clientTrackingRange(10)
-                            .updateInterval(1)
-                            .fireImmune()
-                            .build(ResourceKey.create(
-                                    Registries.ENTITY_TYPE,
-                                    Identifier.fromNamespaceAndPath(AzsCompanions.MOD_ID, JindujunSupport.ENTITY_ID))));
-
     private ModEntities() {
     }
 
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(COMPANION.get(), CompanionEntity.createAttributes().build());
-        event.put(FLYING_NIMBUS.get(), FlyingNimbusEntity.createAttributes().build());
     }
 }

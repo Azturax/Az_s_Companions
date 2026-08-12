@@ -1,9 +1,7 @@
 package com.azscompanions.registry;
 
 import com.azscompanions.AzsCompanions;
-import com.azscompanions.entity.JindujunSupport;
 import com.azscompanions.item.CompanionCharmItem;
-import com.azscompanions.item.JindujunWhistleItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -20,10 +18,6 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> KON_BED =
             ITEMS.register("kon_bed", () ->
                     new BlockItem(ModBlocks.KON_BED.get(), new Item.Properties().stacksTo(1)));
-
-    public static final DeferredItem<JindujunWhistleItem> JINDUJUN_WHISTLE =
-            ITEMS.register(JindujunSupport.ITEM_ID, () ->
-                    new JindujunWhistleItem(new Item.Properties().stacksTo(1)));
 
     private ModItems() {
     }

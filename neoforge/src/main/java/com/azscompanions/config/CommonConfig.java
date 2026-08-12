@@ -53,7 +53,7 @@ public final class CommonConfig {
                 .define("respectClaimMods", true);
         AVOID_BREAKING_TOOLS = builder.define("avoidBreakingTools", true);
         ENABLE_LOOT = builder.comment(
-                        "Inject mod treasure loot (Companion Charm in desert pyramids, Jindujun Whistle in Trail Ruins archaeology, etc.). Default true.")
+                        "Inject mod treasure loot (Companion Charm in desert pyramids, etc.). Default true.")
                 .define("enableLoot", com.azscompanions.loot.CompanionLootSupport.DEFAULT_ENABLE_LOOT);
         builder.pop();
 
