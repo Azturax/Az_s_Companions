@@ -3,7 +3,8 @@
 Wholesome adult companion mod for Minecraft (**1.21.1**, **1.21.5**, **1.20.1**). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v1.0.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.4)
+- **Release:** [v1.0.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.7)
+- **Publishing (Modrinth / CurseForge):** [docs/PUBLISHING.md](docs/PUBLISHING.md)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
 - **Activity skins:** [docs/CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md)
@@ -86,6 +87,16 @@ Same product feature set on every shipped jar (AI, inventory, Wiggly/UUID perks,
 ```
 
 Outputs under `*/build/libs/azscompanions-*-1.0.4+*.jar`. NeoForge 26.x uses `buildNeoForge26` / `buildNeoForge261` and is **not** part of release.
+
+## Publishing (Modrinth / CurseForge)
+
+GitHub Actions workflow [`.github/workflows/publish.yml`](.github/workflows/publish.yml) mirrors **GitHub Release** jars to Modrinth and CurseForge (one store version per jar / loader / MC line, CCI separate).
+
+1. Create Modrinth + CurseForge projects (suggested slug `azs-companions`)
+2. Add secrets `MODRINTH_TOKEN`, `CURSEFORGE_TOKEN` and variables `MODRINTH_PROJECT_ID`, `CURSEFORGE_PROJECT_ID`
+3. Publish a GitHub Release, or run **Actions → Publish Modrinth / CurseForge** with tag `v1.0.7`
+
+Full setup: [docs/PUBLISHING.md](docs/PUBLISHING.md). Store paste copy: [docs/STORE_DESCRIPTION.md](docs/STORE_DESCRIPTION.md).
 
 ## License
 
