@@ -1,17 +1,19 @@
-# Publishing to Modrinth & CurseForge
+# Publishing Az's Companions to Modrinth & CurseForge
 
 Automated upload of **all release jars** (standalone + CCI, all loaders / Minecraft lines) via GitHub Actions + [mc-publish](https://github.com/Kira-NT/mc-publish).
 
 Workflow: [`.github/workflows/publish.yml`](../.github/workflows/publish.yml)
+
+Tokens and project IDs must belong to the **Az's Companions** Modrinth / CurseForge projects (suggested slug `azs-companions`), not other mods.
 
 ## Status (Aug 2026)
 
 | Item | Status |
 |------|--------|
 | GitHub Releases | **Live** (e.g. [v1.0.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.7)) |
-| Modrinth project | **Not created yet** — create the project, then set `MODRINTH_PROJECT_ID` |
-| CurseForge project | **Not created yet** — create the project, then set `CURSEFORGE_PROJECT_ID` |
-| Upload tokens | **Not configured** on the repo (see secrets below) |
+| Modrinth project | **Not created yet** under Azturax (slug `azs-companions` 404) — create it, then set `MODRINTH_PROJECT_ID` |
+| CurseForge project | **Not created / ID not set** — create Az's Companions, then set `CURSEFORGE_PROJECT_ID` |
+| Upload tokens | Prefer `PUBLISH_MODRINTH_TOKEN` / `PUBLISH_CURSEFORGE_TOKEN` (legacy `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` still accepted) |
 
 Suggested slugs when creating store pages:
 
@@ -48,19 +50,19 @@ Add under **Settings → Secrets and variables → Actions → Secrets**:
 
 | Secret | Where to get it |
 |--------|-----------------|
-| `MODRINTH_TOKEN` | [Modrinth → Settings → Authorization](https://modrinth.com/settings/account) → create a PAT with **Create versions** (and project write as needed) |
-| `CURSEFORGE_TOKEN` | [CurseForge → Settings → API Tokens](https://console.curseforge.com/) → generate an API token |
+| `PUBLISH_MODRINTH_TOKEN` | [Modrinth → Settings → Authorization](https://modrinth.com/settings/account) → create a PAT with **Create versions** (and project write as needed) for the Az's Companions account |
+| `PUBLISH_CURSEFORGE_TOKEN` | [CurseForge → Settings → API Tokens](https://console.curseforge.com/) → generate an API token for the Az's Companions account |
 
-Do **not** commit tokens. Do not put them in `gradle.properties`.
+Legacy names `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` still work if `PUBLISH_*` is unset. Do **not** commit tokens. Do not put them in `gradle.properties`.
 
-## Variables (Actions → Variables)
+## Variables (Actions → Variables) — still required
 
-Add under **Settings → Secrets and variables → Actions → Variables**:
+Add under **Settings → Secrets and variables → Actions → Variables**. These must be the **Az's Companions** project IDs (slug `azs-companions`), not placeholders and not IDs from another mod:
 
 | Variable | Example | Notes |
 |----------|---------|-------|
-| `MODRINTH_PROJECT_ID` | `AbCdEfGh` | Modrinth project **id** (8-char) or slug — from the project URL / API after creation |
-| `CURSEFORGE_PROJECT_ID` | `1234567` | Numeric CurseForge project id (from the project page / CF console) |
+| `MODRINTH_PROJECT_ID` | `AbCdEfGh` or `azs-companions` | Modrinth project **id** (8-char) or slug — from the Az's Companions project URL / API after creation |
+| `CURSEFORGE_PROJECT_ID` | `1234567` | Numeric CurseForge project id for Az's Companions (from the project page / CF console) |
 
 Until both a token **and** the matching project id exist for a platform, that platform is skipped. If **neither** platform is fully configured, the workflow finishes with a warning and does not upload.
 
@@ -75,7 +77,7 @@ The workflow does **not** rebuild jars and does **not** re-upload to GitHub; it 
 
 ### Publish an existing release (e.g. v1.0.7)
 
-After secrets + project IDs are set:
+After secrets + Az's Companions project IDs are set:
 
 1. Actions → **Publish Modrinth / CurseForge** → **Run workflow**
 2. Tag: `v1.0.7`
@@ -83,9 +85,9 @@ After secrets + project IDs are set:
 
 ## One-time project setup checklist
 
-1. Create empty Modrinth project (slug `azs-companions` recommended); copy project id → `MODRINTH_PROJECT_ID`
-2. Create empty CurseForge Minecraft mod project; copy numeric id → `CURSEFORGE_PROJECT_ID`
-3. Add `MODRINTH_TOKEN` and `CURSEFORGE_TOKEN` secrets
+1. Create empty Modrinth project for **Az's Companions** (slug `azs-companions` recommended); copy project id → `MODRINTH_PROJECT_ID`
+2. Create empty CurseForge Minecraft mod project for **Az's Companions**; copy numeric id → `CURSEFORGE_PROJECT_ID`
+3. Add `PUBLISH_MODRINTH_TOKEN` and `PUBLISH_CURSEFORGE_TOKEN` secrets (or legacy names)
 4. Run the workflow against the latest release tag
 5. Update README download links once the store pages exist
 

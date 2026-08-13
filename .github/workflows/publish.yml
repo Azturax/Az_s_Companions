@@ -1,10 +1,10 @@
 # Publish Az's Companions jars from a GitHub Release to Modrinth + CurseForge.
 # Docs: docs/PUBLISHING.md
 #
-# Required repo secrets:
-#   MODRINTH_TOKEN
-#   CURSEFORGE_TOKEN
-# Required repo variables:
+# Required repo secrets (prefer PUBLISH_* names; legacy names still work):
+#   PUBLISH_MODRINTH_TOKEN (or MODRINTH_TOKEN)
+#   PUBLISH_CURSEFORGE_TOKEN (or CURSEFORGE_TOKEN)
+# Required repo variables (Az's Companions project IDs / slug azs-companions):
 #   MODRINTH_PROJECT_ID
 #   CURSEFORGE_PROJECT_ID
 #
@@ -65,8 +65,9 @@ jobs:
         id: gate
         shell: bash
         env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          # Prefer PUBLISH_* secrets; fall back to legacy names if unset.
+          MODRINTH_TOKEN: ${{ secrets.PUBLISH_MODRINTH_TOKEN || secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.PUBLISH_CURSEFORGE_TOKEN || secrets.CURSEFORGE_TOKEN }}
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
         run: |
@@ -78,14 +79,14 @@ jobs:
           if [[ -n "${MODRINTH_TOKEN}" && -n "${MODRINTH_PROJECT_ID}" ]]; then
             has_mr=true
           else
-            [[ -z "${MODRINTH_TOKEN}" ]] && reasons+=("secret MODRINTH_TOKEN")
+            [[ -z "${MODRINTH_TOKEN}" ]] && reasons+=("secret PUBLISH_MODRINTH_TOKEN (or MODRINTH_TOKEN)")
             [[ -z "${MODRINTH_PROJECT_ID}" ]] && reasons+=("variable MODRINTH_PROJECT_ID")
           fi
 
           if [[ -n "${CURSEFORGE_TOKEN}" && -n "${CURSEFORGE_PROJECT_ID}" ]]; then
             has_cf=true
           else
-            [[ -z "${CURSEFORGE_TOKEN}" ]] && reasons+=("secret CURSEFORGE_TOKEN")
+            [[ -z "${CURSEFORGE_TOKEN}" ]] && reasons+=("secret PUBLISH_CURSEFORGE_TOKEN (or CURSEFORGE_TOKEN)")
             [[ -z "${CURSEFORGE_PROJECT_ID}" ]] && reasons+=("variable CURSEFORGE_PROJECT_ID")
           fi
 
@@ -287,9 +288,9 @@ jobs:
           retry-delay: 15000
           fail-mode: fail
           modrinth-id: ${{ needs.prepare.outputs.has_modrinth == 'true' && vars.MODRINTH_PROJECT_ID || '' }}
-          modrinth-token: ${{ needs.prepare.outputs.has_modrinth == 'true' && secrets.MODRINTH_TOKEN || '' }}
+          modrinth-token: ${{ needs.prepare.outputs.has_modrinth == 'true' && (secrets.PUBLISH_MODRINTH_TOKEN || secrets.MODRINTH_TOKEN) || '' }}
           curseforge-id: ${{ needs.prepare.outputs.has_curseforge == 'true' && vars.CURSEFORGE_PROJECT_ID || '' }}
-          curseforge-token: ${{ needs.prepare.outputs.has_curseforge == 'true' && secrets.CURSEFORGE_TOKEN || '' }}
+          curseforge-token: ${{ needs.prepare.outputs.has_curseforge == 'true' && (secrets.PUBLISH_CURSEFORGE_TOKEN || secrets.CURSEFORGE_TOKEN) || '' }}
 
   summary:
     name: Summary
