@@ -5,8 +5,8 @@
 #   PUBLISH_MODRINTH_TOKEN (or MODRINTH_TOKEN)
 #   PUBLISH_CURSEFORGE_TOKEN (or CURSEFORGE_TOKEN)
 # Required repo variables (Az's Companions project IDs / slug azs-companions):
-#   MODRINTH_PROJECT_ID
-#   CURSEFORGE_PROJECT_ID
+#   MODRINTH_PROJECT_ID (or MODRINTH)
+#   CURSEFORGE_PROJECT_ID (or CURSEFORGE)
 #
 # Triggers: release published, or manual workflow_dispatch with a tag (e.g. v1.0.7).
 
@@ -68,8 +68,9 @@ jobs:
           # Prefer PUBLISH_* secrets; fall back to legacy names if unset.
           MODRINTH_TOKEN: ${{ secrets.PUBLISH_MODRINTH_TOKEN || secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.PUBLISH_CURSEFORGE_TOKEN || secrets.CURSEFORGE_TOKEN }}
-          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
-          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          # Prefer *_PROJECT_ID; fall back to short MODRINTH / CURSEFORGE variable names.
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID || vars.MODRINTH }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID || vars.CURSEFORGE }}
         run: |
           set -euo pipefail
           reasons=()
@@ -80,14 +81,14 @@ jobs:
             has_mr=true
           else
             [[ -z "${MODRINTH_TOKEN}" ]] && reasons+=("secret PUBLISH_MODRINTH_TOKEN (or MODRINTH_TOKEN)")
-            [[ -z "${MODRINTH_PROJECT_ID}" ]] && reasons+=("variable MODRINTH_PROJECT_ID")
+            [[ -z "${MODRINTH_PROJECT_ID}" ]] && reasons+=("variable MODRINTH_PROJECT_ID (or MODRINTH)")
           fi
 
           if [[ -n "${CURSEFORGE_TOKEN}" && -n "${CURSEFORGE_PROJECT_ID}" ]]; then
             has_cf=true
           else
             [[ -z "${CURSEFORGE_TOKEN}" ]] && reasons+=("secret PUBLISH_CURSEFORGE_TOKEN (or CURSEFORGE_TOKEN)")
-            [[ -z "${CURSEFORGE_PROJECT_ID}" ]] && reasons+=("variable CURSEFORGE_PROJECT_ID")
+            [[ -z "${CURSEFORGE_PROJECT_ID}" ]] && reasons+=("variable CURSEFORGE_PROJECT_ID (or CURSEFORGE)")
           fi
 
           echo "has_modrinth=$has_mr" >> "$GITHUB_OUTPUT"
@@ -114,120 +115,76 @@ jobs:
       max-parallel: 4
       matrix:
         include:
+          # One jar per (Minecraft x loader). CCI is soft-optional inside these jars (not a separate *-cci artifact).
           - jar: azscompanions-neoforge-{VERSION}+1.21.1.jar
             loader: neoforge
             mc: "1.21.1"
             java: "21"
-            edition: standalone
+            edition: main
             version_suffix: 1.21.1-neoforge
-            deps: ""
-          - jar: azscompanions-neoforge-cci-{VERSION}+1.21.1.jar
-            loader: neoforge
-            mc: "1.21.1"
-            java: "21"
-            edition: cci
-            version_suffix: 1.21.1-neoforge-cci
             deps: |
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-fabric-{VERSION}+1.21.1.jar
             loader: fabric
             mc: "1.21.1"
             java: "21"
-            edition: standalone
+            edition: main
             version_suffix: 1.21.1-fabric
             deps: |
               fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-          - jar: azscompanions-fabric-cci-{VERSION}+1.21.1.jar
-            loader: fabric
-            mc: "1.21.1"
-            java: "21"
-            edition: cci
-            version_suffix: 1.21.1-fabric-cci
-            deps: |
-              fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-neoforge-{VERSION}+1.21.5.jar
             loader: neoforge
             mc: "1.21.5"
             java: "21"
-            edition: standalone
+            edition: main
             version_suffix: 1.21.5-neoforge
-            deps: ""
-          - jar: azscompanions-neoforge-cci-{VERSION}+1.21.5.jar
-            loader: neoforge
-            mc: "1.21.5"
-            java: "21"
-            edition: cci
-            version_suffix: 1.21.5-neoforge-cci
             deps: |
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-fabric-{VERSION}+1.21.5.jar
             loader: fabric
             mc: "1.21.5"
             java: "21"
-            edition: standalone
+            edition: main
             version_suffix: 1.21.5-fabric
             deps: |
               fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-          - jar: azscompanions-fabric-cci-{VERSION}+1.21.5.jar
-            loader: fabric
-            mc: "1.21.5"
-            java: "21"
-            edition: cci
-            version_suffix: 1.21.5-fabric-cci
-            deps: |
-              fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-forge-{VERSION}+1.20.1.jar
             loader: forge
             mc: "1.20.1"
             java: "17"
-            edition: standalone
+            edition: main
             version_suffix: 1.20.1-forge
-            deps: ""
-          - jar: azscompanions-forge-cci-{VERSION}+1.20.1.jar
-            loader: forge
-            mc: "1.20.1"
-            java: "17"
-            edition: cci
-            version_suffix: 1.20.1-forge-cci
             deps: |
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-fabric-{VERSION}+1.20.1.jar
             loader: fabric
             mc: "1.20.1"
             java: "17"
-            edition: standalone
+            edition: main
             version_suffix: 1.20.1-fabric
             deps: |
               fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-          - jar: azscompanions-fabric-cci-{VERSION}+1.20.1.jar
-            loader: fabric
-            mc: "1.20.1"
-            java: "17"
-            edition: cci
-            version_suffix: 1.20.1-fabric-cci
-            deps: |
-              fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
-              content-creator-integration(required){modrinth:6Z8wT5tM}{curseforge:302296}
-              ichunutil(required){modrinth:W6ROj0Hl}{curseforge:229060}
+              content-creator-integration(optional){modrinth:6Z8wT5tM}{curseforge:302296}
+              ichunutil(optional){modrinth:W6ROj0Hl}{curseforge:229060}
           - jar: azscompanions-neoforge-{VERSION}+26.1.2.jar
             loader: neoforge
             mc: "26.1.2"
             java: "25"
-            edition: standalone
+            edition: main
             version_suffix: 26.1.2-neoforge
             deps: ""
           - jar: azscompanions-neoforge-{VERSION}+26.2.jar
             loader: neoforge
             mc: "26.2"
             java: "25"
-            edition: standalone
+            edition: main
             version_suffix: 26.2-neoforge
             deps: ""
 
@@ -262,11 +219,7 @@ jobs:
           SUFFIX: ${{ matrix.version_suffix }}
         run: |
           set -euo pipefail
-          if [[ "$EDITION" == "cci" ]]; then
-            TITLE="${VERSION} - ${LOADER} CCI ${MC}"
-          else
-            TITLE="${VERSION} - ${LOADER} ${MC}"
-          fi
+          TITLE="${VERSION} - ${LOADER} ${MC}"
           VER_ID="${VERSION}+${SUFFIX}"
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"
           echo "version_id=$VER_ID" >> "$GITHUB_OUTPUT"
@@ -287,9 +240,9 @@ jobs:
           retry-attempts: 3
           retry-delay: 15000
           fail-mode: fail
-          modrinth-id: ${{ needs.prepare.outputs.has_modrinth == 'true' && vars.MODRINTH_PROJECT_ID || '' }}
+          modrinth-id: ${{ needs.prepare.outputs.has_modrinth == 'true' && (vars.MODRINTH_PROJECT_ID || vars.MODRINTH) || '' }}
           modrinth-token: ${{ needs.prepare.outputs.has_modrinth == 'true' && (secrets.PUBLISH_MODRINTH_TOKEN || secrets.MODRINTH_TOKEN) || '' }}
-          curseforge-id: ${{ needs.prepare.outputs.has_curseforge == 'true' && vars.CURSEFORGE_PROJECT_ID || '' }}
+          curseforge-id: ${{ needs.prepare.outputs.has_curseforge == 'true' && (vars.CURSEFORGE_PROJECT_ID || vars.CURSEFORGE) || '' }}
           curseforge-token: ${{ needs.prepare.outputs.has_curseforge == 'true' && (secrets.PUBLISH_CURSEFORGE_TOKEN || secrets.CURSEFORGE_TOKEN) || '' }}
 
   summary:
