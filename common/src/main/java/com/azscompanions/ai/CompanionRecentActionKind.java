@@ -10,6 +10,8 @@ public enum CompanionRecentActionKind {
     ITEM_CRAFT(85),
     CRAFT_READY(80),
     ITEM_FIND(70),
+    /** Host-defined {@link CompanionCustomChatEvent} reaction. */
+    CUSTOM(65),
     DAMAGE(60),
     COMBAT(55),
     EATING(40),

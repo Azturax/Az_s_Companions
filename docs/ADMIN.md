@@ -68,7 +68,7 @@ Cycle **Profile** to fill `provider` + `baseUrl` (and a model placeholder). **Al
 | MCP (HTTP) | `mcp` | mcp url `http://127.0.0.1:3001/mcp` |
 | Custom... | (yours) | (yours) |
 
-Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the wire; blank keeps current; Clear clears config key), `inputLanguage`, **Use server LLM** (`serverLlmOnly`), **Idle chat** (`idleChat`), `mcpUrl`. Non-blank `apiKey` in the file wins over `apiKeyEnv` / `AZS_LLM_API_KEY`. Env remains fine for hosts that prefer not to store the key in the config file.
+Also editable: `model`, `apiKeyEnv`, masked **`apiKey`** (status only over the wire; blank keeps current; Clear clears config key), `inputLanguage`, **Use server LLM** (`serverLlmOnly`), **Idle chat** (`idleChat`), **Reactive chat** (`reactiveChat`), **Item-find chat** (`itemFindChat`), `mcpUrl`. Non-blank `apiKey` in the file wins over `apiKeyEnv` / `AZS_LLM_API_KEY`. Env remains fine for hosts that prefer not to store the key in the config file.
 
 #### Use server LLM
 
@@ -83,7 +83,13 @@ Toggle label **Use server LLM: ON/OFF** writes `serverLlmOnly` (default **OFF** 
 
 #### Idle chat
 
-Toggle **Idle chat: ON/OFF** writes `idleChat` (default **ON** for new configs). Companions near the owner occasionally speak (~90–240s). Uses the configured host LLM when enabled; otherwise sparse scripted lines. Does not revive AI Mode or name-listen.
+Toggle **Idle chat: ON/OFF** writes `idleChat` (default **ON** for new configs). Companions near the owner occasionally speak (~75–180s). Uses the configured host LLM when enabled; otherwise sparse scripted lines. Does not revive AI Mode or name-listen.
+
+#### Reactive chat / item-find
+
+- **Reactive chat** (`reactiveChat`, default ON): early reactions to explosions, darkness, crafts, damage, and host `customChatEvents`.
+- **Item-find chat** (`itemFindChat`, default ON): builtin “I found something” / notable finds (~14-day cooldown). Custom `item_find` events can still fire when this is off.
+- Extra events: edit `customChatEvents` in the AI config file — see [COMPANION_AI.md](COMPANION_AI.md#custom-chat-events-customchatevents).
 
 API keys always live on the **host** process (config file or env). The admin GUI never sends the stored key to clients — only a status (`config` / `env` / not set). Clients never need their own key when Use server LLM is ON.
 

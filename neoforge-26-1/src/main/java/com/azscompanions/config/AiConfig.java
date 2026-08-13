@@ -45,6 +45,9 @@ public final class AiConfig {
     public static final ModConfigSpec.DoubleValue CHAT_REACT_RANGE;
     public static final ModConfigSpec.IntValue CHAT_REACT_COOLDOWN_SECONDS;
     public static final ModConfigSpec.BooleanValue IDLE_CHAT;
+    public static final ModConfigSpec.BooleanValue REACTIVE_CHAT;
+    public static final ModConfigSpec.BooleanValue ITEM_FIND_CHAT;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> CUSTOM_CHAT_EVENTS;
     public static final ModConfigSpec.IntValue IDLE_CHAT_SECONDS_MIN;
     public static final ModConfigSpec.IntValue IDLE_CHAT_SECONDS_MAX;
     public static final ModConfigSpec.BooleanValue CALL_PLAYER_WHEN_AWAY;
@@ -165,7 +168,22 @@ public final class AiConfig {
         CHAT_REACT_COOLDOWN_SECONDS = builder.comment("Per-companion and per-owner cooldown between auto-replies.")
                 .defineInRange("chatReactCooldownSeconds",
                         CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS, 5, 600);
-        IDLE_CHAT = builder.define("idleChat", true);
+        IDLE_CHAT = builder.comment(
+                        "Occasional ambient LLM/scripted lines near the owner.")
+                .define("idleChat", true);
+        REACTIVE_CHAT = builder.comment(
+                        "React to recent-action events (explosion, darkness, crafts, damage, custom). Default true.")
+                .define("reactiveChat", true);
+        ITEM_FIND_CHAT = builder.comment(
+                        "Builtin \"I found something\" / ITEM_FIND reactions. Default true.")
+                .define("itemFindChat", true);
+        CUSTOM_CHAT_EVENTS = builder.comment(
+                        "Extra chat events as JSON object strings. Example:",
+                        "{\"id\":\"diamond_cheer\",\"enabled\":true,\"trigger\":\"item_find\",",
+                        " \"itemId\":\"minecraft:diamond\",\"prompt\":\"Celebrate the diamond.\",",
+                        " \"fallback\":\"A diamond!\",\"cooldownSeconds\":300,\"priority\":75}",
+                        "Triggers: explosion|darkness|item_find|item_craft|craft_ready|damage|idle")
+                .defineListAllowEmpty("customChatEvents", List.of(), () -> "", o -> o instanceof String);
         IDLE_CHAT_SECONDS_MIN = builder.defineInRange("idleChatSecondsMin",
                 CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN, 30, 3600);
         IDLE_CHAT_SECONDS_MAX = builder.defineInRange("idleChatSecondsMax",
@@ -269,6 +287,9 @@ public final class AiConfig {
                 .setChatReactRange(CHAT_REACT_RANGE.get())
                 .setChatReactCooldownSeconds(CHAT_REACT_COOLDOWN_SECONDS.get())
                 .setIdleChat(IDLE_CHAT.get())
+                .setReactiveChat(REACTIVE_CHAT.get())
+                .setItemFindChat(ITEM_FIND_CHAT.get())
+                .setCustomChatEvents(parseCustomChatEvents(CUSTOM_CHAT_EVENTS.get()))
                 .setIdleChatSecondsMin(IDLE_CHAT_SECONDS_MIN.get())
                 .setIdleChatSecondsMax(IDLE_CHAT_SECONDS_MAX.get())
                 .setCallPlayerWhenAway(CALL_PLAYER_WHEN_AWAY.get())
@@ -336,6 +357,9 @@ public final class AiConfig {
         toml.append("chatReactRange = ").append(s.chatReactRange()).append("\n");
         toml.append("chatReactCooldownSeconds = ").append(s.chatReactCooldownSeconds()).append("\n");
         toml.append("idleChat = ").append(s.idleChat()).append("\n");
+        toml.append("reactiveChat = ").append(s.reactiveChat()).append("\n");
+        toml.append("itemFindChat = ").append(s.itemFindChat()).append("\n");
+        toml.append("customChatEvents = ").append(customEventsToml(s.customChatEvents())).append("\n");
         toml.append("idleChatSecondsMin = ").append(s.idleChatSecondsMin()).append("\n");
         toml.append("idleChatSecondsMax = ").append(s.idleChatSecondsMax()).append("\n");
         toml.append("callPlayerWhenAway = ").append(s.callPlayerWhenAway()).append("\n");
@@ -367,6 +391,37 @@ public final class AiConfig {
         toml.append("protocolVersion = \"").append(esc(s.mcpProtocolVersion())).append("\"\n");
         toml.append("toolAllowlist = \"").append(esc(s.mcpAllowlist())).append("\"\n");
         java.nio.file.Files.writeString(path, toml.toString(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+
+    private static java.util.List<com.azscompanions.ai.CompanionCustomChatEvent> parseCustomChatEvents(
+            java.util.List<? extends String> raw) {
+        java.util.List<com.azscompanions.ai.CompanionCustomChatEvent> out = new java.util.ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (String line : raw) {
+            com.azscompanions.ai.CompanionCustomChatEvent e =
+                    com.azscompanions.ai.CompanionCustomChatEvent.fromJsonString(line);
+            if (e.isValid()) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    private static String customEventsToml(java.util.List<com.azscompanions.ai.CompanionCustomChatEvent> events) {
+        if (events == null || events.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < events.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append('"').append(esc(events.get(i).toJson().toString())).append('"');
+        }
+        return sb.append(']').toString();
     }
 
     private static String esc(String value) {

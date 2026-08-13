@@ -132,4 +132,20 @@ class LlmProviderProfileTest {
         assertTrue(new AdminAiConfigSnapshot().idleChat());
         assertTrue(snap.toWireJson().contains("\"idleChat\":true"));
     }
+
+    @Test
+    void mergePreservesReactiveAndItemFindChat() {
+        CompanionAiSettings base = new CompanionAiSettings()
+                .setReactiveChat(false)
+                .setItemFindChat(false);
+        AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(base);
+        assertFalse(snap.reactiveChat());
+        assertFalse(snap.itemFindChat());
+        snap.setReactiveChat(true).setItemFindChat(true);
+        CompanionAiSettings merged = snap.mergeInto(base);
+        assertTrue(merged.reactiveChat());
+        assertTrue(merged.itemFindChat());
+        assertTrue(new AdminAiConfigSnapshot().reactiveChat());
+        assertTrue(new AdminAiConfigSnapshot().itemFindChat());
+    }
 }

@@ -556,9 +556,46 @@ While an AI request is in flight, the owner (and stranger speaker when relevant)
 
 | Key | Type | Default | Meaning |
 |-----|------|---------|---------|
-| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line (~25s when reacting to a recent event). Also grounds lines in **recent actions** (explosion, darkness→ask for light, notable finds ~**once per 14 days** real-time per owner, craft-ready, crafts like “NICE SWORD!”). |
+| `idleChat` | bool | `true` | Occasional ambient LLM lines when owner is online and nearby (scripted fallback if LLM fails/off). Toggle **Idle chat** in `/az admin` → AI Config. Skips sleep/combat, busy LLM worker, and ~45s after any speak line (~25s when reacting to a recent event). |
+| `reactiveChat` | bool | `true` | Early reactions to recent-action events (explosion, darkness→torch ask, crafts, damage, host custom events). Toggle **Reactive chat** in admin. Independent of `idleChat` — reactive can fire with idle off. |
+| `itemFindChat` | bool | `true` | Builtin **“I found something”** / `ITEM_FIND` reactions (~once per **14 days** real-time per owner). Toggle **Item-find chat**. Custom `item_find` events still work when this is off. |
+| `customChatEvents` | array | `[]` | Host-defined extra events (see below). |
 | `idleChatSecondsMin` | int | `75` | Min seconds between ambient lines; clamped **30–3600** |
 | `idleChatSecondsMax` | int | `180` | Max seconds (random in `[min,max]`); clamped **30–3600** |
+
+#### Custom chat events (`customChatEvents`)
+
+Add named reactive/idle hooks in `azscompanions-ai.json` (Fabric) or as JSON object strings in `customChatEvents` (NeoForge TOML). Each entry:
+
+| Field | Meaning |
+|-------|---------|
+| `id` | Stable id (cooldown key) |
+| `enabled` | Default true |
+| `trigger` | `explosion` · `darkness` · `item_find` · `item_craft` · `craft_ready` · `damage` · `idle` |
+| `itemId` | Optional registry filter for item_* triggers (empty = any) |
+| `prompt` | Extra LLM instruction when this event focuses |
+| `fallback` | Scripted line when LLM is off/fails |
+| `cooldownSeconds` | Per-owner cooldown (default 60) |
+| `priority` | Reactive pick priority (default 50) |
+
+Example (Fabric JSON):
+
+```json
+"customChatEvents": [
+  {
+    "id": "diamond_cheer",
+    "enabled": true,
+    "trigger": "item_find",
+    "itemId": "minecraft:diamond",
+    "prompt": "Celebrate the diamond find in one short wholesome line.",
+    "fallback": "A diamond! Nice!",
+    "cooldownSeconds": 300,
+    "priority": 75
+  }
+]
+```
+
+Requires `reactiveChat=true` (except `trigger=idle`, which needs `idleChat=true`). Edit the AI config file; admin UI exposes idle/reactive/item-find toggles only.
 
 ### Call player when away
 

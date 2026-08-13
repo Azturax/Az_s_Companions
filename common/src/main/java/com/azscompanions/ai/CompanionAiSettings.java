@@ -85,6 +85,19 @@ public final class CompanionAiSettings {
     private int idleChatSecondsMin = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN;
     private int idleChatSecondsMax = CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MAX;
 
+    /**
+     * When true (default), companions may react early to recent-action events
+     * (explosion, darkness, crafts, damage, custom events, …).
+     */
+    private boolean reactiveChat = true;
+    /**
+     * Builtin {@link CompanionRecentActionKind#ITEM_FIND} / “I found something” reactions.
+     * Default true. Independent of host {@link #customChatEvents} with {@code trigger=item_find}.
+     */
+    private boolean itemFindChat = true;
+    /** Host-defined extra chat events (see {@link CompanionCustomChatEvent}). */
+    private List<CompanionCustomChatEvent> customChatEvents = new ArrayList<>();
+
     /** Call the owner by name when they stay beyond {@link #callPlayerDistance} too long. */
     private boolean callPlayerWhenAway = false;
     private int callPlayerAfterSeconds = CompanionAiChatSupport.DEFAULT_CALL_PLAYER_AFTER_SECONDS;
@@ -398,6 +411,40 @@ public final class CompanionAiSettings {
 
     public CompanionAiSettings setIdleChatSecondsMax(int idleChatSecondsMax) {
         this.idleChatSecondsMax = CompanionAiChatSupport.clampIdleSeconds(idleChatSecondsMax);
+        return this;
+    }
+
+    public boolean reactiveChat() {
+        return reactiveChat;
+    }
+
+    public CompanionAiSettings setReactiveChat(boolean reactiveChat) {
+        this.reactiveChat = reactiveChat;
+        return this;
+    }
+
+    public boolean itemFindChat() {
+        return itemFindChat;
+    }
+
+    public CompanionAiSettings setItemFindChat(boolean itemFindChat) {
+        this.itemFindChat = itemFindChat;
+        return this;
+    }
+
+    public List<CompanionCustomChatEvent> customChatEvents() {
+        return List.copyOf(customChatEvents);
+    }
+
+    public CompanionAiSettings setCustomChatEvents(List<CompanionCustomChatEvent> customChatEvents) {
+        this.customChatEvents = new ArrayList<>();
+        if (customChatEvents != null) {
+            for (CompanionCustomChatEvent e : customChatEvents) {
+                if (e != null && e.isValid()) {
+                    this.customChatEvents.add(e.copy());
+                }
+            }
+        }
         return this;
     }
 
@@ -761,6 +808,9 @@ public final class CompanionAiSettings {
                 .setIdleChat(idleChat)
                 .setIdleChatSecondsMin(idleChatSecondsMin)
                 .setIdleChatSecondsMax(idleChatSecondsMax)
+                .setReactiveChat(reactiveChat)
+                .setItemFindChat(itemFindChat)
+                .setCustomChatEvents(customChatEvents)
                 .setCallPlayerWhenAway(callPlayerWhenAway)
                 .setCallPlayerAfterSeconds(callPlayerAfterSeconds)
                 .setCallPlayerDistance(callPlayerDistance)

@@ -1,5 +1,6 @@
 package com.azscompanions.config;
 
+import com.azscompanions.entity.CompanionLuckSupport;
 import com.azscompanions.loot.CompanionLootSupport;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,6 +23,8 @@ public final class FabricCommonConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     private static volatile boolean enableLoot = CompanionLootSupport.DEFAULT_ENABLE_LOOT;
+    private static volatile boolean luckAffectsCompanion =
+            CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION;
 
     private FabricCommonConfig() {
     }
@@ -47,10 +50,16 @@ public final class FabricCommonConfig {
                 } else {
                     enableLoot = CompanionLootSupport.DEFAULT_ENABLE_LOOT;
                 }
+                if (world.has("luckAffectsCompanion")) {
+                    luckAffectsCompanion = world.get("luckAffectsCompanion").getAsBoolean();
+                } else {
+                    luckAffectsCompanion = CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION;
+                }
             }
             apply();
         } catch (Exception e) {
             enableLoot = CompanionLootSupport.DEFAULT_ENABLE_LOOT;
+            luckAffectsCompanion = CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION;
             apply();
             throw new RuntimeException("Failed to load " + path, e);
         }
@@ -63,18 +72,25 @@ public final class FabricCommonConfig {
                 "Az's Companions common/gameplay. Mirrors NeoForge azscompanions-common.toml [world].");
         JsonObject world = new JsonObject();
         world.addProperty("enableLoot", CompanionLootSupport.DEFAULT_ENABLE_LOOT);
+        world.addProperty("luckAffectsCompanion", CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION);
         root.add("world", world);
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             GSON.toJson(root, writer);
         }
         enableLoot = CompanionLootSupport.DEFAULT_ENABLE_LOOT;
+        luckAffectsCompanion = CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION;
     }
 
     private static void apply() {
         CompanionLootSupport.setLootInjectionEnabled(enableLoot);
+        CompanionLuckSupport.setLuckAffectsCompanion(luckAffectsCompanion);
     }
 
     public static boolean enableLoot() {
         return enableLoot;
+    }
+
+    public static boolean luckAffectsCompanion() {
+        return luckAffectsCompanion;
     }
 }

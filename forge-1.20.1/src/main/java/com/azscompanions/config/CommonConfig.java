@@ -18,6 +18,7 @@ public final class CommonConfig {
     public static final ForgeConfigSpec.BooleanValue AVOID_BREAKING_TOOLS;
     public static final ForgeConfigSpec.BooleanValue RESPECT_CLAIM_MODS;
     public static final ForgeConfigSpec.BooleanValue ENABLE_LOOT;
+    public static final ForgeConfigSpec.BooleanValue LUCK_AFFECTS_COMPANION;
     public static final ForgeConfigSpec.IntValue CONTAINER_POLL_COOLDOWN_TICKS;
     public static final ForgeConfigSpec.IntValue MAX_BLOCKS_SCANNED_PER_TICK;
 
@@ -55,6 +56,11 @@ public final class CommonConfig {
         ENABLE_LOOT = builder.comment(
                         "Inject mod treasure loot (Companion Charm in desert pyramids, etc.). Default true.")
                 .define("enableLoot", com.azscompanions.loot.CompanionLootSupport.DEFAULT_ENABLE_LOOT);
+        LUCK_AFFECTS_COMPANION = builder.comment(
+                        "When false (default), companions ignore luck/unluck potion effects and LUCK attribute",
+                        "modifiers (artifact spam). Set true to allow vanilla luck on companions.")
+                .define("luckAffectsCompanion",
+                        com.azscompanions.entity.CompanionLuckSupport.DEFAULT_LUCK_AFFECTS_COMPANION);
         builder.pop();
 
         SPEC = builder.build();

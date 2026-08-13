@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
+import java.util.function.Predicate;
 
 /**
  * Per-owner short-lived event buffer for ambient / reactive companion chatter.
@@ -96,16 +98,30 @@ public final class CompanionRecentActionMemory {
 
     /** Edge-trigger darkness: only when entering dark from lit. */
     public static boolean recordDarknessEnter(UUID playerId, long gameTime, boolean currentlyDark) {
+        return recordDarknessEnter(playerId, gameTime, currentlyDark, true);
+    }
+
+    /**
+     * @param storeEvent when false, only updates the dark-edge latch (for custom fan-out / gating)
+     * @return true when this tick is a dark-<em>enter</em> edge
+     */
+    public static boolean recordDarknessEnter(
+            UUID playerId, long gameTime, boolean currentlyDark, boolean storeEvent) {
         if (playerId == null) {
             return false;
         }
         PlayerBuffer buf = BY_PLAYER.computeIfAbsent(playerId, id -> new PlayerBuffer());
+        boolean entered;
         synchronized (buf) {
             boolean was = buf.wasDark;
             buf.wasDark = currentlyDark;
-            if (!currentlyDark || was) {
-                return false;
-            }
+            entered = currentlyDark && !was;
+        }
+        if (!entered) {
+            return false;
+        }
+        if (!storeEvent) {
+            return true;
         }
         return record(playerId, gameTime, CompanionRecentActionKind.DARKNESS,
                 "it is too dark — ask for a torch or light", null, true);
@@ -137,14 +153,25 @@ public final class CompanionRecentActionMemory {
     }
 
     public static boolean hasReactive(UUID playerId, long gameTime) {
-        return peekReactive(playerId, gameTime).isPresent();
+        return peekReactive(playerId, gameTime, a -> true).isPresent();
+    }
+
+    public static boolean hasReactive(UUID playerId, long gameTime, Predicate<CompanionRecentAction> allow) {
+        return peekReactive(playerId, gameTime, allow).isPresent();
     }
 
     public static Optional<CompanionRecentAction> peekReactive(UUID playerId, long gameTime) {
+        return peekReactive(playerId, gameTime, a -> true);
+    }
+
+    public static Optional<CompanionRecentAction> peekReactive(
+            UUID playerId, long gameTime, Predicate<CompanionRecentAction> allow) {
         List<CompanionRecentAction> list = peek(playerId, gameTime);
+        Predicate<CompanionRecentAction> gate = allow == null ? a -> true : allow;
         return list.stream()
                 .filter(CompanionRecentAction::reactive)
-                .max(Comparator.comparingInt((CompanionRecentAction a) -> a.kind().priority())
+                .filter(gate)
+                .max(Comparator.comparingInt(CompanionRecentActionMemory::reactivePriority)
                         .thenComparingLong(CompanionRecentAction::gameTime));
     }
 
@@ -152,6 +179,11 @@ public final class CompanionRecentActionMemory {
      * Take the highest-priority reactive event and mark it non-reactive (kept for prompt context).
      */
     public static Optional<CompanionRecentAction> consumeReactive(UUID playerId, long gameTime) {
+        return consumeReactive(playerId, gameTime, a -> true);
+    }
+
+    public static Optional<CompanionRecentAction> consumeReactive(
+            UUID playerId, long gameTime, Predicate<CompanionRecentAction> allow) {
         if (playerId == null) {
             return Optional.empty();
         }
@@ -159,6 +191,7 @@ public final class CompanionRecentActionMemory {
         if (buf == null) {
             return Optional.empty();
         }
+        Predicate<CompanionRecentAction> gate = allow == null ? a -> true : allow;
         synchronized (buf) {
             buf.prune(gameTime);
             int bestIdx = -1;
@@ -166,10 +199,10 @@ public final class CompanionRecentActionMemory {
             long bestTime = Long.MIN_VALUE;
             for (int i = 0; i < buf.events.size(); i++) {
                 CompanionRecentAction a = buf.events.get(i);
-                if (!a.reactive()) {
+                if (!a.reactive() || !gate.test(a)) {
                     continue;
                 }
-                int pri = a.kind().priority();
+                int pri = reactivePriority(a);
                 if (pri > bestPri || (pri == bestPri && a.gameTime() >= bestTime)) {
                     bestPri = pri;
                     bestTime = a.gameTime();
@@ -185,6 +218,51 @@ public final class CompanionRecentActionMemory {
         }
     }
 
+    /** Whether a custom event id is off cooldown for this owner. */
+    public static boolean canRecordCustom(UUID playerId, long gameTime, CompanionCustomChatEvent event) {
+        if (playerId == null || event == null || !event.isValid()) {
+            return false;
+        }
+        PlayerBuffer buf = BY_PLAYER.get(playerId);
+        if (buf == null) {
+            return true;
+        }
+        synchronized (buf) {
+            Long last = buf.lastCustom.get(event.id());
+            long cool = Math.max(5L, event.cooldownSeconds()) * 20L;
+            return last == null || gameTime - last >= cool;
+        }
+    }
+
+    /**
+     * Record a host-defined custom reactive event (cooldown keyed by event id).
+     */
+    public static boolean recordCustom(UUID playerId, long gameTime, CompanionCustomChatEvent event, String itemId) {
+        if (playerId == null || event == null || !event.isValid() || !event.enabled()) {
+            return false;
+        }
+        PlayerBuffer buf = BY_PLAYER.computeIfAbsent(playerId, id -> new PlayerBuffer());
+        synchronized (buf) {
+            buf.prune(gameTime);
+            Long last = buf.lastCustom.get(event.id());
+            long cool = Math.max(5L, event.cooldownSeconds()) * 20L;
+            if (last != null && gameTime - last < cool) {
+                return false;
+            }
+            String detail = event.prompt().isBlank()
+                    ? ("custom event " + event.id())
+                    : event.prompt();
+            CompanionRecentAction action = new CompanionRecentAction(
+                    CompanionRecentActionKind.CUSTOM, gameTime, detail, itemId, true, event.id());
+            buf.events.add(action);
+            buf.lastCustom.put(event.id(), gameTime);
+            while (buf.events.size() > MAX_EVENTS_PER_PLAYER) {
+                buf.events.remove(0);
+            }
+            return true;
+        }
+    }
+
     public static long cooldownTicks(CompanionRecentActionKind kind) {
         return switch (kind) {
             case EXPLOSION -> 20L * 45L;
@@ -192,6 +270,7 @@ public final class CompanionRecentActionMemory {
             case ITEM_CRAFT -> 20L * 20L;
             case CRAFT_READY -> 20L * 45L;
             case ITEM_FIND -> ITEM_FIND_COOLDOWN_TICKS;
+            case CUSTOM -> 20L * 60L;
             case DAMAGE, COMBAT -> 20L * 35L;
             case EATING -> 20L * 60L;
             case SLEEPING -> 20L * 90L;
@@ -199,9 +278,20 @@ public final class CompanionRecentActionMemory {
         };
     }
 
+    private static int reactivePriority(CompanionRecentAction a) {
+        if (a.kind() == CompanionRecentActionKind.CUSTOM && a.customEventId() != null) {
+            CompanionCustomChatEvent ev = CompanionChatEventSupport.findById(
+                    CompanionChatEventSupport.settings(), a.customEventId());
+            if (ev != null) {
+                return ev.priority();
+            }
+        }
+        return a.kind().priority();
+    }
+
     private static boolean isDefaultReactive(CompanionRecentActionKind kind) {
         return switch (kind) {
-            case EXPLOSION, DARKNESS, ITEM_CRAFT, CRAFT_READY, ITEM_FIND, DAMAGE -> true;
+            case EXPLOSION, DARKNESS, ITEM_CRAFT, CRAFT_READY, ITEM_FIND, CUSTOM, DAMAGE -> true;
             default -> false;
         };
     }
@@ -209,6 +299,7 @@ public final class CompanionRecentActionMemory {
     private static final class PlayerBuffer {
         private final List<CompanionRecentAction> events = new ArrayList<>();
         private final Map<CompanionRecentActionKind, Long> lastRecorded = new ConcurrentHashMap<>();
+        private final Map<String, Long> lastCustom = new ConcurrentHashMap<>();
         private final java.util.Set<String> seenItemIds = ConcurrentHashMap.newKeySet();
         /** Wall-clock ms of last ITEM_FIND reaction (0 = never). */
         private long lastFindReactMs;

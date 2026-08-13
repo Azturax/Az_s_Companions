@@ -6,6 +6,7 @@ import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
 import com.azscompanions.ai.CompanionRecentAction;
+import com.azscompanions.ai.CompanionChatEventSupport;
 import com.azscompanions.ai.CompanionRecentActionMemory;
 import com.azscompanions.ai.FabricCompanionAiAsk;
 import com.azscompanions.compat.hosted.IntegratedMultiplayerCompat;
@@ -292,6 +293,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             tickHomeBedLeash();
             tickPlayfulEvil();
             tickAiAmbientSpeech();
+            tickStripLuck();
             tickPlayBehavior();
             tickChildParentLeash();
             tickRideAlongSync();
@@ -468,13 +470,52 @@ public class FabricCompanionEntity extends PathfinderMob {
      * Prefers LLM when the server provider is enabled; otherwise sparse scripted fallbacks when idleChat is on.
      * Rate-limited; skips combat/sleep and when the shared AI worker is busy (LLM path).
      */
+
+    @Override
+    public boolean addEffect(net.minecraft.world.effect.MobEffectInstance effect, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.Entity source) {
+        if (!com.azscompanions.entity.CompanionLuckSupport.luckAffectsCompanion()
+                && effect != null
+                && isLuckMobEffect(effect.getEffect())) {
+            return false;
+        }
+        return super.addEffect(effect, source);
+    }
+
+    private void tickStripLuck() {
+        if (com.azscompanions.entity.CompanionLuckSupport.luckAffectsCompanion() || tickCount % 20 != 0) {
+            return;
+        }
+        stripLuckEffectsAndModifiers();
+    }
+
+    private void stripLuckEffectsAndModifiers() {
+        removeEffect(net.minecraft.world.effect.MobEffects.LUCK);
+        removeEffect(net.minecraft.world.effect.MobEffects.UNLUCK);
+        var luck = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.LUCK);
+        if (luck != null) {
+            luck.removeModifiers();
+            luck.setBaseValue(0.0d);
+        }
+    }
+
+    private static boolean isLuckMobEffect(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect) {
+        if (effect == null) {
+            return false;
+        }
+        if (effect.is(net.minecraft.world.effect.MobEffects.LUCK) || effect.is(net.minecraft.world.effect.MobEffects.UNLUCK)) {
+            return true;
+        }
+        var key = net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.getKey(effect.value());
+        return key != null && com.azscompanions.entity.CompanionLuckSupport.isLuckEffectId(key.toString());
+    }
+
     private void tickAiAmbientSpeech() {
         if (tickCount % 20 != 0) {
             return;
         }
         CompanionAiRuntime runtime = CompanionAiRuntime.get();
         CompanionAiSettings settings = runtime.settings();
-        if (!settings.idleChat() && !settings.callPlayerWhenAway()) {
+        if (!settings.idleChat() && !settings.reactiveChat() && !settings.callPlayerWhenAway()) {
             return;
         }
         if (!(getOwner() instanceof ServerPlayer owner) || !owner.isAlive()) {
@@ -485,7 +526,10 @@ public class FabricCompanionEntity extends PathfinderMob {
             return;
         }
         long gameTime = level() instanceof ServerLevel slGt ? slGt.getGameTime() : tickCount;
-        boolean hasReactive = CompanionRecentActionMemory.hasReactive(owner.getUUID(), gameTime);
+        java.util.function.Predicate<com.azscompanions.ai.CompanionRecentAction> allowReactive =
+                a -> com.azscompanions.ai.CompanionChatEventSupport.allowReactiveAction(settings, a);
+        boolean hasReactive = settings.reactiveChat()
+                && CompanionRecentActionMemory.hasReactive(owner.getUUID(), gameTime, allowReactive);
         int speakCoolSec = hasReactive ? 25 : 45;
         // Avoid stacking on top of a recent /ask or ambient line (shorter for reactions).
         if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, speakCoolSec)) {
@@ -528,7 +572,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             ownerAwayTicks = 0;
         }
 
-        if (!settings.idleChat() || (llmOn && runtime.isBusy())) {
+        if ((!settings.idleChat() && !hasReactive) || (llmOn && runtime.isBusy())) {
             return;
         }
         boolean child = getLeaderUuid() != null;
@@ -537,7 +581,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             return;
         }
         CompanionRecentAction focus = hasReactive
-                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime).orElse(null)
+                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime, allowReactive).orElse(null)
                 : null;
         boolean reactiveNow = focus != null;
         if (!reactiveNow) {

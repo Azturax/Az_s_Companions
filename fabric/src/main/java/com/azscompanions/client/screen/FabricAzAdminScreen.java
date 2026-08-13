@@ -18,7 +18,7 @@ import net.minecraft.util.FormattedCharSequence;
 public final class FabricAzAdminScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
-    private static final int PANEL_H = 288;
+    private static final int PANEL_H = 330;
 
     private enum Tab { OVERVIEW, AI }
 
@@ -40,6 +40,8 @@ public final class FabricAzAdminScreen extends Screen {
     private Button profileButton;
     private Button serverLlmButton;
     private Button idleChatButton;
+    private Button reactiveChatButton;
+    private Button itemFindChatButton;
     private boolean syncingFields;
     private boolean clearApiKeyOnSave;
 
@@ -213,6 +215,19 @@ public final class FabricAzAdminScreen extends Screen {
                     idleChatButton.setMessage(Component.literal(idleChatLabel(snap.idleChat())));
                 }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
         addRenderableWidget(idleChatButton);
+        y += 20;
+        reactiveChatButton = Button.builder(Component.literal(reactiveChatLabel(snap.reactiveChat())),
+                b -> {
+                    snap.setReactiveChat(!snap.reactiveChat());
+                    reactiveChatButton.setMessage(Component.literal(reactiveChatLabel(snap.reactiveChat())));
+                }).bounds(bx, y, bw / 2 - 4, 18).build();
+        addRenderableWidget(reactiveChatButton);
+        itemFindChatButton = Button.builder(Component.literal(itemFindChatLabel(snap.itemFindChat())),
+                b -> {
+                    snap.setItemFindChat(!snap.itemFindChat());
+                    itemFindChatButton.setMessage(Component.literal(itemFindChatLabel(snap.itemFindChat())));
+                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
+        addRenderableWidget(itemFindChatButton);
 
         addRenderableWidget(Button.builder(Component.literal("Save & apply"), b -> save())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
@@ -305,6 +320,14 @@ public final class FabricAzAdminScreen extends Screen {
     /** Maps to config {@code idleChat} — ambient speech every ~90–240s. */
     private static String idleChatLabel(boolean on) {
         return "Idle chat: " + (on ? "ON" : "OFF");
+    }
+
+    private static String reactiveChatLabel(boolean on) {
+        return "Reactive chat: " + (on ? "ON" : "OFF");
+    }
+
+    private static String itemFindChatLabel(boolean on) {
+        return "Item-find chat: " + (on ? "ON" : "OFF");
     }
 
     @Override

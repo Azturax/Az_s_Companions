@@ -44,6 +44,8 @@ public final class AdminAiConfigSnapshot {
     private String inputLanguage = "en";
     private boolean serverLlmOnly = false;
     private boolean idleChat = true;
+    private boolean reactiveChat = true;
+    private boolean itemFindChat = true;
     private boolean enableChatMessages = true;
     private String mcpUrl = "http://127.0.0.1:3001/mcp";
 
@@ -63,6 +65,8 @@ public final class AdminAiConfigSnapshot {
         snap.inputLanguage = s.inputLanguage();
         snap.serverLlmOnly = s.serverLlmOnly();
         snap.idleChat = s.idleChat();
+        snap.reactiveChat = s.reactiveChat();
+        snap.itemFindChat = s.itemFindChat();
         snap.enableChatMessages = s.enableChatMessages();
         snap.mcpUrl = s.mcpUrl();
         snap.profileId = LlmProviderProfile.detect(snap).name().toLowerCase();
@@ -82,6 +86,8 @@ public final class AdminAiConfigSnapshot {
         out.setInputLanguage(trimOr(inputLanguage, "en"));
         out.setServerLlmOnly(serverLlmOnly);
         out.setIdleChat(idleChat);
+        out.setReactiveChat(reactiveChat);
+        out.setItemFindChat(itemFindChat);
         out.setEnableChatMessages(enableChatMessages);
         out.setMcpUrl(trimOr(mcpUrl, "http://127.0.0.1:3001/mcp"));
         // Retired: always force ask-only defaults
@@ -254,6 +260,24 @@ public final class AdminAiConfigSnapshot {
         return this;
     }
 
+    public boolean reactiveChat() {
+        return reactiveChat;
+    }
+
+    public AdminAiConfigSnapshot setReactiveChat(boolean reactiveChat) {
+        this.reactiveChat = reactiveChat;
+        return this;
+    }
+
+    public boolean itemFindChat() {
+        return itemFindChat;
+    }
+
+    public AdminAiConfigSnapshot setItemFindChat(boolean itemFindChat) {
+        this.itemFindChat = itemFindChat;
+        return this;
+    }
+
     public boolean enableChatMessages() {
         return enableChatMessages;
     }
@@ -287,6 +311,8 @@ public final class AdminAiConfigSnapshot {
         o.addProperty("inputLanguage", inputLanguage);
         o.addProperty("serverLlmOnly", serverLlmOnly);
         o.addProperty("idleChat", idleChat);
+        o.addProperty("reactiveChat", reactiveChat);
+        o.addProperty("itemFindChat", itemFindChat);
         o.addProperty("enableChatMessages", enableChatMessages);
         o.addProperty("mcpUrl", mcpUrl);
         return o.toString();
@@ -328,6 +354,12 @@ public final class AdminAiConfigSnapshot {
             }
             if (o.has("idleChat")) {
                 snap.setIdleChat(o.get("idleChat").getAsBoolean());
+            }
+            if (o.has("reactiveChat")) {
+                snap.setReactiveChat(o.get("reactiveChat").getAsBoolean());
+            }
+            if (o.has("itemFindChat")) {
+                snap.setItemFindChat(o.get("itemFindChat").getAsBoolean());
             }
             if (o.has("enableChatMessages")) {
                 snap.setEnableChatMessages(o.get("enableChatMessages").getAsBoolean());

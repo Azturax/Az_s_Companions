@@ -11,6 +11,7 @@ import com.azscompanions.config.ClientConfig;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.data.CompanionDefinitionReloadListener;
+import com.azscompanions.entity.CompanionLuckSupport;
 import com.azscompanions.loot.CompanionLootSupport;
 import com.azscompanions.network.ModNetworking;
 import com.azscompanions.event.CompanionAiChatEvents;
@@ -98,6 +99,7 @@ public final class AzsCompanions {
     private void onModConfig(ModConfigEvent event) {
         if (event.getConfig().getSpec() == CommonConfig.SPEC) {
             CompanionLootSupport.setLootInjectionEnabled(CommonConfig.ENABLE_LOOT.get());
+            CompanionLuckSupport.setLuckAffectsCompanion(CommonConfig.LUCK_AFFECTS_COMPANION.get());
         }
         if (event.getConfig().getSpec() == AiConfig.SPEC) {
             CompanionAiRuntime.get().applySettings(AiConfig.toAiSettings());

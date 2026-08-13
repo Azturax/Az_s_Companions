@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 1.0.6
+
+Patch release across maintained Minecraft lines: AI chatter toggles, host custom chat events, and companion luck immunity.
+
+### Added
+- **AI chatter toggles** (`reactiveChat`, `itemFindChat`, existing `idleChat`) — admin AI Config buttons + config keys. Defaults **ON** (current behavior).
+- **`customChatEvents`** — host-defined reactive/idle events (`trigger` + optional `itemId` / `prompt` / `fallback` / cooldown). See [COMPANION_AI.md](docs/COMPANION_AI.md#custom-chat-events-customchatevents).
+- **`world.luckAffectsCompanion`** (common config, default **false**) — when off, companions ignore luck/unluck potion effects and LUCK attribute modifiers (artifact spam).
+
+### Loaders
+| Minecraft | Standalone | CCI |
+|-----------|------------|-----|
+| **1.21.1** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric | Forge + Fabric |
+| **26.2** | NeoForge | — |
+| **26.1.2** | NeoForge | — |
+
+Jar pattern: `azscompanions-<loader>[-cci]-1.0.6+<mc>.jar` (**14** shippable jars on tag `v1.0.6`).
+
 ## 1.0.5
 
 NeoForge **26.x** ship: full product feature parity on **Minecraft 26.1.2** and **26.2** (standalone only — no CCI builds for these MC versions).

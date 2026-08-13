@@ -2,6 +2,7 @@ package com.azscompanions.event;
 
 import com.azscompanions.ai.CompanionInventoryWatchSupport;
 import com.azscompanions.ai.CompanionNotableItemSupport;
+import com.azscompanions.ai.CompanionChatEventSupport;
 import com.azscompanions.ai.CompanionRecentActionKind;
 import com.azscompanions.ai.CompanionRecentActionMemory;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -53,7 +54,7 @@ public final class FabricCompanionRecentActionEvents {
         long time = level.getGameTime();
         AABB box = new AABB(x, y, z, x, y, z).inflate(EXPLOSION_RANGE);
         for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, box)) {
-            CompanionRecentActionMemory.record(
+            CompanionChatEventSupport.observe(
                     player.getUUID(), time, CompanionRecentActionKind.EXPLOSION,
                     "an explosion nearby (TNT or blast)", null, true);
         }
@@ -69,7 +70,7 @@ public final class FabricCompanionRecentActionEvents {
         }
         String id = key.toString();
         String pretty = CompanionNotableItemSupport.prettyName(id);
-        CompanionRecentActionMemory.record(
+        CompanionChatEventSupport.observe(
                 player.getUUID(), player.level().getGameTime(),
                 CompanionRecentActionKind.ITEM_CRAFT,
                 "player just crafted " + pretty, id, true);
@@ -79,10 +80,10 @@ public final class FabricCompanionRecentActionEvents {
         if (player == null || player.level().isClientSide) {
             return;
         }
-        CompanionRecentActionMemory.record(
-                player.getUUID(), player.level().getGameTime(),
-                CompanionRecentActionKind.DAMAGE,
-                "player took damage", null, true);
+        CompanionChatEventSupport.observe(
+                    player.getUUID(), player.level().getGameTime(),
+                    CompanionRecentActionKind.DAMAGE,
+                    "player took damage", null, true);
     }
 
     public static void tickPlayer(ServerPlayer player) {
@@ -96,7 +97,7 @@ public final class FabricCompanionRecentActionEvents {
         int block = level.getBrightness(LightLayer.BLOCK, player.blockPosition());
         int sky = level.getBrightness(LightLayer.SKY, player.blockPosition());
         boolean dark = Math.max(block, sky) <= CompanionRecentActionMemory.DARK_LIGHT_THRESHOLD;
-        CompanionRecentActionMemory.recordDarknessEnter(player.getUUID(), time, dark);
+        CompanionChatEventSupport.observeDarknessEnter(player.getUUID(), time, dark);
 
         Map<String, Integer> counts = countTrackedItems(player.getInventory());
         CompanionInventoryWatchSupport.observeCounts(player.getUUID(), time, counts);

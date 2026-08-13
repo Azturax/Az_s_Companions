@@ -81,7 +81,7 @@ public final class CompanionInventoryWatchSupport {
         if (craftReady.isPresent()) {
             String result = craftReady.get();
             String pretty = CompanionNotableItemSupport.prettyName(result);
-            CompanionRecentActionMemory.record(
+            CompanionChatEventSupport.observe(
                     playerId, gameTime, CompanionRecentActionKind.CRAFT_READY,
                     "player now has the last materials to craft " + pretty,
                     result, true);
@@ -106,7 +106,7 @@ public final class CompanionInventoryWatchSupport {
         String detail = first
                 ? "player found their first " + pretty
                 : "player found " + pretty;
-        CompanionRecentActionMemory.record(
+        CompanionChatEventSupport.observe(
                 playerId, gameTime, CompanionRecentActionKind.ITEM_FIND,
                 detail, itemId, true);
     }

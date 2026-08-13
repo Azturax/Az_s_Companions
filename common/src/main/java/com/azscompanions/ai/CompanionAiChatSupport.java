@@ -145,6 +145,9 @@ public final class CompanionAiChatSupport {
                 sb.append(" Cheer the new sword (e.g. NICE SWORD!).");
             } else if (focus.kind() == CompanionRecentActionKind.EXPLOSION) {
                 sb.append(" React to the boom / TNT.");
+            } else if (focus.kind() == CompanionRecentActionKind.CUSTOM
+                    && focus.detail() != null && !focus.detail().isBlank()) {
+                sb.append(' ').append(focus.detail());
             }
         } else {
             sb.append(idleAmbientPrompt(ownerName));
@@ -237,6 +240,17 @@ public final class CompanionAiChatSupport {
                         "Look at that " + item + "!"
                 };
                 yield pick(lines, name, focus);
+            }
+            case CUSTOM -> {
+                CompanionCustomChatEvent ev = CompanionChatEventSupport.findById(
+                        CompanionChatEventSupport.settings(), focus.customEventId());
+                if (ev != null && ev.fallback() != null && !ev.fallback().isBlank()) {
+                    yield ev.fallback();
+                }
+                if (focus.detail() != null && !focus.detail().isBlank()) {
+                    yield focus.detail();
+                }
+                yield fallbackIdleLine(name);
             }
             case DAMAGE -> name + ", are you okay?!";
             case COMBAT -> "I've got your back, " + name + "!";

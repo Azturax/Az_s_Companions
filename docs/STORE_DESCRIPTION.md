@@ -83,6 +83,7 @@ Special UUID perks exist for a few players (wolf companion grant / toggleable fl
 - Each companion keeps its **own** persona and memory — shared host endpoint ≠ one shared brain.
 - First-create **persona** onboarding (Who / What / How + optional speech, relationship, quirks); edit anytime with `/az persona edit`.
 - **Idle chat** (toggle in admin): occasional ambient lines when nearby (~75–180s by default).
+- **Reactive chat** / **Item-find chat** (admin toggles): event reactions; item-find is the builtin “I found something” line. Hosts can add more via `customChatEvents` in the AI config file.
 - **Reactive chatter:** short reactions to nearby events (explosions, darkness → ask for light, crafting gear, notable finds ~once per **14 days** real-time per owner). Uses the LLM when configured; otherwise sparse scripted fallbacks.
 - LLM is **text dialogue only** — no “AI Mode” that puppets the world. Gathering / tasks use normal companion behavior commands.
 
@@ -121,7 +122,10 @@ Files: Fabric `config/azscompanions-ai.json` · NeoForge `config/azscompanions-a
 | `baseUrl` + `model` | Endpoint and model id |
 | `apiKey` / `apiKeyEnv` | Secrets on the host only |
 | **Use server LLM** (`serverLlmOnly`) | Opt-in shared host LLM |
-| **Idle chat** (`idleChat`) | Ambient + reactive lines nearby |
+| **Idle chat** (`idleChat`) | Ambient lines nearby |
+| **Reactive chat** (`reactiveChat`) | Event reactions (TNT, dark, crafts, …) |
+| **Item-find chat** (`itemFindChat`) | Builtin “I found something” |
+| `customChatEvents` | Host-defined extra events (AI config file) |
 | `idleChatSecondsMin` / `Max` | Ambient interval (default ~75–180s) |
 | `maxParallelRequests` | Concurrent LLM calls (default 2; `/ask` jumps the queue) |
 | `timeoutSeconds` / `connectTimeoutSeconds` | Generation vs fail-fast connect |
@@ -249,6 +253,7 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li>Each companion keeps its <strong>own</strong> persona and memory — shared host endpoint ≠ one shared brain.</li>
   <li>First-create <strong>persona</strong> onboarding (Who / What / How + optional speech, relationship, quirks); edit anytime with <code>/az persona edit</code>.</li>
   <li><strong>Idle chat</strong> (toggle in admin): occasional ambient lines when nearby (~75–180s by default).</li>
+  <li><strong>Reactive chat</strong> / <strong>Item-find chat</strong> (admin toggles): event reactions; item-find is the builtin “I found something” line. Hosts can add more via <code>customChatEvents</code> in the AI config file.</li>
   <li><strong>Reactive chatter:</strong> short reactions to nearby events (explosions, darkness → ask for light, crafting gear, notable finds ~once per <strong>14 days</strong> real-time per owner). Uses the LLM when configured; otherwise sparse scripted fallbacks.</li>
   <li>LLM is <strong>text dialogue only</strong> — no “AI Mode” that puppets the world. Gathering / tasks use normal companion behavior commands.</li>
 </ul>
@@ -285,7 +290,10 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li><code>baseUrl</code> + <code>model</code> — endpoint and model id</li>
   <li><code>apiKey</code> / <code>apiKeyEnv</code> — secrets on the host only</li>
   <li><strong>Use server LLM</strong> (<code>serverLlmOnly</code>) — opt-in shared host LLM</li>
-  <li><strong>Idle chat</strong> (<code>idleChat</code>) — ambient + reactive lines nearby</li>
+  <li><strong>Idle chat</strong> (<code>idleChat</code>) — ambient lines nearby</li>
+  <li><strong>Reactive chat</strong> (<code>reactiveChat</code>) — event reactions</li>
+  <li><strong>Item-find chat</strong> (<code>itemFindChat</code>) — builtin “I found something”</li>
+  <li><code>customChatEvents</code> — host-defined extra events (AI config file)</li>
   <li><code>idleChatSecondsMin</code> / <code>Max</code> — ambient interval (default ~75–180s)</li>
   <li><code>maxParallelRequests</code> — concurrent LLM calls (default 2; <code>/ask</code> jumps the queue)</li>
   <li><code>timeoutSeconds</code> / <code>connectTimeoutSeconds</code> — generation vs fail-fast connect</li>

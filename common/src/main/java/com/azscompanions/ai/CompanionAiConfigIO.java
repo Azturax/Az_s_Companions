@@ -131,6 +131,24 @@ public final class CompanionAiConfigIO {
         if (root.has("idleChat")) {
             s.setIdleChat(root.get("idleChat").getAsBoolean());
         }
+        if (root.has("reactiveChat")) {
+            s.setReactiveChat(root.get("reactiveChat").getAsBoolean());
+        }
+        if (root.has("itemFindChat")) {
+            s.setItemFindChat(root.get("itemFindChat").getAsBoolean());
+        }
+        if (root.has("customChatEvents") && root.get("customChatEvents").isJsonArray()) {
+            java.util.List<CompanionCustomChatEvent> events = new java.util.ArrayList<>();
+            root.getAsJsonArray("customChatEvents").forEach(el -> {
+                if (el != null && el.isJsonObject()) {
+                    CompanionCustomChatEvent e = CompanionCustomChatEvent.fromJson(el.getAsJsonObject());
+                    if (e.isValid()) {
+                        events.add(e);
+                    }
+                }
+            });
+            s.setCustomChatEvents(events);
+        }
         if (root.has("idleChatSecondsMin")) {
             s.setIdleChatSecondsMin(root.get("idleChatSecondsMin").getAsInt());
         }
@@ -270,6 +288,11 @@ public final class CompanionAiConfigIO {
         s.censorExtraWords().forEach(censorExtra::add);
         root.add("censorExtraWords", censorExtra);
         root.addProperty("idleChat", s.idleChat());
+        root.addProperty("reactiveChat", s.reactiveChat());
+        root.addProperty("itemFindChat", s.itemFindChat());
+        JsonArray customEvents = new JsonArray();
+        s.customChatEvents().forEach(e -> customEvents.add(e.toJson()));
+        root.add("customChatEvents", customEvents);
         root.addProperty("idleChatSecondsMin", s.idleChatSecondsMin());
         root.addProperty("idleChatSecondsMax", s.idleChatSecondsMax());
         root.addProperty("callPlayerWhenAway", s.callPlayerWhenAway());
