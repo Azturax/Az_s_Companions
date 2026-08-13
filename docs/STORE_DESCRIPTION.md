@@ -1,8 +1,8 @@
-# Az's Companions — store page copy (1.0.1)
+# Az's Companions — store page copy (1.0.8+)
 
 Paste-ready descriptions for Modrinth and CurseForge. Characters are **adult**, **wholesome**, and **non-sexual**. Do not advertise removed features (Jindujun / Flying Nimbus / whistle, Glowing Orb, flight ki aura).
 
-**Version:** 1.0.1 · Minecraft **1.21.1** · NeoForge + Fabric  
+**Version:** 1.0.8+ · Minecraft **1.21.1**, **1.21.5**, **1.20.1**, NeoForge **26.1.2** / **26.2**  
 **License:** MIT  
 **Repo:** https://github.com/Azturax/Az_s_Companions
 
@@ -13,9 +13,11 @@ Paste-ready descriptions for Modrinth and CurseForge. Characters are **adult**, 
 ```markdown
 # Az's Companions
 
-A wholesome adult companion for Minecraft **1.21.1** — follow you through the world, fight beside you, sleep at night, and (optionally) chat with you via a local or remote LLM.
+A wholesome adult companion for Minecraft — follow you through the world, fight beside you, sleep at night, and (optionally) chat with you via a local or remote LLM.
 
 Characters are explicitly **adult**, **wholesome**, and **non-sexual**.
+
+**Supported:** Minecraft **1.21.1**, **1.21.5**, **1.20.1**, plus NeoForge **26.1.2** / **26.2**. One jar per loader × MC line (**8 jars**). CCI is **soft-compat inside every main jar** — no separate `*-cci` edition.
 
 ---
 
@@ -27,26 +29,30 @@ Summon a companion with the **Companion Charm**, then command them with the in-g
 - **Customize** — forms (player + mobs), coat/breed variants, proportions, skins, and **activity outfits** (Sleeping / Bathing / Adventuring) for player form
 - **Inventory** — store and manage their gear
 - **Combat** — fixed netherite-sword melee; optional team fights for streamers / ops
-- **Worldplay** — flower gifts, night sleep (Kon Bed), ride-along when you mount, swim follow, dimension teleport with you (vanilla + modded), logout park / login restore
+- **Worldplay** — flower gifts, night sleep on **their own Kon Bed** (obstructed beds trigger a re-search), ride-along when you mount, swim follow, dimension teleport with you (vanilla + modded), logout park / login restore
 - **Mob flavor** — cat form scares creepers; wolf form scares skeletons; wander mode can playfully interact with nearby mobs
 - **Child Bits** — companions can have children that stick with the family
 - **Optional AI** — `/ask` dialogue, idle chatter, and event reactions when you configure an LLM (off by default)
+- **Wiggly / UUID perks** — Mister Wiggly default ON (hard-capped to one); survival-flight perk is opt-in for eligible UUIDs (`/az wiggly` or keybind)
 
-Owned companions **do not naturally despawn**. Desert pyramids can drop a Companion Charm (~5%; disable with `world.enableLoot`).
+Owned companions **do not naturally despawn**. Desert pyramids can drop a Companion Charm (~5%; disable with `world.enableLoot`). Companions **ignore luck/unluck by default** (`world.luckAffectsCompanion=false`).
+
+**Not included:** Jindujun / Flying Nimbus / whistle (removed).
 
 ---
 
-## Editions (pick one jar)
+## Jars (pick one)
 
-| Jar | Use when |
-|-----|----------|
-| **Standalone** (NeoForge or Fabric) | Default — no streamer bridge |
-| **CCI** (NeoForge or Fabric) | Twitch / Streamlabs / StreamElements via [CCI](https://modrinth.com/mod/content-creator-integration) + iChunUtil |
+Install **one** Az's Companions jar for your Minecraft version + loader. NeoForge and Fabric are always separate. There is **no** separate CCI jar — streaming support activates when [CCI](https://modrinth.com/mod/content-creator-integration) + iChunUtil are present (same MC + loader). NeoForge **26.x** has no CCI.
 
-Install **one** Az's Companions jar per loader (NeoForge and Fabric are separate). CCI is optional soft-compat in the same jar.
+| Line | Loaders | Java |
+|------|---------|------|
+| **1.21.1** | NeoForge · Fabric | 21 |
+| **1.21.5** | NeoForge · Fabric | 21 |
+| **1.20.1** | Forge · Fabric (no NeoForge 20.1) | 17 |
+| **NeoForge 26.1.2 / 26.2** | NeoForge | 25 |
 
-**Requirements:** Minecraft **1.21.1**, Java **21**, NeoForge **21.1.x** *or* Fabric Loader ≥0.16 + Fabric API.  
-**Optional CCI:** install CCI **1.13.0** + iChunUtil for the same loader when streaming.
+**Optional CCI (1.21.x / 1.20.1):** CCI **1.13.0** + matching iChunUtil for that loader.
 
 ---
 
@@ -55,9 +61,10 @@ Install **one** Az's Companions jar per loader (NeoForge and Fabric are separate
 Works without these; nicer with them:
 
 - FTB Teams / Chunks / Ranks (trust & claim-aware behavior)
-- Map icons (Xaero's, JourneyMap)
+- Map icons (Xaero's, JourneyMap — some 1.20.1 omissions)
 - Dynamic lights soft-detect
 - Simple Voice Chat detect (no full TTS bridge)
+- **CCI + iChunUtil** — optional streaming IMC / Fabric `/azscci` when installed
 
 ---
 
@@ -82,9 +89,10 @@ Special UUID perks exist for a few players (wolf companion grant / toggleable fl
 - Replies appear as in-character chat for the **owner** (Thinking HUD while waiting).
 - Each companion keeps its **own** persona and memory — shared host endpoint ≠ one shared brain.
 - First-create **persona** onboarding (Who / What / How + optional speech, relationship, quirks); edit anytime with `/az persona edit`.
-- **Idle chat** (toggle in admin): occasional ambient lines when nearby (~75–180s by default).
-- **Reactive chat** / **Item-find chat** (admin toggles): event reactions; item-find is the builtin “I found something” line. Hosts can add more via `customChatEvents` in the AI config file.
-- **Reactive chatter:** short reactions to nearby events (explosions, darkness → ask for light, crafting gear, notable finds ~once per **14 days** real-time per owner). Uses the LLM when configured; otherwise sparse scripted fallbacks.
+- **Idle chat** (`idleChat`, admin toggle): occasional ambient lines when nearby (~75–180s by default).
+- **Reactive chat** (`reactiveChat`): short reactions to nearby events (explosions, darkness → ask for light, crafting gear, damage, host `customChatEvents`).
+- **Item-find chat** (`itemFindChat`): builtin “I found something” / `ITEM_FIND` — rare, ~once per **14 days** real-time per owner.
+- Hosts can add more via `customChatEvents` in the AI config file.
 - LLM is **text dialogue only** — no “AI Mode” that puppets the world. Gathering / tasks use normal companion behavior commands.
 
 ### Join consent & privacy
@@ -124,7 +132,7 @@ Files: Fabric `config/azscompanions-ai.json` · NeoForge `config/azscompanions-a
 | **Use server LLM** (`serverLlmOnly`) | Opt-in shared host LLM |
 | **Idle chat** (`idleChat`) | Ambient lines nearby |
 | **Reactive chat** (`reactiveChat`) | Event reactions (TNT, dark, crafts, …) |
-| **Item-find chat** (`itemFindChat`) | Builtin “I found something” |
+| **Item-find chat** (`itemFindChat`) | Builtin “I found something” (~14-day cooldown) |
 | `customChatEvents` | Host-defined extra events (AI config file) |
 | `idleChatSecondsMin` / `Max` | Ambient interval (default ~75–180s) |
 | `maxParallelRequests` | Concurrent LLM calls (default 2; `/ask` jumps the queue) |
@@ -133,6 +141,7 @@ Files: Fabric `config/azscompanions-ai.json` · NeoForge `config/azscompanions-a
 | `perCompanionMemory` / `memoryMaxMessages` | Separate minds + history depth |
 | `inputLanguage` | Preferred reply language |
 | `enableChatMessages` | Show replies as owner chat lines |
+| `world.luckAffectsCompanion` | Default **false** — companions ignore luck/unluck |
 
 Status: `/az ai status`. Full reference: [Companion AI docs](https://github.com/Azturax/Az_s_Companions/blob/main/docs/COMPANION_AI.md).
 
@@ -154,13 +163,15 @@ Status: `/az ai status`. Full reference: [Companion AI docs](https://github.com/
 - `/ask` · `/az ask` — talk to your companion
 - `/az admin` · `/az ai config` — admin / AI panel
 - `/az persona …` — view / edit persona
+- `/az wiggly` — Wiggly perk toggle (eligible players)
 - `/az teamfight on|off|status` — ops team-fight toggle
 
 ---
 
 ## Known limitations
 
-- NeoForge **26.2** / newer Minecraft lines: not shipped in 1.0.1
+- NeoForge **26.x**: no CCI
+- **1.20.1**: some API omissions (JourneyMap, wolf body armor, scale attribute, etc.) — see loader NOTES
 - VoiceMod TTS / full SVC entity speech: detect-only soft-compat
 - Old saves with removed items/forms simply no longer spawn those features
 
@@ -183,14 +194,14 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 **CF tips**
 
 - Prefer `<h2>` / `<h3>`, `<ul><li>`, `<p>`, `<strong>`, `<code>`, `<a href="…">`, `<hr/>`, simple `<table>` if allowed.
-- Avoid Markdown tables if the preview breaks — the HTML version uses lists instead where needed.
-- Upload **one** jar per Minecraft × loader; mention both loaders in the description. CCI is optional in-jar.
-- Short summary / subtitle field (if present): *Wholesome adult companions for 1.21.1 — follow, fight, customize, optional LLM chat.*
+- Upload **one** jar per Minecraft × loader (**8** files for 1.0.8). CCI is optional in-jar soft-compat.
+- Short summary / subtitle field (if present): *Wholesome adult companions for 1.21.1 / 1.21.5 / 1.20.1 / NeoForge 26 — follow, fight, customize, optional LLM chat. CCI soft-compat included.*
 
 ```html
 <h2>Az's Companions</h2>
-<p>A wholesome adult companion for Minecraft <strong>1.21.1</strong> — follow you through the world, fight beside you, sleep at night, and (optionally) chat with you via a local or remote LLM.</p>
+<p>A wholesome adult companion for Minecraft — follow you through the world, fight beside you, sleep at night, and (optionally) chat with you via a local or remote LLM.</p>
 <p>Characters are explicitly <strong>adult</strong>, <strong>wholesome</strong>, and <strong>non-sexual</strong>.</p>
+<p><strong>Supported:</strong> Minecraft <strong>1.21.1</strong>, <strong>1.21.5</strong>, <strong>1.20.1</strong>, plus NeoForge <strong>26.1.2</strong> / <strong>26.2</strong>. One jar per loader × MC line (<strong>8 jars</strong>). CCI is <strong>soft-compat inside every main jar</strong> — no separate <code>*-cci</code> edition.</p>
 
 <hr/>
 
@@ -201,23 +212,26 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li><strong>Customize</strong> — forms (player + mobs), coat/breed variants, proportions, skins, and <strong>activity outfits</strong> (Sleeping / Bathing / Adventuring) for player form</li>
   <li><strong>Inventory</strong> — store and manage their gear</li>
   <li><strong>Combat</strong> — fixed netherite-sword melee; optional team fights for streamers / ops</li>
-  <li><strong>Worldplay</strong> — flower gifts, night sleep (Kon Bed), ride-along when you mount, swim follow, dimension teleport with you (vanilla + modded), logout park / login restore</li>
+  <li><strong>Worldplay</strong> — flower gifts, night sleep on <strong>their own Kon Bed</strong> (obstructed beds trigger a re-search), ride-along when you mount, swim follow, dimension teleport with you (vanilla + modded), logout park / login restore</li>
   <li><strong>Mob flavor</strong> — cat form scares creepers; wolf form scares skeletons; wander mode can playfully interact with nearby mobs</li>
   <li><strong>Child Bits</strong> — companions can have children that stick with the family</li>
   <li><strong>Optional AI</strong> — <code>/ask</code> dialogue, idle chatter, and event reactions when you configure an LLM (off by default)</li>
+  <li><strong>Wiggly / UUID perks</strong> — Mister Wiggly default ON (hard-capped to one); survival-flight perk is opt-in for eligible UUIDs</li>
 </ul>
-<p>Owned companions <strong>do not naturally despawn</strong>. Desert pyramids can drop a Companion Charm (~5%; disable with <code>world.enableLoot</code>).</p>
+<p>Owned companions <strong>do not naturally despawn</strong>. Desert pyramids can drop a Companion Charm (~5%; disable with <code>world.enableLoot</code>). Companions <strong>ignore luck/unluck by default</strong> (<code>world.luckAffectsCompanion=false</code>).</p>
+<p><strong>Not included:</strong> Jindujun / Flying Nimbus / whistle (removed).</p>
 
 <hr/>
 
-<h2>Editions (pick one jar)</h2>
+<h2>Jars (pick one)</h2>
+<p>Install <strong>one</strong> Az's Companions jar for your Minecraft version + loader. NeoForge and Fabric are always separate. There is <strong>no</strong> separate CCI jar — streaming support activates when CCI + iChunUtil are present (same MC + loader). NeoForge <strong>26.x</strong> has no CCI.</p>
 <ul>
-  <li><strong>Standalone</strong> (NeoForge or Fabric) — default, no streamer bridge</li>
-  <li><strong>CCI</strong> (NeoForge or Fabric) — Twitch / Streamlabs / StreamElements via CCI + iChunUtil</li>
+  <li><strong>1.21.1</strong> — NeoForge · Fabric (Java 21)</li>
+  <li><strong>1.21.5</strong> — NeoForge · Fabric (Java 21)</li>
+  <li><strong>1.20.1</strong> — Forge · Fabric (Java 17; no NeoForge 20.1)</li>
+  <li><strong>NeoForge 26.1.2 / 26.2</strong> — NeoForge (Java 25)</li>
 </ul>
-<p>Install <strong>one</strong> Az's Companions jar per loader — never standalone + CCI together.</p>
-<p><strong>Requirements:</strong> Minecraft <strong>1.21.1</strong>, Java <strong>21</strong>, NeoForge <strong>21.1.x</strong> <em>or</em> Fabric Loader ≥0.16 + Fabric API.<br/>
-<strong>CCI editions only:</strong> CCI <strong>1.13.0</strong> + iChunUtil <strong>1.0.3</strong> for the same loader.</p>
+<p><strong>Optional CCI (1.21.x / 1.20.1):</strong> CCI <strong>1.13.0</strong> + matching iChunUtil for that loader.</p>
 
 <hr/>
 
@@ -225,9 +239,10 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 <p>Works without these; nicer with them:</p>
 <ul>
   <li>FTB Teams / Chunks / Ranks (trust &amp; claim-aware behavior)</li>
-  <li>Map icons (Xaero's, JourneyMap)</li>
+  <li>Map icons (Xaero's, JourneyMap — some 1.20.1 omissions)</li>
   <li>Dynamic lights soft-detect</li>
   <li>Simple Voice Chat detect (no full TTS bridge)</li>
+  <li><strong>CCI + iChunUtil</strong> — optional streaming IMC / Fabric <code>/azscci</code> when installed</li>
 </ul>
 
 <hr/>
@@ -252,10 +267,10 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li>Replies appear as in-character chat for the <strong>owner</strong> (Thinking HUD while waiting).</li>
   <li>Each companion keeps its <strong>own</strong> persona and memory — shared host endpoint ≠ one shared brain.</li>
   <li>First-create <strong>persona</strong> onboarding (Who / What / How + optional speech, relationship, quirks); edit anytime with <code>/az persona edit</code>.</li>
-  <li><strong>Idle chat</strong> (toggle in admin): occasional ambient lines when nearby (~75–180s by default).</li>
-  <li><strong>Reactive chat</strong> / <strong>Item-find chat</strong> (admin toggles): event reactions; item-find is the builtin “I found something” line. Hosts can add more via <code>customChatEvents</code> in the AI config file.</li>
-  <li><strong>Reactive chatter:</strong> short reactions to nearby events (explosions, darkness → ask for light, crafting gear, notable finds ~once per <strong>14 days</strong> real-time per owner). Uses the LLM when configured; otherwise sparse scripted fallbacks.</li>
-  <li>LLM is <strong>text dialogue only</strong> — no “AI Mode” that puppets the world. Gathering / tasks use normal companion behavior commands.</li>
+  <li><strong>Idle chat</strong> (<code>idleChat</code>): occasional ambient lines when nearby (~75–180s by default).</li>
+  <li><strong>Reactive chat</strong> (<code>reactiveChat</code>): event reactions (explosions, darkness, crafts, damage, host <code>customChatEvents</code>).</li>
+  <li><strong>Item-find chat</strong> (<code>itemFindChat</code>): builtin “I found something” — rare, ~once per <strong>14 days</strong> real-time per owner.</li>
+  <li>LLM is <strong>text dialogue only</strong> — no “AI Mode” that puppets the world.</li>
 </ul>
 
 <h3>Join consent &amp; privacy</h3>
@@ -279,9 +294,9 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 
 <h3>Use server LLM</h3>
 <ul>
-  <li><strong>OFF (default):</strong> Personal / host-local setup. Great for singleplayer or your own LAN host pointing at LM Studio, Ollama, LiteLLM, or a remote API.</li>
-  <li><strong>ON (opt-in):</strong> Shared <strong>host</strong> endpoint for everyone on that world. Joiners do not need their own keys or local LLM.</li>
-  <li>On <strong>dedicated</strong> servers, <code>/ask</code> always runs in the <strong>server process</strong> (no per-joiner client LLM). Turn <strong>Use server LLM</strong> on when you want that shared endpoint intentional.</li>
+  <li><strong>OFF (default):</strong> Personal / host-local setup.</li>
+  <li><strong>ON (opt-in):</strong> Shared <strong>host</strong> endpoint for everyone on that world.</li>
+  <li>On <strong>dedicated</strong> servers, <code>/ask</code> always runs in the <strong>server process</strong>.</li>
 </ul>
 
 <h3>Knobs players &amp; admins care about</h3>
@@ -292,15 +307,15 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li><strong>Use server LLM</strong> (<code>serverLlmOnly</code>) — opt-in shared host LLM</li>
   <li><strong>Idle chat</strong> (<code>idleChat</code>) — ambient lines nearby</li>
   <li><strong>Reactive chat</strong> (<code>reactiveChat</code>) — event reactions</li>
-  <li><strong>Item-find chat</strong> (<code>itemFindChat</code>) — builtin “I found something”</li>
-  <li><code>customChatEvents</code> — host-defined extra events (AI config file)</li>
+  <li><strong>Item-find chat</strong> (<code>itemFindChat</code>) — builtin “I found something” (~14-day cooldown)</li>
+  <li><code>customChatEvents</code> — host-defined extra events</li>
   <li><code>idleChatSecondsMin</code> / <code>Max</code> — ambient interval (default ~75–180s)</li>
-  <li><code>maxParallelRequests</code> — concurrent LLM calls (default 2; <code>/ask</code> jumps the queue)</li>
-  <li><code>timeoutSeconds</code> / <code>connectTimeoutSeconds</code> — generation vs fail-fast connect</li>
-  <li><code>maxTokens</code> — reply length cap (ambient capped shorter)</li>
-  <li><code>perCompanionMemory</code> / <code>memoryMaxMessages</code> — separate minds + history depth</li>
-  <li><code>inputLanguage</code> — preferred reply language</li>
-  <li><code>enableChatMessages</code> — show replies as owner chat lines</li>
+  <li><code>maxParallelRequests</code> — concurrent LLM calls (default 2)</li>
+  <li><code>timeoutSeconds</code> / <code>connectTimeoutSeconds</code></li>
+  <li><code>maxTokens</code> — reply length cap</li>
+  <li><code>perCompanionMemory</code> / <code>memoryMaxMessages</code></li>
+  <li><code>inputLanguage</code> / <code>enableChatMessages</code></li>
+  <li><code>world.luckAffectsCompanion</code> — default <strong>false</strong></li>
 </ul>
 <p>Status: <code>/az ai status</code>. Full reference on GitHub: docs/COMPANION_AI.md</p>
 
@@ -323,6 +338,7 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
   <li><code>/ask</code> · <code>/az ask</code> — talk to your companion</li>
   <li><code>/az admin</code> · <code>/az ai config</code> — admin / AI panel</li>
   <li><code>/az persona …</code> — view / edit persona</li>
+  <li><code>/az wiggly</code> — Wiggly perk toggle (eligible players)</li>
   <li><code>/az teamfight on|off|status</code> — ops team-fight toggle</li>
 </ul>
 
@@ -330,7 +346,8 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 
 <h2>Known limitations</h2>
 <ul>
-  <li>NeoForge <strong>26.2</strong> / newer Minecraft lines: not shipped in 1.0.1</li>
+  <li>NeoForge <strong>26.x</strong>: no CCI</li>
+  <li><strong>1.20.1</strong>: some API omissions (see loader NOTES)</li>
   <li>VoiceMod TTS / full SVC entity speech: detect-only soft-compat</li>
   <li>Old saves with removed items/forms simply no longer spawn those features</li>
 </ul>
@@ -352,21 +369,30 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 
 **Tagline / one-liner**
 
-> Wholesome adult companions for Minecraft 1.21.1 — follow, customize, fight, and optionally chat with a local or cloud LLM.
+> Wholesome adult companions for Minecraft 1.21.1 / 1.21.5 / 1.20.1 / NeoForge 26 — follow, customize, fight, optional LLM chat. CCI soft-compat in every jar.
 
 **Very short summary (≈160 chars)**
 
-> Adult wholesome companions for 1.21.1 (NeoForge + Fabric). Charm summon, forms, combat, gifts, optional `/ask` AI. CCI soft-compat included (optional).
+> Adult wholesome companions (NeoForge/Fabric/Forge). Charm summon, forms, combat, gifts, optional `/ask` AI. 8 unified jars; CCI soft-compat included.
 
 **Categories / tags (suggestions)**
 
-`adventure` · `mobs` · `utility` · `social` · `management` · `cosmetic` · `technology` (AI) · `1.21.1`
+`adventure` · `mobs` · `utility` · `social` · `management` · `cosmetic` · `technology` (AI) · `1.21.1` · `1.21.5` · `1.20.1`
 
 ---
 
 ## Accuracy notes (for maintainers)
 
-- Sourced from README, CHANGELOG **1.0.1**, `docs/COMPANION_AI.md`, `docs/ADMIN.md`, CCI/COMPAT high-level.
+- Sourced from README, CHANGELOG **1.0.8**, `docs/COMPANION_AI.md`, `docs/ADMIN.md`, CCI/COMPAT high-level.
 - **Not advertised:** Jindujun / Flying Nimbus / whistle, Glowing Orb, flight ki aura, AI Mode / LLM world puppeting.
-- UUID perks mentioned only at high level (no spoiler UUIDs).
-- AI path emphasized as **ask + idle/reactive**; join consent is once-per-server; `serverLlmOnly` default OFF.
+- UUID / Wiggly perks mentioned at high level only (no spoiler UUIDs).
+- AI path emphasized as **ask + idle/reactive/item-find**; join consent is once-per-server; `serverLlmOnly` default OFF; `world.luckAffectsCompanion` default false.
+- Own-bed-only sleep + obstructed re-search; rare ITEM_FIND (~14 days).
+
+## Live push (Actions)
+
+With secrets `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` (or `PUBLISH_*`) and variables `MODRINTH=rCK3CSZj`, `CURSEFORGE=1645728`:
+
+1. Prefer running `.github/workflows/update-store-description.yml` (or the publish workflow’s description job if present).
+2. Modrinth: `PATCH /v2/project/{id}` with `{ "body": "<markdown>", "description": "<summary>" }`.
+3. CurseForge: Upload API has limited description support — if API update fails, paste the HTML block above on the project page.
