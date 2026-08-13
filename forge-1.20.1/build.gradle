@@ -69,6 +69,8 @@ configurations {
 dependencies {
     implementation project(':common')
     // JourneyMap API omitted on 1.20.1 (JVM 21+)
+    compileOnly "maven.modrinth:content-creator-integration:${rootProject.cci_1_20_1_forge_modrinth_version_id}"
+    compileOnly "maven.modrinth:ichunutil:${rootProject.ichunutil_1_20_1_forge_modrinth_version_id}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -92,6 +94,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_name               : rootProject.mod_name,
             mod_license            : rootProject.mod_license,
             mod_version            : rootProject.mod_version,
+            cci_version_range      : rootProject.cci_version_range,
+            ichunutil_version_range: rootProject.ichunutil_version_range,
     ]
     inputs.properties replaceProperties
     expand replaceProperties

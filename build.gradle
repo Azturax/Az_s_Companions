@@ -22,38 +22,32 @@ allprojects {
 
 tasks.register('buildAll') {
     group = 'build'
-    description = 'Build Fabric, Fabric CCI, NeoForge standalone, and NeoForge CCI jars (1.21.1)'
-    dependsOn ':fabric:build', ':fabric-cci:build', ':neoforge:build', ':neoforge-cci:build'
+    description = 'Build Fabric + NeoForge jars for 1.21.1 (CCI soft-compat included)'
+    dependsOn ':fabric:build', ':neoforge:build'
 }
 
 tasks.register('buildAll215') {
     group = 'build'
-    description = 'Build Fabric + NeoForge standalone and CCI jars for Minecraft 1.21.5'
-    dependsOn ':fabric-21.5:build', ':fabric-cci-21.5:build', ':neoforge-21.5:build', ':neoforge-cci-21.5:build'
+    description = 'Build Fabric + NeoForge jars for Minecraft 1.21.5 (CCI soft-compat included)'
+    dependsOn ':fabric-21.5:build', ':neoforge-21.5:build'
 }
 
 tasks.register('buildAll1201') {
     group = 'build'
-    description = 'Build Fabric + Forge standalone and CCI jars for Minecraft 1.20.1 (no NeoForge 20.1 line)'
-    dependsOn ':fabric-1.20.1:build', ':fabric-cci-1.20.1:build', ':forge-1.20.1:build', ':forge-cci-1.20.1:build'
+    description = 'Build Fabric + Forge jars for Minecraft 1.20.1 (CCI soft-compat included; no NeoForge 20.1)'
+    dependsOn ':fabric-1.20.1:build', ':forge-1.20.1:build'
 }
 
 tasks.register('buildNeoForge26') {
     group = 'build'
-    description = 'Build NeoForge standalone jar for Minecraft 26.2 (no CCI)'
+    description = 'Build NeoForge standalone jar for Minecraft 26.2 (no CCI available)'
     dependsOn ':neoforge-26:build'
 }
 
 tasks.register('buildNeoForge261') {
     group = 'build'
-    description = 'Build NeoForge standalone jar for Minecraft 26.1.2 (no CCI)'
+    description = 'Build NeoForge standalone jar for Minecraft 26.1.2 (no CCI available)'
     dependsOn ':neoforge-26-1:build'
-}
-
-tasks.register('runFabricCciClient') {
-    group = 'fabric'
-    description = 'Run Fabric client with the CCI-compatible edition'
-    dependsOn ':fabric-cci:runClient'
 }
 
 tasks.register('runFabricClient') {
@@ -76,10 +70,4 @@ tasks.register('runNeoForge261Client') {
     group = 'neoforge'
     description = 'Run NeoForge client for Minecraft 26.1.2 (:neoforge-26-1)'
     dependsOn ':neoforge-26-1:runClient'
-}
-
-tasks.register('runNeoForgeCciClient') {
-    group = 'neoforge'
-    description = 'Run NeoForge client with the CCI-compatible edition'
-    dependsOn ':neoforge-cci:runClient'
 }

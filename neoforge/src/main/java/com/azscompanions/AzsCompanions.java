@@ -74,6 +74,7 @@ public final class AzsCompanions {
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(this::onModConfig);
         modBus.addListener(CompanionChunkTickets::register);
+        com.azscompanions.compat.cci.CciCompatModule.register(modBus);
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);

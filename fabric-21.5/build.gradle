@@ -25,6 +25,8 @@ dependencies {
     implementation project(':common')
     // Soft-dep API — plain compileOnly avoids Loom remapping the JM API jar.
     compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
+    modCompileOnly "maven.modrinth:content-creator-integration:${rootProject.cci_21_5_fabric_modrinth_version_id}"
+    modCompileOnly "maven.modrinth:ichunutil:${rootProject.ichunutil_21_5_fabric_modrinth_version_id}"
 }
 
 loom {

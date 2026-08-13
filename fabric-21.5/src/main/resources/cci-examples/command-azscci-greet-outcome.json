@@ -1,0 +1,6 @@
+{
+  "_comment": "Fabric fallback when IMC mixin is unavailable. Same effect as companion_greet IMC. NeoForge CCI prefers type imc.",
+  "type": "command",
+  "command": "azscci companion_greet $username",
+  "executeAsSelf": true
+}

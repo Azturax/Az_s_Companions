@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.azscompanions.mixin.cci",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "IMCOutcomeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

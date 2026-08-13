@@ -47,6 +47,7 @@ public final class AzsCompanionsFabricClient implements ClientModInitializer {
         com.azscompanions.compat.map.FabricMapCompat.bootstrapClient();
         com.azscompanions.compat.fancyanim.FabricFancyAnimCompat.bootstrapClient();
         com.azscompanions.compat.dynamiclights.FabricDynamicLightsCompat.bootstrapClient();
+        com.azscompanions.compat.cci.FabricCciCompatModule.bootstrapClient();
 
         AzsCompanionsFabric.LOGGER.info("Az's Companions (Fabric) client ready");
     }

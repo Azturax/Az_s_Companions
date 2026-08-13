@@ -1,0 +1,6 @@
+{
+  "type": "imc",
+  "modId": "azscompanions",
+  "subject": "companion_hide_seek",
+  "message": "role=hider;seconds=12"
+}

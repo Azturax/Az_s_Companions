@@ -79,6 +79,8 @@ dependencies {
     implementation project(':common')
     // Soft-dep APIs — never packaged; JourneyMap may not ship a 1.21.5 API yet.
     compileOnly "info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1"
+    compileOnly "maven.modrinth:content-creator-integration:${rootProject.cci_21_5_modrinth_version_id}"
+    compileOnly "maven.modrinth:ichunutil:${rootProject.ichunutil_21_5_modrinth_version_id}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -103,6 +105,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_name               : rootProject.mod_name,
             mod_license            : rootProject.mod_license,
             mod_version            : rootProject.mod_version,
+            cci_version_range      : rootProject.cci_version_range,
+            ichunutil_version_range: rootProject.ichunutil_version_range,
     ]
     inputs.properties replaceProperties
     expand replaceProperties

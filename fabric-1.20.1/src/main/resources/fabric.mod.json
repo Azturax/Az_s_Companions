@@ -17,7 +17,8 @@
   "environment": "*",
   "accessWidener": "azscompanions.accesswidener",
   "mixins": [
-    "azscompanions.mixins.json"
+    "azscompanions.mixins.json",
+    "azscompanions-cci.mixins.json"
   ],
   "entrypoints": {
     "main": [
@@ -45,7 +46,9 @@
     "lambdynlights": "*",
     "ryoamiclights": "*",
     "voicechat": "*",
-    "voicemod": "*"
+    "voicemod": "*",
+    "contentcreatorintegration": "*",
+    "ichunutil": "*"
   },
   "custom": {
     "azscompanions:support": {

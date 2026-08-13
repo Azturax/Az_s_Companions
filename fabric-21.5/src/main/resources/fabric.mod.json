@@ -17,7 +17,8 @@
   "environment": "*",
   "accessWidener": "azscompanions.accesswidener",
   "mixins": [
-    "azscompanions.mixins.json"
+    "azscompanions.mixins.json",
+    "azscompanions-cci.mixins.json"
   ],
   "entrypoints": {
     "main": [
@@ -48,11 +49,13 @@
     "lambdynlights": "*",
     "ryoamiclights": "*",
     "voicechat": "*",
-    "voicemod": "*"
+    "voicemod": "*",
+    "contentcreatorintegration": "*",
+    "ichunutil": "*"
   },
   "custom": {
     "azscompanions:support": {
-      "minecraft": "1.21.1",
+      "minecraft": "1.21.5",
       "loaders": ["fabric", "neoforge"]
     }
   }

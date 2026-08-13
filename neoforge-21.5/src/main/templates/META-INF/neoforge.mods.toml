@@ -13,7 +13,8 @@ Az's Companions adds wholesome adult AI companions for Minecraft.
 Find a Companion Charm, summon your companion, customize them, chat nearby,
 and let them follow you home to a bed.
 
-NeoForge jar for Minecraft 1.21.1 (Fabric jar available separately).
+NeoForge jar for Minecraft 1.21.5 (Fabric jar available separately).
+Optional soft-compat for iChun Content Creator Integration (CCI) when installed.
 All characters are explicitly adult, wholesome, and non-sexual.
 One companion per player on multiplayer servers.
 '''
@@ -21,7 +22,7 @@ One companion per player on multiplayer servers.
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-# Production pin: NeoForge 21.1.x (Minecraft 1.21.1). NeoForge 26.2 is a separate port.
+# Production pin: NeoForge 21.5.x (Minecraft 1.21.5).
 versionRange="${neo_version_range}"
 ordering="NONE"
 side="BOTH"
@@ -29,9 +30,23 @@ side="BOTH"
 [[dependencies.${mod_id}]]
 modId="minecraft"
 type="required"
-# Production pin: Minecraft 1.21.1 only (see docs/MULTI_VERSION.md for 26.2 plans)
 versionRange="${minecraft_version_range}"
 ordering="NONE"
+side="BOTH"
+
+# Optional CCI stream integration — soft-dep (mod loads without CCI / iChunUtil)
+[[dependencies.${mod_id}]]
+modId="contentcreatorintegration"
+type="optional"
+versionRange="${cci_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="ichunutil"
+type="optional"
+versionRange="${ichunutil_version_range}"
+ordering="AFTER"
 side="BOTH"
 
 # Optional map mods — soft-dep (mod loads without them)

@@ -75,6 +75,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         com.azscompanions.compat.FabricFtbCompat.bootstrap();
         com.azscompanions.compat.FabricHostedWorldCompat.bootstrap();
         com.azscompanions.compat.voicechat.FabricVoiceChatCompat.bootstrap();
+        com.azscompanions.compat.cci.FabricCciCompatModule.bootstrapCommon();
 
         ResourceManagerHelper.get(PackType.SERVER_DATA)
                 .registerReloadListener(new FabricCompanionDefinitionLoader());

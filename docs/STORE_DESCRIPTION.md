@@ -43,10 +43,10 @@ Owned companions **do not naturally despawn**. Desert pyramids can drop a Compan
 | **Standalone** (NeoForge or Fabric) | Default — no streamer bridge |
 | **CCI** (NeoForge or Fabric) | Twitch / Streamlabs / StreamElements via [CCI](https://modrinth.com/mod/content-creator-integration) + iChunUtil |
 
-Install **one** Az's Companions jar per loader — never standalone + CCI together.
+Install **one** Az's Companions jar per loader (NeoForge and Fabric are separate). CCI is optional soft-compat in the same jar.
 
 **Requirements:** Minecraft **1.21.1**, Java **21**, NeoForge **21.1.x** *or* Fabric Loader ≥0.16 + Fabric API.  
-**CCI editions only:** CCI **1.13.0** + iChunUtil **1.0.3** for the same loader.
+**Optional CCI:** install CCI **1.13.0** + iChunUtil for the same loader when streaming.
 
 ---
 
@@ -184,7 +184,7 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 
 - Prefer `<h2>` / `<h3>`, `<ul><li>`, `<p>`, `<strong>`, `<code>`, `<a href="…">`, `<hr/>`, simple `<table>` if allowed.
 - Avoid Markdown tables if the preview breaks — the HTML version uses lists instead where needed.
-- Upload **one** edition jar per file (standalone vs CCI); mention both loaders in the description.
+- Upload **one** jar per Minecraft × loader; mention both loaders in the description. CCI is optional in-jar.
 - Short summary / subtitle field (if present): *Wholesome adult companions for 1.21.1 — follow, fight, customize, optional LLM chat.*
 
 ```html
@@ -356,7 +356,7 @@ CurseForge’s description editor accepts a subset of HTML. Paste the block belo
 
 **Very short summary (≈160 chars)**
 
-> Adult wholesome companions for 1.21.1 (NeoForge + Fabric). Charm summon, forms, combat, gifts, optional `/ask` AI. Standalone or CCI editions.
+> Adult wholesome companions for 1.21.1 (NeoForge + Fabric). Charm summon, forms, combat, gifts, optional `/ask` AI. CCI soft-compat included (optional).
 
 **Categories / tags (suggestions)**
 

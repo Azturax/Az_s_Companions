@@ -27,6 +27,8 @@ dependencies {
 
     implementation project(':common')
     // JourneyMap API jar requires JVM 21+; omit compile-time JM soft-dep on 1.20.1 (Java 17).
+    modCompileOnly "maven.modrinth:content-creator-integration:${rootProject.cci_1_20_1_fabric_modrinth_version_id}"
+    modCompileOnly "maven.modrinth:ichunutil:${rootProject.ichunutil_1_20_1_fabric_modrinth_version_id}"
 }
 
 loom {

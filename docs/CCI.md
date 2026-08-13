@@ -13,14 +13,18 @@ Complete guide for **iChun Content Creator Integration (CCI)** with Az's Compani
 
 CCI connects Twitch (or Streamlabs / StreamElements) events to in-game outcomes via **IMC** (`modId` + `subject` + `message`).
 
+From **v1.0.8**, CCI is a **soft/optional** dependency inside the **main** Az's Companions jars — there are **no** separate `*-cci` jars:
+
 | Jar | Use when |
 |-----|----------|
-| `azscompanions-neoforge-cci-*.jar` | NeoForge + CCI + iChunUtil (1.21.1 / 1.21.5) |
-| `azscompanions-fabric-cci-*.jar` | Fabric + CCI + iChunUtil (1.21.1 / 1.21.5 / 1.20.1) |
-| `azscompanions-forge-cci-*.jar` | Forge + CCI + iChunUtil (**1.20.1 only**) |
-| `azscompanions-*-*.jar` (no `-cci`) | **Standalone** — no CCI bridge |
+| `azscompanions-neoforge-*.jar` | NeoForge 1.21.1 / 1.21.5 — CCI activates when CCI + iChunUtil are installed |
+| `azscompanions-fabric-*.jar` | Fabric 1.21.1 / 1.21.5 / 1.20.1 — same |
+| `azscompanions-forge-*.jar` | Forge **1.20.1 only** — same |
+| NeoForge **26.x** jars | **No CCI** for that line |
 
-Install **one** Az's Companions jar only — never standalone + CCI together.
+Without CCI installed, companions work normally (bridge idle). With CCI present, stream IMC outcomes and Fabric `/azscci` work. NeoForge vs Fabric remain **separate** jars.
+
+Install **one** Az's Companions jar only for your loader.
 
 **IMC mod id:** `azscompanions`
 

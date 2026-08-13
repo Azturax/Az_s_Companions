@@ -74,6 +74,7 @@ public final class AzsCompanions {
         ModNetworking.register();
         modBus.addListener(ModEntities::registerAttributes);
         modBus.addListener(this::onModConfig);
+        com.azscompanions.compat.cci.CciCompatModule.register(modBus);
 
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         MinecraftForge.EVENT_BUS.addListener(this::onAddReloadListeners);

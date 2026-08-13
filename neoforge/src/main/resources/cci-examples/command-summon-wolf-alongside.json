@@ -1,0 +1,6 @@
+{
+  "_comment": "CCI-native CommandOutcome — not handled by Az's Companions. Pair with an IMC companion_greet/say in the same Config Event. Adjust NBT / executeAsSelf for your world.",
+  "type": "command",
+  "command": "summon minecraft:wolf ~ ~ ~",
+  "executeAsSelf": true
+}
