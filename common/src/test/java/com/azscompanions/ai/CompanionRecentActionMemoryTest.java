@@ -116,6 +116,19 @@ class CompanionRecentActionMemoryTest {
     }
 
     @Test
+    void tryClaimItemFindIsSingleFlightAcrossHundredCalls() {
+        CompanionRecentActionMemory.testNowMs = 2_000_000L;
+        int claimed = 0;
+        for (int i = 0; i < 100; i++) {
+            if (CompanionRecentActionMemory.tryClaimItemFind(player, 1000L + i)) {
+                claimed++;
+            }
+        }
+        assertEquals(1, claimed);
+        assertFalse(CompanionRecentActionMemory.canClaimItemFind(player, 2000L));
+    }
+
+    @Test
     void notableHeuristics() {
         assertTrue(CompanionNotableItemSupport.isSword("minecraft:iron_sword"));
         assertTrue(CompanionNotableItemSupport.isNotablePickup("minecraft:diamond"));

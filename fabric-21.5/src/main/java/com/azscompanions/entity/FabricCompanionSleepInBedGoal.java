@@ -3,7 +3,6 @@ package com.azscompanions.entity;
 import com.azscompanions.block.FabricKonBedBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -15,13 +14,10 @@ import net.minecraft.world.phys.AABB;
 import java.util.EnumSet;
 
 /**
- * Night sleep in the nearest usable bed. Kon-named companions prefer Kon beds first.
- * Leaves bed if owner moves far. Follow mode only (Stay/Sit/Wander unchanged).
+ * Night sleep in the companion's own Kon bed only.
+ * If the claimed home bed is obstructed or gone, clears the claim and searches for another Kon bed.
  */
 public final class FabricCompanionSleepInBedGoal extends Goal {
-    /** Horizontal search radius (blocks) around the companion for usable beds. */
-    private static final int SEARCH_RADIUS = 48;
-    private static final int SEARCH_VERTICAL = 48;
     private static final int WAKE_COOLDOWN_TICKS = 100;
 
     private final FabricCompanionEntity companion;
@@ -46,7 +42,7 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level) || !shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        bedPos = findNearestUsableBed(level);
+        bedPos = resolveBed(level);
         return bedPos != null;
     }
 
@@ -55,8 +51,8 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level) || !shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        if (bedPos == null || !isUsableBed(level, bedPos)) {
-            bedPos = findNearestUsableBed(level);
+        if (bedPos == null || !isUsableKonBed(level, bedPos)) {
+            bedPos = resolveBed(level);
         }
         return bedPos != null;
     }
@@ -86,8 +82,8 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         }
         if (companion.blockPosition().closerThan(bedPos, 2.0d)) {
             if (!companion.isSleeping()) {
-                if (!isUsableBed(level, bedPos)) {
-                    bedPos = findNearestUsableBed(level);
+                if (!isUsableKonBed(level, bedPos)) {
+                    bedPos = resolveBed(level);
                     return;
                 }
                 companion.getNavigation().stop();
@@ -122,48 +118,33 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
         return level.isDarkOutside();
     }
 
-    /**
-     * Closest usable empty bed near the companion.
-     * Kon-named: nearest Kon bed first, else nearest any bed. Never locks to a stored home bed.
-     */
-    private BlockPos findNearestUsableBed(ServerLevel level) {
-        BlockPos origin = companion.blockPosition();
-        boolean preferKonBed = companion.isKonNamed();
-        BlockPos bestKon = null;
-        int bestKonDist = Integer.MAX_VALUE;
-        BlockPos bestAny = null;
-        int bestAnyDist = Integer.MAX_VALUE;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int dy = -SEARCH_VERTICAL; dy <= SEARCH_VERTICAL; dy++) {
-            for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
-                for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
-                    cursor.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!isUsableBed(level, cursor)) {
-                        continue;
-                    }
-                    int dist = origin.distManhattan(cursor);
-                    if (preferKonBed && level.getBlockState(cursor).getBlock() instanceof FabricKonBedBlock) {
-                        if (dist < bestKonDist) {
-                            bestKonDist = dist;
-                            bestKon = cursor.immutable();
-                        }
-                    } else if (dist < bestAnyDist) {
-                        bestAnyDist = dist;
-                        bestAny = cursor.immutable();
-                    }
-                }
-            }
+    private BlockPos resolveBed(ServerLevel level) {
+        BlockPos originMc = companion.blockPosition();
+        CompanionBedSleepSupport.IntPos origin =
+                new CompanionBedSleepSupport.IntPos(originMc.getX(), originMc.getY(), originMc.getZ());
+        BlockPos claimedMc = companion.getHomeBedPos();
+        CompanionBedSleepSupport.IntPos claimed = claimedMc == null
+                ? null
+                : new CompanionBedSleepSupport.IntPos(claimedMc.getX(), claimedMc.getY(), claimedMc.getZ());
+
+        if (CompanionBedSleepSupport.isClaimInvalid(claimed, pos -> isUsableKonBed(level, toBlockPos(pos)))) {
+            companion.setHomeBedPos(null);
+            claimed = null;
         }
-        BlockPos nearest = bestKon != null ? bestKon : bestAny;
-        if (nearest != null) {
-            companion.setHomeBedPos(nearest);
-            companion.setHomePos(nearest);
+
+        CompanionBedSleepSupport.IntPos resolved = CompanionBedSleepSupport.resolveSleepBed(
+                origin, claimed, pos -> isUsableKonBed(level, toBlockPos(pos)));
+        if (resolved == null) {
+            return null;
         }
-        return nearest;
+        BlockPos bed = toBlockPos(resolved);
+        companion.setHomeBedPos(bed);
+        companion.setHomePos(bed);
+        return bed;
     }
 
-    private boolean isUsableBed(ServerLevel level, BlockPos pos) {
-        if (!isBedHead(level, pos)) {
+    private boolean isUsableKonBed(ServerLevel level, BlockPos pos) {
+        if (!isKonBedHead(level, pos)) {
             return false;
         }
         BlockState state = level.getBlockState(pos);
@@ -177,14 +158,19 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
                 e -> e.isAlive() && e.isSleeping() && e != companion).isEmpty();
     }
 
-    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
+    private static boolean isKonBedHead(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (!state.is(BlockTags.BEDS) && !(state.getBlock() instanceof BedBlock)) {
-            return false;
-        }
-        if (!(state.getBlock() instanceof BedBlock)) {
+        if (!(state.getBlock() instanceof FabricKonBedBlock)) {
             return false;
         }
         return !state.hasProperty(BedBlock.PART) || state.getValue(BedBlock.PART) == BedPart.HEAD;
+    }
+
+    private static BlockPos toBlockPos(CompanionBedSleepSupport.IntPos pos) {
+        return new BlockPos(pos.x(), pos.y(), pos.z());
+    }
+
+    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
+        return isKonBedHead(level, pos);
     }
 }

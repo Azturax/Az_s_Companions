@@ -1,13 +1,13 @@
 package com.azscompanions.entity.ai;
 
 import com.azscompanions.block.KonBedBlock;
+import com.azscompanions.entity.CompanionBedSleepSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.entity.CompanionWakeLoot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -19,15 +19,11 @@ import net.minecraft.world.phys.AABB;
 import java.util.EnumSet;
 
 /**
- * At night (or when the owner is sleeping), path to the nearest usable bed and sleep.
- * Kon-named companions prefer the nearest {@link KonBedBlock}, otherwise any nearest bed.
- * Leaves bed if the owner moves farther than {@link CompanionFollowDistances#LEAVE_BED_OWNER_DISTANCE}.
+ * At night (or when the owner is sleeping), path to the companion's own Kon bed and sleep.
+ * Never uses vanilla / village / other beds — only {@link KonBedBlock}.
+ * If the claimed home bed is obstructed or gone, clears the claim and searches for another Kon bed.
  */
 public final class CompanionSleepInBedGoal extends Goal {
-    /** Horizontal search radius (blocks) around the companion for usable beds. */
-    private static final int SEARCH_RADIUS = 48;
-    private static final int SEARCH_VERTICAL = 48;
-    /** Cooldown after waking from owner-distance to avoid bed thrashing. */
     private static final int WAKE_COOLDOWN_TICKS = 100;
 
     private final CompanionEntity companion;
@@ -52,13 +48,10 @@ public final class CompanionSleepInBedGoal extends Goal {
         if (!(companion.level() instanceof ServerLevel level)) {
             return false;
         }
-        if (!shouldSleep(level)) {
+        if (!shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        if (ownerTooFar()) {
-            return false;
-        }
-        bedPos = findNearestUsableBed(level);
+        bedPos = resolveBed(level);
         return bedPos != null;
     }
 
@@ -70,8 +63,8 @@ public final class CompanionSleepInBedGoal extends Goal {
         if (!shouldSleep(level) || ownerTooFar()) {
             return false;
         }
-        if (bedPos == null || !isUsableBed(level, bedPos)) {
-            bedPos = findNearestUsableBed(level);
+        if (bedPos == null || !isUsableKonBed(level, bedPos)) {
+            bedPos = resolveBed(level);
         }
         return bedPos != null;
     }
@@ -104,8 +97,8 @@ public final class CompanionSleepInBedGoal extends Goal {
         }
         if (companion.blockPosition().closerThan(bedPos, 2.0d)) {
             if (!companion.isSleeping()) {
-                if (!isUsableBed(level, bedPos)) {
-                    bedPos = findNearestUsableBed(level);
+                if (!isUsableKonBed(level, bedPos)) {
+                    bedPos = resolveBed(level);
                     return;
                 }
                 companion.getNavigation().stop();
@@ -140,48 +133,33 @@ public final class CompanionSleepInBedGoal extends Goal {
         return !level.isBrightOutside();
     }
 
-    /**
-     * Picks the closest usable empty bed near the companion.
-     * Kon-named: nearest Kon bed first, else nearest any bed. Always nearest — never locks to a stored home bed.
-     */
-    private BlockPos findNearestUsableBed(ServerLevel level) {
-        BlockPos origin = companion.blockPosition();
-        boolean preferKonBed = companion.isKonNamed();
-        BlockPos bestKon = null;
-        int bestKonDist = Integer.MAX_VALUE;
-        BlockPos bestAny = null;
-        int bestAnyDist = Integer.MAX_VALUE;
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int dy = -SEARCH_VERTICAL; dy <= SEARCH_VERTICAL; dy++) {
-            for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
-                for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
-                    cursor.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
-                    if (!isUsableBed(level, cursor)) {
-                        continue;
-                    }
-                    int dist = origin.distManhattan(cursor);
-                    if (preferKonBed && isKonBed(level, cursor)) {
-                        if (dist < bestKonDist) {
-                            bestKonDist = dist;
-                            bestKon = cursor.immutable();
-                        }
-                    } else if (dist < bestAnyDist) {
-                        bestAnyDist = dist;
-                        bestAny = cursor.immutable();
-                    }
-                }
-            }
+    private BlockPos resolveBed(ServerLevel level) {
+        BlockPos originMc = companion.blockPosition();
+        CompanionBedSleepSupport.IntPos origin =
+                new CompanionBedSleepSupport.IntPos(originMc.getX(), originMc.getY(), originMc.getZ());
+        BlockPos claimedMc = companion.getHomeBedPos();
+        CompanionBedSleepSupport.IntPos claimed = claimedMc == null
+                ? null
+                : new CompanionBedSleepSupport.IntPos(claimedMc.getX(), claimedMc.getY(), claimedMc.getZ());
+
+        if (CompanionBedSleepSupport.isClaimInvalid(claimed, pos -> isUsableKonBed(level, toBlockPos(pos)))) {
+            companion.setHomeBedPos(null);
+            claimed = null;
         }
-        BlockPos nearest = bestKon != null ? bestKon : bestAny;
-        if (nearest != null) {
-            companion.setHomeBedPos(nearest);
-            companion.setHomePos(nearest);
+
+        CompanionBedSleepSupport.IntPos resolved = CompanionBedSleepSupport.resolveSleepBed(
+                origin, claimed, pos -> isUsableKonBed(level, toBlockPos(pos)));
+        if (resolved == null) {
+            return null;
         }
-        return nearest;
+        BlockPos bed = toBlockPos(resolved);
+        companion.setHomeBedPos(bed);
+        companion.setHomePos(bed);
+        return bed;
     }
 
-    private boolean isUsableBed(ServerLevel level, BlockPos pos) {
-        if (!isBedHead(level, pos)) {
+    private boolean isUsableKonBed(ServerLevel level, BlockPos pos) {
+        if (!isKonBedHead(level, pos)) {
             return false;
         }
         BlockState state = level.getBlockState(pos);
@@ -195,19 +173,19 @@ public final class CompanionSleepInBedGoal extends Goal {
                 e -> e.isAlive() && e.isSleeping() && e != companion).isEmpty();
     }
 
-    private static boolean isKonBed(ServerLevel level, BlockPos pos) {
-        return level.getBlockState(pos).getBlock() instanceof KonBedBlock;
-    }
-
-    /** True for the head half of any bed (vanilla colors, Kon bed, tagged beds). */
-    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
+    private static boolean isKonBedHead(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (!state.is(BlockTags.BEDS) && !(state.getBlock() instanceof BedBlock)) {
-            return false;
-        }
-        if (!(state.getBlock() instanceof BedBlock)) {
+        if (!(state.getBlock() instanceof KonBedBlock)) {
             return false;
         }
         return !state.hasProperty(BedBlock.PART) || state.getValue(BedBlock.PART) == BedPart.HEAD;
+    }
+
+    private static BlockPos toBlockPos(CompanionBedSleepSupport.IntPos pos) {
+        return new BlockPos(pos.x(), pos.y(), pos.z());
+    }
+
+    public static boolean isBedHead(ServerLevel level, BlockPos pos) {
+        return isKonBedHead(level, pos);
     }
 }

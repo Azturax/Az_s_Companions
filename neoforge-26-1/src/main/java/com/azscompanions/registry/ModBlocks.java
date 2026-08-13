@@ -12,14 +12,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(AzsCompanions.MOD_ID);
 
-    public static final DeferredBlock<KonBedBlock> KON_BED = BLOCKS.register("kon_bed", () ->
-            new KonBedBlock(BlockBehaviour.Properties.of()
+    /** Must use {@code registerBlock} so NeoForge sets the block id on Properties (MC 26+). */
+    public static final DeferredBlock<KonBedBlock> KON_BED = BLOCKS.registerBlock(
+            "kon_bed",
+            KonBedBlock::new,
+            () -> BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_PINK)
                     .strength(0.2F)
                     .sound(SoundType.WOOD)
                     .ignitedByLava()
                     .pushReaction(PushReaction.DESTROY)
-                    .noOcclusion()));
+                    .noOcclusion());
 
     private ModBlocks() {
     }

@@ -59,6 +59,18 @@ public final class CompanionChatEventSupport {
     public static boolean observe(
             UUID playerId, long gameTime, CompanionRecentActionKind kind,
             String detail, String itemId, boolean reactive) {
+        if (kind == CompanionRecentActionKind.ITEM_FIND) {
+            if (!CompanionRecentActionMemory.tryClaimItemFind(playerId, gameTime)) {
+                return false;
+            }
+            if (allowBuiltinReactive(kind)) {
+                CompanionRecentActionMemory.record(
+                        playerId, gameTime, kind, detail, itemId, reactive, true);
+            }
+            fanOutCustom(playerId, gameTime, kind, itemId);
+            return true;
+        }
+
         boolean recorded = false;
         if (allowBuiltinReactive(kind)) {
             recorded = CompanionRecentActionMemory.record(

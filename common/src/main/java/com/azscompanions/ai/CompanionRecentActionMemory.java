@@ -9,12 +9,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
-import java.util.function.Predicate;
 
 /**
  * Per-owner short-lived event buffer for ambient / reactive companion chatter.
  * TTL + per-kind cooldowns keep lines from spamming.
- * {@link CompanionRecentActionKind#ITEM_FIND} uses a long wall-clock cooldown (~2 weeks).
+ * <p>
+ * {@link CompanionRecentActionKind#ITEM_FIND} is hard-capped to <strong>at most one</strong>
+ * claim per ~14 days (wall-clock <em>and</em> game ticks). The find gate survives
+ * {@link #clearPlayer} (logout) so reconnects cannot re-spam finds the same night.
  */
 public final class CompanionRecentActionMemory {
     public static final long DEFAULT_TTL_TICKS = 20L * 60L; // 60s
@@ -27,6 +29,11 @@ public final class CompanionRecentActionMemory {
     public static final long ITEM_FIND_COOLDOWN_TICKS = 20L * 60L * 60L * 24L * 14L; // 24_192_000
 
     private static final Map<UUID, PlayerBuffer> BY_PLAYER = new ConcurrentHashMap<>();
+    /**
+     * Durable find-claim gate (per owner). Not cleared by {@link #clearPlayer} — only
+     * {@link #clearAll} (tests / full reset).
+     */
+    private static final Map<UUID, FindGate> FIND_GATES = new ConcurrentHashMap<>();
 
     /** Test override for wall-clock; null → {@link System#currentTimeMillis()}. */
     static volatile Long testNowMs;
@@ -41,12 +48,50 @@ public final class CompanionRecentActionMemory {
 
     public static void clearAll() {
         BY_PLAYER.clear();
+        FIND_GATES.clear();
         testNowMs = null;
     }
 
     public static void clearPlayer(UUID playerId) {
         if (playerId != null) {
             BY_PLAYER.remove(playerId);
+            // Intentionally keep FIND_GATES — logout must not reset the 14-day find cap.
+        }
+    }
+
+    /** True when another ITEM_FIND may be claimed for this owner. */
+    public static boolean canClaimItemFind(UUID playerId, long gameTime) {
+        if (playerId == null) {
+            return false;
+        }
+        FindGate gate = FIND_GATES.get(playerId);
+        if (gate == null) {
+            return true;
+        }
+        synchronized (gate) {
+            return gate.canClaim(gameTime, nowMs());
+        }
+    }
+
+    /**
+     * Atomically claim the single ITEM_FIND slot for this cooldown window.
+     * Shared by builtin finds, custom {@code item_find} fan-out, and direct {@link #record}.
+     *
+     * @return true if this call owns the slot (at most one success per cooldown window)
+     */
+    public static boolean tryClaimItemFind(UUID playerId, long gameTime) {
+        if (playerId == null) {
+            return false;
+        }
+        FindGate gate = FIND_GATES.computeIfAbsent(playerId, id -> new FindGate());
+        synchronized (gate) {
+            long now = nowMs();
+            if (!gate.canClaim(gameTime, now)) {
+                return false;
+            }
+            gate.lastMs = now;
+            gate.lastTick = gameTime;
+            return true;
         }
     }
 
@@ -57,18 +102,28 @@ public final class CompanionRecentActionMemory {
      */
     public static boolean record(UUID playerId, long gameTime, CompanionRecentActionKind kind,
                                  String detail, String itemId, boolean reactive) {
+        return record(playerId, gameTime, kind, detail, itemId, reactive, false);
+    }
+
+    /**
+     * @param itemFindAlreadyClaimed when true, {@link CompanionRecentActionKind#ITEM_FIND} skips
+     *                               {@link #tryClaimItemFind} (caller already claimed)
+     */
+    public static boolean record(UUID playerId, long gameTime, CompanionRecentActionKind kind,
+                                 String detail, String itemId, boolean reactive,
+                                 boolean itemFindAlreadyClaimed) {
         if (playerId == null || kind == null) {
             return false;
+        }
+        if (kind == CompanionRecentActionKind.ITEM_FIND && !itemFindAlreadyClaimed) {
+            if (!tryClaimItemFind(playerId, gameTime)) {
+                return false;
+            }
+            itemFindAlreadyClaimed = true;
         }
         PlayerBuffer buf = BY_PLAYER.computeIfAbsent(playerId, id -> new PlayerBuffer());
         synchronized (buf) {
             buf.prune(gameTime);
-            if (kind == CompanionRecentActionKind.ITEM_FIND) {
-                long now = nowMs();
-                if (buf.lastFindReactMs > 0L && now - buf.lastFindReactMs < ITEM_FIND_COOLDOWN_MS) {
-                    return false;
-                }
-            }
             long cool = cooldownTicks(kind);
             Long last = buf.lastRecorded.get(kind);
             if (last != null && gameTime - last < cool) {
@@ -78,9 +133,6 @@ public final class CompanionRecentActionMemory {
                     kind, gameTime, detail, itemId, reactive);
             buf.events.add(action);
             buf.lastRecorded.put(kind, gameTime);
-            if (kind == CompanionRecentActionKind.ITEM_FIND) {
-                buf.lastFindReactMs = nowMs();
-            }
             while (buf.events.size() > MAX_EVENTS_PER_PLAYER) {
                 buf.events.remove(0);
             }
@@ -296,13 +348,26 @@ public final class CompanionRecentActionMemory {
         };
     }
 
+    private static final class FindGate {
+        private long lastMs;
+        private long lastTick;
+
+        boolean canClaim(long gameTime, long nowMs) {
+            if (lastMs > 0L && nowMs - lastMs < ITEM_FIND_COOLDOWN_MS) {
+                return false;
+            }
+            if (lastTick > 0L && gameTime - lastTick < ITEM_FIND_COOLDOWN_TICKS) {
+                return false;
+            }
+            return true;
+        }
+    }
+
     private static final class PlayerBuffer {
         private final List<CompanionRecentAction> events = new ArrayList<>();
         private final Map<CompanionRecentActionKind, Long> lastRecorded = new ConcurrentHashMap<>();
         private final Map<String, Long> lastCustom = new ConcurrentHashMap<>();
         private final java.util.Set<String> seenItemIds = ConcurrentHashMap.newKeySet();
-        /** Wall-clock ms of last ITEM_FIND reaction (0 = never). */
-        private long lastFindReactMs;
         private boolean wasDark;
 
         void prune(long gameTime) {

@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## 1.0.7
+
+NeoForge **26.x** registry crash fix, own-bed-only sleep, and hard ITEM_FIND rarity (all maintained MC lines).
+
+### Fixed
+- **NeoForge 26.x startup crash** — `Block id not set` / `Item id not set` / unbound `azscompanions:kon_bed` during `RegisterEvent`. Use `registerBlock` / `registerItem` / `registerSimpleBlockItem` so IDs are set and BlockItem does not call `.get()` early.
+- **ITEM_FIND spam** — custom `item_find` fan-out no longer bypasses the long cooldown; at most **one** find claim per ~14 days (wall-clock **and** game ticks). Logout no longer clears the find gate. Rapid inventory ticks cannot burst finds.
+
+### Changed
+- **Own-bed-only sleep** — companions sleep only in claimed `azscompanions:kon_bed` (never vanilla / village / other beds). If the home bed is missing or obstructed, the claim is cleared and the nearest free Kon bed is searched (`CompanionBedSleepSupport`).
+
+### Loaders
+| Minecraft | Standalone | CCI |
+|-----------|------------|-----|
+| **1.21.1** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric | Forge + Fabric |
+| **26.2** | NeoForge | — |
+| **26.1.2** | NeoForge | — |
+
+Jar pattern: `azscompanions-<loader>[-cci]-1.0.7+<mc>.jar` on tag `v1.0.7`.
+
 ## 1.0.6
 
 Patch release across maintained Minecraft lines: AI chatter toggles, host custom chat events, and companion luck immunity.
