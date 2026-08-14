@@ -84,6 +84,7 @@ public final class AzsCompanions {
         MinecraftForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         MinecraftForge.EVENT_BUS.register(com.azscompanions.event.CompanionRecentActionEvents.class);
         MinecraftForge.EVENT_BUS.register(TeamFightGameEvents.class);
+        MinecraftForge.EVENT_BUS.register(com.azscompanions.event.CompanionDeathEvents.class);
         MinecraftForge.EVENT_BUS.register(DepositSelectionEvents.class);
         MinecraftForge.EVENT_BUS.register(com.azscompanions.event.CompanionLogoutEvents.class);
         MinecraftForge.EVENT_BUS.register(com.azscompanions.event.CompanionDimensionTravelEvents.class);

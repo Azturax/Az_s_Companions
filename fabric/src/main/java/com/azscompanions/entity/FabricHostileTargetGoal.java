@@ -23,7 +23,7 @@ public final class FabricHostileTargetGoal extends NearestAttackableTargetGoal<L
         if (!companion.wantsAggressiveTargets()) {
             return false;
         }
-        if (companion.isSleeping()) {
+        if (companion.getMode() == FabricCompanionMode.SIT || companion.getMode() == FabricCompanionMode.STAY || companion.isSleeping()) {
             return false;
         }
         return super.canUse();
@@ -32,6 +32,9 @@ public final class FabricHostileTargetGoal extends NearestAttackableTargetGoal<L
     @Override
     public boolean canContinueToUse() {
         if (!companion.wantsAggressiveTargets()) {
+            return false;
+        }
+        if (companion.getMode() == FabricCompanionMode.SIT || companion.getMode() == FabricCompanionMode.STAY || companion.isSleeping()) {
             return false;
         }
         return super.canContinueToUse();

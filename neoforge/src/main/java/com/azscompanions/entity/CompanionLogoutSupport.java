@@ -109,6 +109,30 @@ public final class CompanionLogoutSupport {
         }
     }
 
+    /**
+     * Merge a death snapshot into the owner's logout list so inventory survives without an immediate respawn.
+     */
+    public static void mergeDeathSnapshot(ServerPlayer player, UUID id, CompoundTag data) {
+        if (player == null || id == null || data == null) {
+            return;
+        }
+        CompoundTag persistent = player.getPersistentData();
+        ListTag parked = persistent.contains(CompanionLogoutPersistence.PLAYER_LIST_TAG, Tag.TAG_LIST)
+                ? persistent.getList(CompanionLogoutPersistence.PLAYER_LIST_TAG, Tag.TAG_COMPOUND)
+                : new ListTag();
+        ListTag next = new ListTag();
+        for (int i = 0; i < parked.size(); i++) {
+            CompoundTag e = parked.getCompound(i);
+            if (e.hasUUID(CompanionLogoutPersistence.ENTRY_UUID)
+                    && id.equals(e.getUUID(CompanionLogoutPersistence.ENTRY_UUID))) {
+                continue;
+            }
+            next.add(e.copy());
+        }
+        next.add(entry(id, data.copy()));
+        persistent.put(CompanionLogoutPersistence.PLAYER_LIST_TAG, next);
+    }
+
     public static void restoreParkedCompanions(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         ListTag parked = persistent.contains(CompanionLogoutPersistence.PLAYER_LIST_TAG, Tag.TAG_LIST)

@@ -1077,6 +1077,15 @@ public class FabricCompanionEntity extends PathfinderMob {
         player.openMenu(new FabricCompanionInventoryMenu.ExtendedProvider(this));
     }
 
+    
+    @Override
+    protected void dropEquipment() {
+        if (CompanionInventoryPersistence.shouldKeepInventoryOnDeath(FabricServerConfig.KEEP_INVENTORY_ON_DEATH)) {
+            return;
+        }
+        super.dropEquipment();
+    }
+
     public void speakSuccess() {
         getDefinition().dialogue().pick(getDefinition().dialogue().success(), random)
                 .ifPresent(line -> {
@@ -1707,7 +1716,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public boolean wantsAggressiveTargets() {
-        return getAttitude().isHostile() || (getTeamId() != null && !getTeamId().isBlank());
+        return CompanionCombatTargetSupport.wantsCombatTargets();
     }
 
     public boolean isValidHostilePrey(LivingEntity target) {

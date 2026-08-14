@@ -83,6 +83,7 @@ public final class AzsCompanions {
         NeoForge.EVENT_BUS.register(CompanionAiChatEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionRecentActionEvents.class);
         NeoForge.EVENT_BUS.register(TeamFightGameEvents.class);
+        NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionDeathEvents.class);
         NeoForge.EVENT_BUS.register(DepositSelectionEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionLogoutEvents.class);
         NeoForge.EVENT_BUS.register(com.azscompanions.event.CompanionDimensionTravelEvents.class);

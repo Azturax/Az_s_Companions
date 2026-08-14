@@ -5,6 +5,7 @@ import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.entity.CompanionFollowDistances;
+import com.azscompanions.entity.CompanionInventoryPersistence;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Path;
@@ -32,6 +33,8 @@ public final class FabricServerConfig {
     public static final int SUPPORT_AMOUNT_PER_COMPANION = 100;
     /** When true, companions defend the owner against living attackers. */
     public static final boolean ALLOW_COMBAT = true;
+    public static final boolean KEEP_INVENTORY_ON_DEATH =
+            CompanionInventoryPersistence.DEFAULT_KEEP_INVENTORY_ON_DEATH;
     /**
      * Force-load the chunk each summoned companion/Bit occupies (entity tickets, not FTB claims).
      * Mirrors NeoForge {@code companionChunkLoading}. Default on for reliability; costs server chunks.

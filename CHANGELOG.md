@@ -1,17 +1,55 @@
 # Changelog
 
+## 1.0.9
+
+Inventory/Bits never drop by default, Kon/PASSIVE combat parity, and humanoid bow combat.
+
+### Fixed
+- **Inventory & Bits persist** — death no longer dumps companion/Bit gear into the world (`keepInventoryOnDeath` default **true**). Snapshots go to the bound charm (parents) or parent StoredChildren (Bits). Equipment drop chances forced to 0; LivingDrops canceled when keep is on.
+- **Kon / PASSIVE combat** — PASSIVE companions (including Kon) now proactively aggro hostile mobs like other combat-capable companions. Target acquisition no longer requires HOSTILE attitude or a team id. Fabric `canAttackTarget` aligned with NeoForge.
+
+### Added
+- **Bow / ranged combat** — humanoid forms (player, zombie/skeleton/husk/stray, enderman) and humanoid Bits shoot when holding a bow/crossbow with arrows (or Infinity). Animal / spider / non-humanoid forms stay **melee-only**.
+
+### Config
+- `keepInventoryOnDeath` (server combat section, default true)
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.9+<mc>.jar` on tag `v1.0.9` (**8** unified jars).
+
 ## Unreleased
+
+## 1.0.8
+
+Unified CCI soft-compat into the main jars (no separate `*-cci` builds).
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.8+<mc>.jar` on tag `v1.0.8`.
 
 ## 1.0.7
 
 NeoForge **26.x** registry crash fix, own-bed-only sleep, and hard ITEM_FIND rarity (all maintained MC lines).
 
 ### Fixed
-- **NeoForge 26.x startup crash** — `Block id not set` / `Item id not set` / unbound `azscompanions:kon_bed` during `RegisterEvent`. Use `registerBlock` / `registerItem` / `registerSimpleBlockItem` so IDs are set and BlockItem does not call `.get()` early.
-- **ITEM_FIND spam** — custom `item_find` fan-out no longer bypasses the long cooldown; at most **one** find claim per ~14 days (wall-clock **and** game ticks). Logout no longer clears the find gate. Rapid inventory ticks cannot burst finds.
+- **NeoForge 26.x startup crash** â€” `Block id not set` / `Item id not set` / unbound `azscompanions:kon_bed` during `RegisterEvent`. Use `registerBlock` / `registerItem` / `registerSimpleBlockItem` so IDs are set and BlockItem does not call `.get()` early.
+- **ITEM_FIND spam** â€” custom `item_find` fan-out no longer bypasses the long cooldown; at most **one** find claim per ~14 days (wall-clock **and** game ticks). Logout no longer clears the find gate. Rapid inventory ticks cannot burst finds.
 
 ### Changed
-- **Own-bed-only sleep** — companions sleep only in claimed `azscompanions:kon_bed` (never vanilla / village / other beds). If the home bed is missing or obstructed, the claim is cleared and the nearest free Kon bed is searched (`CompanionBedSleepSupport`).
+- **Own-bed-only sleep** â€” companions sleep only in claimed `azscompanions:kon_bed` (never vanilla / village / other beds). If the home bed is missing or obstructed, the claim is cleared and the nearest free Kon bed is searched (`CompanionBedSleepSupport`).
 
 ### Loaders
 | Minecraft | Standalone | CCI |
@@ -19,8 +57,8 @@ NeoForge **26.x** registry crash fix, own-bed-only sleep, and hard ITEM_FIND rar
 | **1.21.1** | NeoForge + Fabric | NeoForge + Fabric |
 | **1.21.5** | NeoForge + Fabric | NeoForge + Fabric |
 | **1.20.1** | Forge + Fabric | Forge + Fabric |
-| **26.2** | NeoForge | — |
-| **26.1.2** | NeoForge | — |
+| **26.2** | NeoForge | â€” |
+| **26.1.2** | NeoForge | â€” |
 
 Jar pattern: `azscompanions-<loader>[-cci]-1.0.7+<mc>.jar` on tag `v1.0.7`.
 
@@ -29,9 +67,9 @@ Jar pattern: `azscompanions-<loader>[-cci]-1.0.7+<mc>.jar` on tag `v1.0.7`.
 Patch release across maintained Minecraft lines: AI chatter toggles, host custom chat events, and companion luck immunity.
 
 ### Added
-- **AI chatter toggles** (`reactiveChat`, `itemFindChat`, existing `idleChat`) — admin AI Config buttons + config keys. Defaults **ON** (current behavior).
-- **`customChatEvents`** — host-defined reactive/idle events (`trigger` + optional `itemId` / `prompt` / `fallback` / cooldown). See [COMPANION_AI.md](docs/COMPANION_AI.md#custom-chat-events-customchatevents).
-- **`world.luckAffectsCompanion`** (common config, default **false**) — when off, companions ignore luck/unluck potion effects and LUCK attribute modifiers (artifact spam).
+- **AI chatter toggles** (`reactiveChat`, `itemFindChat`, existing `idleChat`) â€” admin AI Config buttons + config keys. Defaults **ON** (current behavior).
+- **`customChatEvents`** â€” host-defined reactive/idle events (`trigger` + optional `itemId` / `prompt` / `fallback` / cooldown). See [COMPANION_AI.md](docs/COMPANION_AI.md#custom-chat-events-customchatevents).
+- **`world.luckAffectsCompanion`** (common config, default **false**) â€” when off, companions ignore luck/unluck potion effects and LUCK attribute modifiers (artifact spam).
 
 ### Loaders
 | Minecraft | Standalone | CCI |
@@ -39,18 +77,18 @@ Patch release across maintained Minecraft lines: AI chatter toggles, host custom
 | **1.21.1** | NeoForge + Fabric | NeoForge + Fabric |
 | **1.21.5** | NeoForge + Fabric | NeoForge + Fabric |
 | **1.20.1** | Forge + Fabric | Forge + Fabric |
-| **26.2** | NeoForge | — |
-| **26.1.2** | NeoForge | — |
+| **26.2** | NeoForge | â€” |
+| **26.1.2** | NeoForge | â€” |
 
 Jar pattern: `azscompanions-<loader>[-cci]-1.0.6+<mc>.jar` (**14** shippable jars on tag `v1.0.6`).
 
 ## 1.0.5
 
-NeoForge **26.x** ship: full product feature parity on **Minecraft 26.1.2** and **26.2** (standalone only — no CCI builds for these MC versions).
+NeoForge **26.x** ship: full product feature parity on **Minecraft 26.1.2** and **26.2** (standalone only â€” no CCI builds for these MC versions).
 
 ### Added
-- **Minecraft 26.2** — NeoForge **26.2.0.59** (`:neoforge-26`), Java 25 / unobfuscated
-- **Minecraft 26.1.2** — NeoForge **26.1.2.95** (`:neoforge-26-1`), Java 25 / unobfuscated
+- **Minecraft 26.2** â€” NeoForge **26.2.0.59** (`:neoforge-26`), Java 25 / unobfuscated
+- **Minecraft 26.1.2** â€” NeoForge **26.1.2.95** (`:neoforge-26-1`), Java 25 / unobfuscated
 - Ports: AvatarRenderState / SubmitNodeCollector render (armor, cape, wings, hands, mob forms, Kon ears/bed), GuiGraphicsExtractor HUDs, capabilities containers/furnaces, craft/workstation recipes, logout/dimension/deposit/AI-join/chunk-ticket features
 
 ### Honest omissions (26.x only)
@@ -63,9 +101,9 @@ NeoForge **26.x** ship: full product feature parity on **Minecraft 26.1.2** and 
 ### Loaders
 | Minecraft | Standalone | CCI |
 |-----------|------------|-----|
-| **26.2** | NeoForge | — |
-| **26.1.2** | NeoForge | — |
-| **1.21.1 / 1.21.5 / 1.20.1** | unchanged — use **v1.0.4** jars | as in 1.0.4 |
+| **26.2** | NeoForge | â€” |
+| **26.1.2** | NeoForge | â€” |
+| **1.21.1 / 1.21.5 / 1.20.1** | unchanged â€” use **v1.0.4** jars | as in 1.0.4 |
 
 Jar pattern: `azscompanions-neoforge-1.0.5+26.2.jar`, `azscompanions-neoforge-1.0.5+26.1.2.jar` on tag `v1.0.5`.
 
@@ -74,17 +112,17 @@ Jar pattern: `azscompanions-neoforge-1.0.5+26.2.jar`, `azscompanions-neoforge-1.
 Multi-version release: full feature parity across **1.21.1**, **1.21.5**, and **1.20.1** (standalone + CCI where CCI exists).
 
 ### Added
-- **Minecraft 1.21.5** — NeoForge **21.5.98** + Fabric API **0.128.2+1.21.5**, standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.7**)
-- **Minecraft 1.20.1** — Fabric + **Forge 47.4.22** (no NeoForge 20.1), standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.3**)
+- **Minecraft 1.21.5** â€” NeoForge **21.5.98** + Fabric API **0.128.2+1.21.5**, standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.7**)
+- **Minecraft 1.20.1** â€” Fabric + **Forge 47.4.22** (no NeoForge 20.1), standalone + CCI (CCI 1.13.0 / iChunUtil **1.0.3**)
 - Gradle tasks: `buildAll215`, `buildAll1201`; pins in `gradle.properties` and [MULTI_VERSION.md](docs/MULTI_VERSION.md)
 
 ### Honest omissions (1.20.1 only)
 - JourneyMap soft-dep (API jar needs JVM 21+)
-- Wolf body armor / `EquipmentSlot.BODY`; `Attributes.SCALE` (entity-data scale); nametag attachment → BB-height offset
+- Wolf body armor / `EquipmentSlot.BODY`; `Attributes.SCALE` (entity-data scale); nametag attachment â†’ BB-height offset
 - Fabric: damage recent-action via `ALLOW_DAMAGE`; Forge: event-bus recent-action (no mixins)
 
 ### Not shipped (superseded by 1.0.5)
-- NeoForge **26.1.2** / **26.2** — see **1.0.5**
+- NeoForge **26.1.2** / **26.2** â€” see **1.0.5**
 
 ### Loaders
 | Minecraft | Standalone | CCI |
@@ -100,8 +138,8 @@ Jar pattern: `azscompanions-<loader>[-cci]-1.0.4+<mc>.jar` (12 shippable jars on
 Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 
 ### Fixed / Changed
-- **Mister Wiggly (`5b0a2d0a-…`):** Wiggly toggle dog is eligible and **defaults ON** (no manual toggle required); still dismissible via `/az wiggly` / keybind
-- **Flight perk UUID (`4274c47f-…`):** keeps Wiggly toggle as **opt-in** (default OFF) plus survival flight
+- **Mister Wiggly (`5b0a2d0a-â€¦`):** Wiggly toggle dog is eligible and **defaults ON** (no manual toggle required); still dismissible via `/az wiggly` / keybind
+- **Flight perk UUID (`4274c47f-â€¦`):** keeps Wiggly toggle as **opt-in** (default OFF) plus survival flight
 - **One Wiggly only:** NeoForge prefers the companion sidekick while a companion is summoned (toggle dog despawns); toggle dog returns when the companion is stored; hard cap remains **1** per owner
 - Non-perk players: still no Wiggly
 
@@ -111,9 +149,9 @@ Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 | **1.21.1** | `azscompanions-neoforge-1.0.3+1.21.1.jar` | `azscompanions-fabric-1.0.3+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.3+1.21.1.jar` | `azscompanions-fabric-cci-1.0.3+1.21.1.jar` |
 
 **Not in this release (see [MULTI_VERSION.md](docs/MULTI_VERSION.md)):**
-- NeoForge **26.2** / **26.1.2** — WIP / no module; render & API stubs; no CCI
-- Minecraft **1.21.5** (latest CCI MC) — full forward port required
-- Minecraft **1.20.1** — full backport required; no NeoForge `20.1.x` on Maven
+- NeoForge **26.2** / **26.1.2** â€” WIP / no module; render & API stubs; no CCI
+- Minecraft **1.21.5** (latest CCI MC) â€” full forward port required
+- Minecraft **1.20.1** â€” full backport required; no NeoForge `20.1.x` on Maven
 
 ## 1.0.2
 
@@ -137,7 +175,7 @@ Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 
 ### Fixed / Polish
-- **Companion inventory GUI:** blit uses explicit **256×256** atlas size (Fabric + NeoForge) so UV mapping matches `companion_inventory.png`
+- **Companion inventory GUI:** blit uses explicit **256Ã—256** atlas size (Fabric + NeoForge) so UV mapping matches `companion_inventory.png`
 - **GUI generator:** `tools/gen_companion_inventory_gui.py` clarified for light-grey beveled panels / slot grid
 
 ### Docs
@@ -148,7 +186,7 @@ Patch release for Minecraft **1.21.1** (NeoForge + Fabric, standalone + CCI).
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-1.0.1+1.21.1.jar` | `azscompanions-fabric-1.0.1+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.1+1.21.1.jar` | `azscompanions-fabric-cci-1.0.1+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`)  port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Â— port in progress; no jar shipped.
 
 ## 1.0.0
 
@@ -158,16 +196,16 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 - **Companions:** Charm summon/store, Follow / Stay / Sit / Wander, Customize (forms + coat variants, proportions, activity skins), inventory, night sleep, Kon Bed, child Bits
 - **Worldplay:** desert-pyramid Companion Charm loot (`world.enableLoot`), flower gifts, logout park / login restore, dimension follow (vanilla + modded), swim follow, ride-along mounts, wander mob play, cat/wolf scare, chunk tickets
 - **Combat / perks:** fixed netherite-sword melee, UUID Wolfy / Wiggly (+ survival flight) perks, team fights (CCI / `/az teamfight`)
-- **Optional AI:** `/ask` Â· `/az ask`, ambient + reactive chatter, persona onboarding, admin LLM profiles + join consent â [COMPANION_AI.md](docs/COMPANION_AI.md)
-- **CCI editions:** streamer-chat companions when CCI + iChunUtil are installed â [CCI.md](docs/CCI.md)
-- **Soft-compat:** FTB, map icons, dynamic lights, Simple Voice Chat detect â [COMPAT.md](docs/COMPAT.md)
+- **Optional AI:** `/ask` Ã‚Â· `/az ask`, ambient + reactive chatter, persona onboarding, admin LLM profiles + join consent Ã¢Â€Â” [COMPANION_AI.md](docs/COMPANION_AI.md)
+- **CCI editions:** streamer-chat companions when CCI + iChunUtil are installed Ã¢Â€Â” [CCI.md](docs/CCI.md)
+- **Soft-compat:** FTB, map icons, dynamic lights, Simple Voice Chat detect Ã¢Â€Â” [COMPAT.md](docs/COMPAT.md)
 
 ### Changed (from 0.4.7)
 - **Docs / copy:** README and version docs describe **1.0.0**; teamfight hint prefers primary `/az teamfight on` (alias `/azscompanions` still works)
 - **Housekeeping:** unfinished shared-hooks draft moved to `docs/dev/` (live wiring remains in loader event classes)
 
 ### Not shipped
-- NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar
+- NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar
 - Removed earlier experiments stay gone: Jindujun / Flying Nimbus / whistle, Glowing Orb form, flight ki aura
 
 ### Loaders
@@ -175,13 +213,13 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-1.0.0+1.21.1.jar` | `azscompanions-fabric-1.0.0+1.21.1.jar` | `azscompanions-neoforge-cci-1.0.0+1.21.1.jar` | `azscompanions-fabric-cci-1.0.0+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.7
 
 ### Removed
-- **Jindujun / Flying Nimbus** â rideable cloud entity, Blockbench mesh/renderer, enchant particle stream, textures, and all registration hooks (NeoForge, Fabric, NeoForge 26.2).
-- **Jindujun Whistle** â summon/dismiss item, creative-tab entry, Trail Ruins archaeology loot injection (Fabric pool + NeoForge taiga GLM), lang strings, and related tests.
+- **Jindujun / Flying Nimbus** Ã¢Â€Â” rideable cloud entity, Blockbench mesh/renderer, enchant particle stream, textures, and all registration hooks (NeoForge, Fabric, NeoForge 26.2).
+- **Jindujun Whistle** Ã¢Â€Â” summon/dismiss item, creative-tab entry, Trail Ruins archaeology loot injection (Fabric pool + NeoForge taiga GLM), lang strings, and related tests.
 
 ### Changed
 - **Treasure loot:** `world.enableLoot` now only gates Companion Charm desert-pyramid injection (whistle loot gone).
@@ -191,12 +229,12 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.7+1.21.1.jar` | `azscompanions-fabric-0.4.7+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.7+1.21.1.jar` | `azscompanions-fabric-cci-0.4.7+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.6
 
 ### Fixed
-- **Jindujun sit gap (again):** remaining air above the cream deck â `RIDER_Y_OFFSET` lowered from `0.32ÃSCALE` (~0.80) to `0.22ÃSCALE` (~0.55) so feet sit slightly into the top fluff.
+- **Jindujun sit gap (again):** remaining air above the cream deck Ã¢Â€Â” `RIDER_Y_OFFSET` lowered from `0.32ÃƒÂ—SCALE` (~0.80) to `0.22ÃƒÂ—SCALE` (~0.55) so feet sit slightly into the top fluff.
 - **Jindujun violent spin:** yaw sync no longer overwrites previous-tick rot (`yRotO` / body / head) or re-applies in both `travel` and `tick`. Steering applies rider look yaw once per travel tick (normalized), keeping client lerp stable.
 
 ### Loaders
@@ -204,40 +242,40 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.6+1.21.1.jar` | `azscompanions-fabric-0.4.6+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.6+1.21.1.jar` | `azscompanions-fabric-cci-0.4.6+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.5
 
 ### Fixed
-- **Jindujun sit gap:** 2.5Ã render scaled *after* the Blockbench `-1.501` feet pivot, sinking the mesh ~2.25 blocks under the hitbox so the rider floated above the cloud. Scale now wraps the pivot; `RIDER_Y_OFFSET` lowered from `HEIGHTÃ0.88` (~1.21) to `0.32ÃSCALE` (~0.80) so the player sits flush on the deck.
-- **Jindujun enchant stream:** denser / taller glyph cloud reduced â compact pixels, stream further behind at foot height, far fewer particles per tick, and enchant velocity no longer lifts glyphs into the rider. Spawn origin remains the nimbus entity only.
+- **Jindujun sit gap:** 2.5ÃƒÂ— render scaled *after* the Blockbench `-1.501` feet pivot, sinking the mesh ~2.25 blocks under the hitbox so the rider floated above the cloud. Scale now wraps the pivot; `RIDER_Y_OFFSET` lowered from `HEIGHTÃƒÂ—0.88` (~1.21) to `0.32ÃƒÂ—SCALE` (~0.80) so the player sits flush on the deck.
+- **Jindujun enchant stream:** denser / taller glyph cloud reduced Ã¢Â€Â” compact pixels, stream further behind at foot height, far fewer particles per tick, and enchant velocity no longer lifts glyphs into the rider. Spawn origin remains the nimbus entity only.
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.5+1.21.1.jar` | `azscompanions-fabric-0.4.5+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.5+1.21.1.jar` | `azscompanions-fabric-cci-0.4.5+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.4
 
 ### Changed
-- **Join-time LLM consent remembered:** Yes/No on the âuse server LLM?â (or local-probe) prompt is saved per server key in client `config/azscompanions-ai-join-consent.json`, so the screen asks **at most once**. Host **Use server LLM** (`serverLlmOnly`) still lives in AI config and is changeable later only via `/az admin` â AI Config (no re-prompt on every join / JVM restart).
-- **Jindujun 2.5Ã size:** hitbox, shadow, Blockbench mesh render scale, and enchant stream offsets all use `JindujunSupport.SCALE` (2.5).
+- **Join-time LLM consent remembered:** Yes/No on the Ã¢Â€Âœuse server LLM?Ã¢Â€Â (or local-probe) prompt is saved per server key in client `config/azscompanions-ai-join-consent.json`, so the screen asks **at most once**. Host **Use server LLM** (`serverLlmOnly`) still lives in AI config and is changeable later only via `/az admin` Ã¢Â†Â’ AI Config (no re-prompt on every join / JVM restart).
+- **Jindujun 2.5ÃƒÂ— size:** hitbox, shadow, Blockbench mesh render scale, and enchant stream offsets all use `JindujunSupport.SCALE` (2.5).
 - **Jindujun turns with rider:** while mounted, cloud `yRot` / body / head sync to the controlling player look yaw each tick (no locked world-axis facing).
-- **Jindujun sit offset:** passenger rides on the cloud top (`RIDER_Y_OFFSET` â 88% of scaled height).
+- **Jindujun sit offset:** passenger rides on the cloud top (`RIDER_Y_OFFSET` Ã¢Â‰Âˆ 88% of scaled height).
 - **Jindujun idle dismiss:** if left unridden for **56s** continuously, the cloud discards itself (timer resets on mount / ride / right-click mount; persisted in NBT).
-- **ITEM_FIND reactive chatter rarer:** "nice find" / notable-item reactions now use a **~14-day real-time** per-owner cooldown (`System.currentTimeMillis`, also ~24â¯192â¯000 ticks at 20 TPS). Explosion / darkness / craft paths unchanged.
+- **ITEM_FIND reactive chatter rarer:** "nice find" / notable-item reactions now use a **~14-day real-time** per-owner cooldown (`System.currentTimeMillis`, also ~24Ã¢Â€Â¯192Ã¢Â€Â¯000 ticks at 20 TPS). Explosion / darkness / craft paths unchanged.
 
 ### Fixed
-- **Enchant trail only on Jindujun:** shaped `ENCHANT` stream spawns only from the nimbus entity tick at cloud/foot height â not on the player passenger, companions, or Bits (flight-aura leftovers already removed).
+- **Enchant trail only on Jindujun:** shaped `ENCHANT` stream spawns only from the nimbus entity tick at cloud/foot height Ã¢Â€Â” not on the player passenger, companions, or Bits (flight-aura leftovers already removed).
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.4+1.21.1.jar` | `azscompanions-fabric-0.4.4+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.4+1.21.1.jar` | `azscompanions-fabric-cci-0.4.4+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.3
 
@@ -245,7 +283,7 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 - **No natural despawn for owned companions / Bits:** owned companions and child Bits get vanilla persistence (`setPersistenceRequired`) plus scoreboard tag `azscompanions.nodespawn` on create/own/load (recruit, Bit spawn, charm summon, logout restore). Intentional discard (logout park, charm store, kill) unchanged. Fabric + NeoForge (+26.2).
 
 ### Changed
-- **Jindujun visuals:** Desktop Blockbench cloud mesh + texture (`Jindujun.java` / `Jindujun.png`) replaces the billboard cloud. While ridden, only the nimbus shows a **shaped `ParticleTypes.ENCHANT` stream** (plugin-style cross/ladder silhouette behind the cloud at foot height â not in first-person face).
+- **Jindujun visuals:** Desktop Blockbench cloud mesh + texture (`Jindujun.java` / `Jindujun.png`) replaces the billboard cloud. While ridden, only the nimbus shows a **shaped `ParticleTypes.ENCHANT` stream** (plugin-style cross/ladder silhouette behind the cloud at foot height Ã¢Â€Â” not in first-person face).
 - **Jindujun texture:** classic bright yellow / soft-gold fluffy Nimbus paint over the existing UV layout (replaces Blockbench face-debug colors).
 
 ### Removed
@@ -256,30 +294,30 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.3+1.21.1.jar` | `azscompanions-fabric-0.4.3+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.3+1.21.1.jar` | `azscompanions-fabric-cci-0.4.3+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.2
 
 ### Added
-- **`world.enableLoot` config** (default **true**): master switch for mod treasure loot injections (Companion Charm in desert pyramids, Jindujun Whistle in Trail Ruins archaeology). Set **false** to disable all of them. NeoForge: `config/azscompanions-common.toml` â `[world] enableLoot`; Fabric: `config/azscompanions-common.json` â `world.enableLoot`.
-- **Reactive AI chatter (recent actions):** owned companions (Idle chat ON, in range) react to short-lived nearby events â TNT/explosions, entering darkness (asks for a torch), notable item finds, last ingredient toward watched crafts (swords/tools/armor), and crafting gear (e.g. **NICE SWORD!**). LLM prompt includes event context; scripted fallbacks when LLM is off. Rate-limited; Fabric + NeoForge (+26.2) hooks.
+- **`world.enableLoot` config** (default **true**): master switch for mod treasure loot injections (Companion Charm in desert pyramids, Jindujun Whistle in Trail Ruins archaeology). Set **false** to disable all of them. NeoForge: `config/azscompanions-common.toml` Ã¢Â†Â’ `[world] enableLoot`; Fabric: `config/azscompanions-common.json` Ã¢Â†Â’ `world.enableLoot`.
+- **Reactive AI chatter (recent actions):** owned companions (Idle chat ON, in range) react to short-lived nearby events Ã¢Â€Â” TNT/explosions, entering darkness (asks for a torch), notable item finds, last ingredient toward watched crafts (swords/tools/armor), and crafting gear (e.g. **NICE SWORD!**). LLM prompt includes event context; scripted fallbacks when LLM is off. Rate-limited; Fabric + NeoForge (+26.2) hooks.
 - **Ride-along mounts:** when you mount a horse/camel/llama, boat, minecart, pig, or strider, following companions try to tame (if needed) and mount the nearest empty matching rideable, then keep pace nearby. They never take your vehicle or another player's pet. If nothing empty is nearby they briefly approach a candidate, then cool down. They dismount when you do.
 - **Cat-form creeper scare:** companions in **Cat** form scare creepers like vanilla cats (creepers flee within ~6 blocks). Player and other forms do not.
-- **Wolf-form skeleton scare:** companions in **Wolf** (dog) form scare skeletons the same way â Skeleton, Stray, Wither Skeleton, and Bogged flee within ~6 blocks. Other forms do not.
+- **Wolf-form skeleton scare:** companions in **Wolf** (dog) form scare skeletons the same way Ã¢Â€Â” Skeleton, Stray, Wither Skeleton, and Bogged flee within ~6 blocks. Other forms do not.
 - **Wander mob play:** in **Wander** mode only, companions occasionally circle, sneak around, nudge/push, or give a light punch (knockback; tiny damage only if combat is allowed) to nearby passive/hostile mobs. Rate-limited; skips players, owner pets, bosses, and protected entities. Follow/Stay/Sit unchanged.
 - **Sit pose (minecart-like):** Command **Sit** now applies a visible passenger / bent-leg sit pose for **Player**, **Zombie**, **Skeleton**, **Husk**, **Stray**, and **Enderman** forms (same as riding a minecart). Wolf / Cat / Fox keep their native sit. Other animals and spider still hold still without a sit mesh. Stay remains upright hold-still.
-- **Mob form variants:** Customization â Form shows small `<` / `>` buttons beside Wolf, Cat, Fox, Rabbit, and Sheep to cycle coats/breeds/types/wool. Persisted as synched `CompanionFormVariant` NBT; live preview. Player and other forms have no arrows.
+- **Mob form variants:** Customization Ã¢Â†Â’ Form shows small `<` / `>` buttons beside Wolf, Cat, Fox, Rabbit, and Sheep to cycle coats/breeds/types/wool. Persisted as synched `CompanionFormVariant` NBT; live preview. Player and other forms have no arrows.
 - **Logout park / login restore:** owned companions despawn when the owner disconnects and respawn near them on join. Snapshots go to player persistent data (NeoForge) / overworld SavedData (Fabric), and the bound Companion Charm mirrors with `LogoutParked` so charm state stays consistent. Manual charm store is unchanged (no auto-summon). Children fold into parent `StoredChildren` before parking.
-- **Flower gifts:** right-click your companion with any `#minecraft:flowers` item (poppies, tulips, torchflower, tall flowers, etc.) to gift one â hearts appear, then they **throw** a **context-weighted** return gift as an item entity toward you (mild arc; short pickup delay). Quiet moments lean on classic flowers; darkness/night â torch/lantern, low hunger â food, sleeping/bathing/adventuring, recent combat/craft/find, biome, and attitude also bias the pool. The tossed stack is newly created (never pulled from task inventory). Empty-hand right-click remains a fallback if a pending offer could not be thrown. ~3s cooldown. Owner (Fabric) / owner or trusted (NeoForge).
+- **Flower gifts:** right-click your companion with any `#minecraft:flowers` item (poppies, tulips, torchflower, tall flowers, etc.) to gift one Ã¢Â€Â” hearts appear, then they **throw** a **context-weighted** return gift as an item entity toward you (mild arc; short pickup delay). Quiet moments lean on classic flowers; darkness/night Ã¢Â†Â’ torch/lantern, low hunger Ã¢Â†Â’ food, sleeping/bathing/adventuring, recent combat/craft/find, biome, and attitude also bias the pool. The tossed stack is newly created (never pulled from task inventory). Empty-hand right-click remains a fallback if a pending offer could not be thrown. ~3s cooldown. Owner (Fabric) / owner or trusted (NeoForge).
 - **Flight aura + Jindujun Whistle:** soft **ki aura** + foot-level motion trails on flying players (creative/survival flight, elytra); no rising particle columns into first-person view. **Jindujun Whistle** summons a rideable **Flying Nimbus** cloud (steer WASD + jump/sneak). Creative tab + Trail Ruins archaeology loot (chance below).
 
 ### Fixed
-- **Companions follow into every dimension:** on any owner dimension change (vanilla Nether/End **and** modded dims via registry key â no mod-id allowlist), owned companions **teleport with the player** (`Entity.teleportTo` / `DimensionTransition`). Not logout park/respawn â form, skin, persona, and proportions stay continuous for the world save. First-create persona UI only on new companion creation. Logout park remains disconnect-only.
+- **Companions follow into every dimension:** on any owner dimension change (vanilla Nether/End **and** modded dims via registry key Ã¢Â€Â” no mod-id allowlist), owned companions **teleport with the player** (`Entity.teleportTo` / `DimensionTransition`). Not logout park/respawn Ã¢Â€Â” form, skin, persona, and proportions stay continuous for the world save. First-create persona UI only on new companion creation. Logout park remains disconnect-only.
 
 ### Changed
-- **Companion AI snappier `/ask`:** up to **2 parallel** LLM calls (`maxParallelRequests`, 1â4) so ask is not stuck behind idle ambient; interactive prompts jump the queue ahead of `[ambient]`/`[react]`/`[call]`. New `connectTimeoutSeconds` default **8** (fail dead endpoints faster; full `timeoutSeconds` still **30** for slow local models). Ambient completions capped at **128** tokens. Defaults: idle interval **75â180s** (was 90â240), chat-react cooldown **12s** (was 20), `memoryMaxMessages` **12** (was 16). See [COMPANION_AI.md](docs/COMPANION_AI.md).
-- **Behavior radii:** Wander radius is always **â¥ follow radius** (raising follow bumps wander; wander cannot be set below follow). Wander max raised **48 â 128** (same as follow). Defaults: follow **48**, wander **48** (was wander 16). Persists via existing NBT / Behavior screen / CCI.
-- **Treasure loot rarer + small finds:** Companion Charm desert-pyramid chest chance **100% â 5%** (1 charm when it hits). Jindujun Whistle Trail Ruins archaeology chance **2% â 0.5%** (taiga GLM on NeoForge). Mod treasure appends **1** unique item per successful roll (within a 1â3 item policy; no multi-roll stacks).
+- **Companion AI snappier `/ask`:** up to **2 parallel** LLM calls (`maxParallelRequests`, 1Ã¢Â€Â“4) so ask is not stuck behind idle ambient; interactive prompts jump the queue ahead of `[ambient]`/`[react]`/`[call]`. New `connectTimeoutSeconds` default **8** (fail dead endpoints faster; full `timeoutSeconds` still **30** for slow local models). Ambient completions capped at **128** tokens. Defaults: idle interval **75Ã¢Â€Â“180s** (was 90Ã¢Â€Â“240), chat-react cooldown **12s** (was 20), `memoryMaxMessages` **12** (was 16). See [COMPANION_AI.md](docs/COMPANION_AI.md).
+- **Behavior radii:** Wander radius is always **Ã¢Â‰Â¥ follow radius** (raising follow bumps wander; wander cannot be set below follow). Wander max raised **48 Ã¢Â†Â’ 128** (same as follow). Defaults: follow **48**, wander **48** (was wander 16). Persists via existing NBT / Behavior screen / CCI.
+- **Treasure loot rarer + small finds:** Companion Charm desert-pyramid chest chance **100% Ã¢Â†Â’ 5%** (1 charm when it hits). Jindujun Whistle Trail Ruins archaeology chance **2% Ã¢Â†Â’ 0.5%** (taiga GLM on NeoForge). Mod treasure appends **1** unique item per successful roll (within a 1Ã¢Â€Â“3 item policy; no multi-roll stacks).
 - **Companion melee damage:** fixed to vanilla netherite sword Attack Damage (**8**). Ignores Bit gear tiers / held tool material (no more base-4 + weapon modifier stacking).
 - **Special perk UUID mapping:** **Wolfy** (`7c97e337-2c49-448c-b710-7655487f18df`) brown wolf grant **only**; special flight UUID (`4274c47f-d61f-4850-bf29-9e5c185db4ac`) gets survival flight + flying companion + toggleable **Wiggly** (H / `/az wiggly`) with **auto-glowing removed**. 0.4.0 had wrongly attached Wiggly to the Wolfy UUID.
 
@@ -292,7 +330,7 @@ First stable product release for Minecraft **1.21.1** (NeoForge + Fabric, standa
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.2+1.21.1.jar` | `azscompanions-fabric-0.4.2+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.2+1.21.1.jar` | `azscompanions-fabric-cci-0.4.2+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.1
 
@@ -303,13 +341,13 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.1+1.21.1.jar` | `azscompanions-fabric-0.4.1+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.1+1.21.1.jar` | `azscompanions-fabric-cci-0.4.1+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.4.0
 
 ### Glowing Orb form
-- New selectable form **Glowing Orb** (Customization â Form â Special / `glowing_orb`): ~0.5Ã0.5 floating companion â no player/mob mesh, no humanoid/wolf armor.
-- Always-air follow with personal-space ring + owner-local **Offset X/Y/Z**, float height/bob/speed, RGB color, and **Brightness** (0â15) for dynamic-lights soft-compat.
+- New selectable form **Glowing Orb** (Customization Ã¢Â†Â’ Form Ã¢Â†Â’ Special / `glowing_orb`): ~0.5ÃƒÂ—0.5 floating companion Ã¢Â€Â” no player/mob mesh, no humanoid/wolf armor.
+- Always-air follow with personal-space ring + owner-local **Offset X/Y/Z**, float height/bob/speed, RGB color, and **Brightness** (0Ã¢Â€Â“15) for dynamic-lights soft-compat.
 - Children of orb parents inherit orb form + orb settings (cake / CCI / spawnChild).
 - Render: Sodium + Iris/Oculus-safe **cutout core + eyes emissive** (no translucent-only path). Docs: [COMPAT.md](docs/COMPAT.md).
 
@@ -319,8 +357,8 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 - **Wander** while the owner is flying: leisurely air roam inside the wander radius, outside personal space; lands when the owner stops flying (no permanent hover).
 
 ### Toggleable Wiggly dog
-- Pink-collar dog named **Wiggly** with toggle keybind **H** / `/az wiggly` (UUID mapping corrected in **0.4.1** â see above).
-- Behavior: ground-follows when you walk; floats beside you only while you are flying / elytra (same rule as special companions â no permanent flight).
+- Pink-collar dog named **Wiggly** with toggle keybind **H** / `/az wiggly` (UUID mapping corrected in **0.4.1** Ã¢Â€Â” see above).
+- Behavior: ground-follows when you walk; floats beside you only while you are flying / elytra (same rule as special companions Ã¢Â€Â” no permanent flight).
 - Playful sit/stand wiggle on the ground; light bob while floating. Visibility persists via `azscompanions.wiggly_dog_hidden`.
 
 ### Wolfy UUID perk
@@ -334,17 +372,17 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 
 ### CCI user-facing messages
 - CCI outcomes (greet/wave/say, modes, summon/modify, persona, play, AI status/ask, teamfight, interaction Bit spawn, dismiss) now use **lang keys** (`toast.azscompanions.cci.*` / `message.azscompanions.cci.*` / dialogue keys) instead of hardcoded English.
-- Feedback via CCI informational toast when available, plus action-bar fallback (`Title â body`).
+- Feedback via CCI informational toast when available, plus action-bar fallback (`Title Ã¢Â€Â” body`).
 - Fabric `/azscci` shows usage on bare invoke and a chat deny for unknown subjects.
 - Shared helper: `CciMessages` in common. Docs: [CCI.md](docs/CCI.md).
 
 ### Command menu icons + Sit + keybind
 - Command menu shows icon buttons for **Follow**, **Stay**, **Sit**, and **Wander** (name + short description in tooltip). Close with **ESC** (no Back button).
 - **Sit** is a separate mode from Stay (sitting pose / hold still).
-- Keybind **Open Command Menu** (default **K**) under Options â Controls â **Az's Companions** â targets look-at companion, else nearest owned/trusted within 32 blocks. Still available via charm + Shift+RMB â Command.
+- Keybind **Open Command Menu** (default **K**) under Options Ã¢Â†Â’ Controls Ã¢Â†Â’ **Az's Companions** Ã¢Â€Â” targets look-at companion, else nearest owned/trusted within 32 blocks. Still available via charm + Shift+RMB Ã¢Â†Â’ Command.
 
 ### Simple Voice Chat soft-compat (plus VoiceMod detect)
-- Soft-detect **Simple Voice Chat** (`voicechat` / `voicechat_api`) alongside optional `voicemod` awareness â no hard jar dependency.
+- Soft-detect **Simple Voice Chat** (`voicechat` / `voicechat_api`) alongside optional `voicemod` awareness Ã¢Â€Â” no hard jar dependency.
 - Reference pin for NeoForge 1.21.1: **`voicechat-neoforge-1.21.1-2.6.21.jar`** (2.6.21); Fabric equivalent documented.
 - Optional soft-deps in NeoForge `neoforge.mods.toml` + Fabric `suggests`; bootstrap logs when present; Voicechat API class probed via reflection (entity audio emission not wired yet).
 - VoiceMod desktop TTS bridge remains **not shipped** (text dialogue only).
@@ -352,13 +390,13 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 
 ### Activity / context skins (player form only)
 - Companion Customization top tab **Activity**: Sleeping / Bathing / Adventuring outfits from **local** (`config/azscompanions/skins/`) or **URL**.
-- **Player form only** â mob forms keep form rendering; settings still save. Priority: context outfit â custom skin â base/default.
+- **Player form only** Ã¢Â€Â” mob forms keep form rendering; settings still save. Priority: context outfit Ã¢Â†Â’ custom skin Ã¢Â†Â’ base/default.
 - Sleeping = in bed; bathing = in water; adventuring = owner exploring. NBT + synced for multiplayer.
 - Docs: [CONTEXT_SKINS.md](docs/CONTEXT_SKINS.md).
 
 ### Server LLM optional (opt-in)
 - **`serverLlmOnly` default OFF** (admin **Use server LLM**). Personal local/remote LLM on SP/integrated is the default path; shared host endpoint is explicit opt-in.
-- **`integratedMultiplayerSharedLlm` default OFF** â friends joining no longer silently force shared-host status.
+- **`integratedMultiplayerSharedLlm` default OFF** Ã¢Â€Â” friends joining no longer silently force shared-host status.
 - Join prompt is optional: **Yes** on a local probe enables your LLM without turning Use server LLM on; **Yes** on a server offer opts hosts into shared mode; **No** skips and leaves personal AI Config available.
 - Dedicated: `/ask` still runs on the server process (no per-joiner client LLM); Use server LLM is no longer forced on by dedicated alone.
 - Docs: [COMPANION_AI.md](docs/COMPANION_AI.md), [ADMIN.md](docs/ADMIN.md), [COMPAT.md](docs/COMPAT.md).
@@ -368,12 +406,12 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.4.0+1.21.1.jar` | `azscompanions-fabric-0.4.0+1.21.1.jar` | `azscompanions-neoforge-cci-0.4.0+1.21.1.jar` | `azscompanions-fabric-cci-0.4.0+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.17
 
 ### `/ask` empty reply UX (Gemma / LiteLLM)
-- Root cause: Gemma 4 often returns HTTP 200 with empty `message.content` (thinking budget / `reasoning_content`). Idle chat still âspokeâ via **scripted fallback**; `/ask` dumped the exception **including truncated JSON** into chat (looked like `"role"` / `"content"` lines).
+- Root cause: Gemma 4 often returns HTTP 200 with empty `message.content` (thinking budget / `reasoning_content`). Idle chat still Ã¢Â€ÂœspokeÃ¢Â€Â via **scripted fallback**; `/ask` dumped the exception **including truncated JSON** into chat (looked like `"role"` / `"content"` lines).
 - Parser falls back to `reasoning_content` / `reasoning` / `thinking` when content is null/blank.
 - Gemma-like model ids send `think:false` + `reasoning_effort:none` and bump request `max_tokens` to at least 512.
 - Player-facing `/ask` errors are **short** (no raw JSON body). Full body + diagnosis go to the **server log** only.
@@ -383,7 +421,7 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.17+1.21.1.jar` | `azscompanions-fabric-0.3.17+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.17+1.21.1.jar` | `azscompanions-fabric-cci-0.3.17+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.16
 
@@ -395,7 +433,7 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 ### Ambient idle chat (speech only)
 - **`idleChat` default ON** (new installs / NeoForge TOML default). Admin AI Config toggle **Idle chat: ON/OFF**.
 - Prefers LLM ambient prompts when the server provider is enabled; on empty/error or when AI is disabled, uses sparse scripted fallback lines.
-- Skips sleep, combat, busy LLM worker, and ~45s after any recent speak line. Interval still `idleChatSecondsMin`/`Max` (default 75â180s).
+- Skips sleep, combat, busy LLM worker, and ~45s after any recent speak line. Interval still `idleChatSecondsMin`/`Max` (default 75Ã¢Â€Â“180s).
 - Docs: [COMPANION_AI.md](docs/COMPANION_AI.md), [ADMIN.md](docs/ADMIN.md).
 
 ### Loaders
@@ -403,19 +441,19 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.16+1.21.1.jar` | `azscompanions-fabric-0.3.16+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.16+1.21.1.jar` | `azscompanions-fabric-cci-0.3.16+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.15
 
-### Admin AI Config â Use server LLM + API key
-- **Use server LLM: ON/OFF** toggle in `/az admin` â AI Config (maps to `serverLlmOnly`; default ON). Host LLM endpoint is authoritative for companions; joining clients do not need their own provider or keys. Dedicated servers always use the server endpoint.
+### Admin AI Config Ã¢Â€Â” Use server LLM + API key
+- **Use server LLM: ON/OFF** toggle in `/az admin` Ã¢Â†Â’ AI Config (maps to `serverLlmOnly`; default ON). Host LLM endpoint is authoritative for companions; joining clients do not need their own provider or keys. Dedicated servers always use the server endpoint.
 - Masked **`apiKey`** field: status only over S2C (`config` / `env` / not set); blank keeps current; **Clear** clears the config key. **Save & apply** writes the AI file and hot-applies to the live LLM runtime (no restart for these fields). Non-blank `apiKey` still wins over `apiKeyEnv`.
 - Docs: [ADMIN.md](docs/ADMIN.md), [COMPANION_AI.md](docs/COMPANION_AI.md).
 
 ### Join-time LLM consent
 - On world/server join, if the **server has AI configured** (S2C offer) or (integrated/SP) a **local LLM** answers a short TCP probe on LiteLLM `:4000` / Ollama `:11434` / LM Studio `:1234`, the client shows a yes/no prompt: **Use the server LLM?**
-- **Yes** â remembers accept for this server key for the client session; hosts/admins enable **Use server LLM** and may apply a local LiteLLM/Ollama/LM Studio profile when AI was disabled; tip points to `/ask`.
-- **No** â dismisses for this server key (no re-prompt until reconnect to a different key / new JVM); does not enable AI; never auto-connects without consent.
+- **Yes** Ã¢Â€Â” remembers accept for this server key for the client session; hosts/admins enable **Use server LLM** and may apply a local LiteLLM/Ollama/LM Studio profile when AI was disabled; tip points to `/ask`.
+- **No** Ã¢Â€Â” dismisses for this server key (no re-prompt until reconnect to a different key / new JVM); does not enable AI; never auto-connects without consent.
 - Dedicated servers only offer when the server AI config is already enabled (no client-side remote probe).
 
 ### Loaders
@@ -423,11 +461,11 @@ Draft-only (never published). UUID perk fix, orb polish, flight aura, and Jinduj
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.15+1.21.1.jar` | `azscompanions-fabric-0.3.15+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.15+1.21.1.jar` | `azscompanions-fabric-cci-0.3.15+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.14
 
-Release: [v0.3.14](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.14) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.14](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.14) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### LiteLLM / openai_compatible API key
 - `/ask` no longer fails with **Missing LLM API key** solely because `apiKey` / `AZS_LLM_API_KEY` is empty. Open local proxies (LiteLLM without `master_key`, etc.) work without a Bearer header.
@@ -439,14 +477,14 @@ Release: [v0.3.14](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.14+1.21.1.jar` | `azscompanions-fabric-0.3.14+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.14+1.21.1.jar` | `azscompanions-fabric-cci-0.3.14+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.13
 
-Release: [v0.3.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.13) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.13) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Commands menu
-- Removed **Gatherâ¦**, Gather status, Cancel gather, **Deposit chestsâ¦**, Deposit done, and Clear deposit from the companion **Commands** screen (Fabric + NeoForge 1.21.1). NeoForge 26.2 already had movement-only.
+- Removed **GatherÃ¢Â€Â¦**, Gather status, Cancel gather, **Deposit chestsÃ¢Â€Â¦**, Deposit done, and Clear deposit from the companion **Commands** screen (Fabric + NeoForge 1.21.1). NeoForge 26.2 already had movement-only.
 - `/az gather`, `/deposit`, and CCI gather/deposit remain available.
 
 ### Loaders
@@ -454,14 +492,14 @@ Release: [v0.3.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.13+1.21.1.jar` | `azscompanions-fabric-0.3.13+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.13+1.21.1.jar` | `azscompanions-fabric-cci-0.3.13+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.12
 
-Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.12) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.12) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
-### Admin AI Config â editable profiles
-- Selecting any Profile (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled, Customâ¦) still **fills defaults**, then **all fields stay editable**: `provider`, `baseUrl`, `model`, `apiKeyEnv`, `inputLanguage`, `mcpUrl`, `serverLlmOnly`.
+### Admin AI Config Ã¢Â€Â” editable profiles
+- Selecting any Profile (LM Studio, Ollama, OpenRouter, OpenAI, Groq, LiteLLM, MCP, Disabled, CustomÃ¢Â€Â¦) still **fills defaults**, then **all fields stay editable**: `provider`, `baseUrl`, `model`, `apiKeyEnv`, `inputLanguage`, `mcpUrl`, `serverLlmOnly`.
 - Tweaking `provider` / `baseUrl` / `mcpUrl` away from a preset switches the label to **Custom...**.
 - Save still writes `azscompanions-ai.json` / `.toml` + restart message (Fabric + NeoForge + NeoForge 26.2 admin screens).
 
@@ -471,7 +509,7 @@ Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.
 - Legacy config / CCI session keys for those three flags are **ignored**; admin toggles removed.
 
 ### Dynamic lighting soft-compat
-- Optional soft-compat with LambDynamicLights / RyoamicLights / similar (`compat/dynamiclights`) â companions expose held torch/lantern light via LivingEntity hand slots; optional legacy API registration when those mods are present.
+- Optional soft-compat with LambDynamicLights / RyoamicLights / similar (`compat/dynamiclights`) Ã¢Â€Â” companions expose held torch/lantern light via LivingEntity hand slots; optional legacy API registration when those mods are present.
 - NeoForge client `[dynamicLights]`; Fabric `config/azscompanions-dynamiclights.json`. Docs: [COMPAT.md](docs/COMPAT.md).
 
 ### Loaders
@@ -479,16 +517,16 @@ Release: [v0.3.12](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.12+1.21.1.jar` | `azscompanions-fabric-0.3.12+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.12+1.21.1.jar` | `azscompanions-fabric-cci-0.3.12+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.10
 
-Release: [v0.3.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.10) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.10) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Remove AI Mode completely
 - Shift+RMB menu no longer shows **AI Mode: ON/OFF** (button, tooltip, and cancel-row layout from 0.3.8/0.3.9).
 - Removed per-companion `AiPlayMode` synced data / NBT, `TOGGLE_AI_MODE` menu packet, CCI `aiMode=` / `aiPlayMode=` / `llmPlay=`, and related lang keys.
-- LLM remains **text chat only** via `/ask`, name listen, and idle/call-away when the server provider is enabled â no LLM world puppeting or goal pausing.
+- LLM remains **text chat only** via `/ask`, name listen, and idle/call-away when the server provider is enabled Ã¢Â€Â” no LLM world puppeting or goal pausing.
 - Use Behavior gather/deposit (and other tasks) for material work instead.
 
 ### Companion menu + charm
@@ -498,16 +536,16 @@ Release: [v0.3.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.
 ### Gather + deposit
 - `/az gather <item> <count> [chest|look|nearest]` + status/cancel; dynamic item + craft recipe catalogs on server start.
 - `/deposit` multi-select chests (RMB toggle, Esc/`done` exit; highlights only while mode on). Gather uses nearest of selected chests.
-- Commands menu scroll list: Gatherâ¦ / Deposit / status / cancel â **draggable scrollbar** (also persona + customize).
+- Commands menu scroll list: GatherÃ¢Â€Â¦ / Deposit / status / cancel Ã¢Â€Â” **draggable scrollbar** (also persona + customize).
 - Tool swap, off-hand torch, place torch when dark (NeoForge); ask owner + craft missing tools when possible.
 
 Docs: [GATHER.md](docs/GATHER.md).
 
 ### LiteLLM / proxy auth
-- MCP HTTP client sends `Authorization: Bearer <key>` on **every** request (including `POST /mcp/`), using the same `apiKey` / `AZS_LLM_API_KEY` resolution as chat. Fixes LiteLLM `401` / âMalformed API Keyâ¦ Ensure Key has `Bearer ` prefix.â
+- MCP HTTP client sends `Authorization: Bearer <key>` on **every** request (including `POST /mcp/`), using the same `apiKey` / `AZS_LLM_API_KEY` resolution as chat. Fixes LiteLLM `401` / Ã¢Â€ÂœMalformed API KeyÃ¢Â€Â¦ Ensure Key has `Bearer ` prefix.Ã¢Â€Â
 - OpenAI-compatible + MCP clients normalize Bearer (no double-prefix if the env/config value already includes `Bearer `).
 - Admin AI profile **LiteLLM** preset: `openai_compatible` @ `http://127.0.0.1:4000/v1` (also seeds `mcp.url` to `http://127.0.0.1:4000/mcp/`). Config alias `litellm`.
-- Hardening: empty baseUrl / missing remote API key â clear `/ask` errors; connection refused / timeouts / malformed JSON caught on the AI worker (no server-tick crash).
+- Hardening: empty baseUrl / missing remote API key Ã¢Â†Â’ clear `/ask` errors; connection refused / timeouts / malformed JSON caught on the AI worker (no server-tick crash).
 
 Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
 
@@ -520,11 +558,11 @@ Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.10+1.21.1.jar` | `azscompanions-fabric-0.3.10+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.10+1.21.1.jar` | `azscompanions-fabric-cci-0.3.10+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.9
 
-Release: [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fix: Glowing companions rendered as outline-only
 - **Symptom:** Player-form companion shows only a bright white silhouette outline + nametag (skin missing). Common for the UUID-gated special perk (forces vanilla Glowing) and any companion with a Glowing potion.
@@ -536,26 +574,26 @@ Release: [v0.3.9](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.9
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.9+1.21.1.jar` | `azscompanions-fabric-0.3.9+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.9+1.21.1.jar` | `azscompanions-fabric-cci-0.3.9+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.8
 
-Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### AI Mode (per companion)
-- Shift+RMB menu â **AI Mode: ON/OFF** (âLet the LLM play the game!â).
-- When ON: normal follow/wander/combat goals pause; LLM tools drive play (requires provider â  disabled).
+- Shift+RMB menu Ã¢Â†Â’ **AI Mode: ON/OFF** (Ã¢Â€ÂœLet the LLM play the game!Ã¢Â€Â).
+- When ON: normal follow/wander/combat goals pause; LLM tools drive play (requires provider Ã¢Â‰Â  disabled).
 - When OFF: text/chat only for that companion even if server `enableAiActions` is true.
 - Persists as `AiPlayMode` NBT / synced data. CCI: `companion_modify` `aiMode=` / `aiPlayMode=` / `llmPlay=`.
 
 ### Name chat without slash
-- **`nameListen`** (default true): say the companionâs name in normal chat (`Kon, how are you?`) â no `/ask` or `/az ask` required.
+- **`nameListen`** (default true): say the companionÃ¢Â€Â™s name in normal chat (`Kon, how are you?`) Ã¢Â€Â” no `/ask` or `/az ask` required.
 - Works even when `chatListenMode` is `off`. Full multi-sentence messages preserved (up to `maxInputChars`, default 2000).
 - While busy, requests queue (`queueMaxDepth`, default 4) instead of dropping. Owner vs stranger modes; strangers stay social-safe.
 
 ### Thinking HUD
 - Top-right client HUD while a companion AI request is in flight (name + progress/timeout).
-- S2C thinking packet; Fabric + NeoForge overlays. Action-bar âthinkingâ on explicit ask still works.
+- S2C thinking packet; Fabric + NeoForge overlays. Action-bar Ã¢Â€ÂœthinkingÃ¢Â€Â on explicit ask still works.
 
 ### Persona setup (scrollable)
 - Persona GUI shows **all** fields in a scrollable panel: Who / What / How / speech / relationship / quirks.
@@ -570,7 +608,7 @@ Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8
 - Interaction / support spawn and persona keys unchanged; AI subjects share the same name-listen + queue pipeline.
 
 ### Admin AI profiles
-- `/az admin` / `/az ai config` profiles (LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP, Customâ¦) remain the in-game way to write `azscompanions-ai.json` / `.toml` (restart to apply).
+- `/az admin` / `/az ai config` profiles (LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP, CustomÃ¢Â€Â¦) remain the in-game way to write `azscompanions-ai.json` / `.toml` (restart to apply).
 
 ### Docs
 - [COMPANION_AI.md](docs/COMPANION_AI.md) updated for AI Mode, name chat, input limits, thinking HUD, and persona scroll UI.
@@ -580,11 +618,11 @@ Release: [v0.3.8](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.8
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.8+1.21.1.jar` | `azscompanions-fabric-0.3.8+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.8+1.21.1.jar` | `azscompanions-fabric-cci-0.3.8+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.7
 
-Release: [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fix: invisible player-form skins
 - **Root cause:** 0.3.6 Fancy Anim compat forced `RenderType.entityTranslucent` for companions. `FeminineCompanionModel` extends `PlayerModel` (translucent by default); falling back to `super.getRenderType` did not restore cutout. On Iris/Sodium (and some GPUs) non-player translucent meshes can draw fully invisible.
@@ -596,59 +634,59 @@ Release: [v0.3.7](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.7
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.7+1.21.1.jar` | `azscompanions-fabric-0.3.7+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.7+1.21.1.jar` | `azscompanions-fabric-cci-0.3.7+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress; no jar shipped.
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress; no jar shipped.
 
 ## 0.3.6
 
-Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Stats / info screen
-- **Companion | Owner** read-only panel: Shift+RMB menu â **Stats**, or `/az stats` (nearest) / `/az stats <name>`.
+- **Companion | Owner** read-only panel: Shift+RMB menu Ã¢Â†Â’ **Stats**, or `/az stats` (nearest) / `/az stats <name>`.
 - Companion: name, form, mode, attitude, team, health, follow/personal/wander radii, children, armor visibility, short persona who/what/how, AI snippet when enabled.
 - Owner: name, health, food, owned companion count, charm bound status.
 - Persona / child count / charm / AI synced via S2C; other fields from entity data. Fabric + NeoForge.
 
 ### Az Admin + in-game AI config
 - **`/az admin`** / **`/az ai config`** (ops, singleplayer/LAN host, or `adminWhitelist` / `azAdminUsers`): Overview + **AI Config** tabs.
-- Provider **profiles** (Disabled, LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP HTTP, **Customâ¦**); Save writes `azscompanions-ai.json` / `.toml` **without** hot-reload â chat: *Companion AI settings saved. Restart the server/game for them to apply.*
+- Provider **profiles** (Disabled, LM Studio, Ollama, OpenRouter, OpenAI, Groq, MCP HTTP, **CustomÃ¢Â€Â¦**); Save writes `azscompanions-ai.json` / `.toml` **without** hot-reload Ã¢Â€Â” chat: *Companion AI settings saved. Restart the server/game for them to apply.*
 - NeoForge `[admin]` in `azscompanions-server.toml`; Fabric `azscompanions-server.json`. Docs: [ADMIN.md](docs/ADMIN.md).
 
 ### FTB suite soft-compat
 - Optional **FTB Teams / Chunks / Ranks** via reflection (no hard dep). Config under AI `[ftb]` / `"ftb"`: `ftbTeamsCompat`, `ftbChunksAllowPresence`, `ftbChunksBlockInteraction`, `ftbChunksAiClaim`, `ftbRanksCompat`, `trustSameTeamAsOwner`, permission nodes.
 - **Walk OK, interact blocked:** companions may enter claims; mine/place/build/containers gated by FTB perms. Owner AI optional `claim_chunk` / `unclaim_chunk` (owner quota; no steal).
-- Same-team â trusted interact; optional owner-level AI tools; ranks gate ask/actions/CCI/teamfight/spawn.
+- Same-team Ã¢Â†Â’ trusted interact; optional owner-level AI tools; ranks gate ask/actions/CCI/teamfight/spawn.
 - Docs: [COMPAT.md](docs/COMPAT.md).
 
 ### Map mods soft-compat
 - **Xaero Minimap / World Map:** companions show on entity radar (LivingEntity) + bundled charm icon definition.
-- **JourneyMap:** API v2 soft plugin â name, charm icon, owner tooltip; hide via `showOnMinimap` / `showChildrenOnMap`.
-- Config: NeoForge client `[map]` Â· Fabric `config/azscompanions-map.json`.
+- **JourneyMap:** API v2 soft plugin Ã¢Â€Â” name, charm icon, owner tooltip; hide via `showOnMinimap` / `showChildrenOnMap`.
+- Config: NeoForge client `[map]` Ã‚Â· Fabric `config/azscompanions-map.json`.
 - **FTB Chunks** stays claim-overlay only (map package does not touch FTB claim code). Docs: [COMPAT.md](docs/COMPAT.md).
 
 ### Online from LAN / Essential
 - Soft-compat for **Essential** (`essential`), **e4mc**, **World Host**, **LAN Server Properties**, and vanilla Open-to-LAN: detect hosted integrated multiplayer without hard deps.
-- `integratedMultiplayerSharedLlm` (default true) â host LLM stays authoritative when friends join even if `serverLlmOnly=false`. Dedicated servers unchanged.
-- `ownerNameFallback` (default true, integrated hosted MP only) â persist `OwnerName`, match/heal owner UUID after offlineâonline remaps. Never on dedicated.
-- Docs: [COMPAT.md](docs/COMPAT.md) (âOnline from LAN / Essentialâ).
+- `integratedMultiplayerSharedLlm` (default true) Ã¢Â€Â” host LLM stays authoritative when friends join even if `serverLlmOnly=false`. Dedicated servers unchanged.
+- `ownerNameFallback` (default true, integrated hosted MP only) Ã¢Â€Â” persist `OwnerName`, match/heal owner UUID after offlineÃ¢Â†Â”online remaps. Never on dedicated.
+- Docs: [COMPAT.md](docs/COMPAT.md) (Ã¢Â€ÂœOnline from LAN / EssentialÃ¢Â€Â).
 
 ### Fancy Animations / EMF+ETF soft-compat
 - Player-form skins use translucent buffers (player-like) so ETF skin features / emissives / animated frames with alpha render correctly; cape matches.
 - Mob-form proxies sync the companion UUID for stable Fresh Animations CEM + ETF random variants on vanilla entity paths.
-- Bundled ETF `entityRenderLayerOverride=translucent` hints for companion texture paths. Config: NeoForge `[fancyAnim]` Â· Fabric `azscompanions-fancyanim.json`. Docs: [COMPAT.md](docs/COMPAT.md).
+- Bundled ETF `entityRenderLayerOverride=translucent` hints for companion texture paths. Config: NeoForge `[fancyAnim]` Ã‚Â· Fabric `azscompanions-fancyanim.json`. Docs: [COMPAT.md](docs/COMPAT.md).
 
 ### Behavior / follow spacing
-- **Behavior screen** (Shift+RMB menu â Behavior): **Follow radius** (1â128, default 48), **Personal space** (1â12, default 2), **Wander radius** (3â48, default 16).
+- **Behavior screen** (Shift+RMB menu Ã¢Â†Â’ Behavior): **Follow radius** (1Ã¢Â€Â“128, default 48), **Personal space** (1Ã¢Â€Â“12, default 2), **Wander radius** (3Ã¢Â€Â“48, default 16).
 - Persists per companion (`FollowRadius` / `PersonalSpace` / `WanderRadius` NBT + synched data) across reload, dimension change, charm store/summon, form change.
 - Child Bits inherit parent spacing at 75%. CCI `companion_modify`: `followRadius=` / `teleportDistance=`, `personalSpace=`, `wanderRadius=`.
 
 ### Child store / call UX
 - Parent keeps a FIFO **`StoredChildren`** list (synced **stored count** + **maxChildren** for UI).
 - Default **max 3** Bits per companion (living + stored); CCI `maxChildren=` / `companion_modify` overrides (up to 64).
-- Menu **Remove child** / child **Dismiss child**: world Bit â store (count up); inventory stays in the snapshot.
+- Menu **Remove child** / child **Dismiss child**: world Bit Ã¢Â†Â’ store (count up); inventory stays in the snapshot.
 - **Charm RMB or empty-hand RMB** on parent (owner): call next stored Bit in order (count down). Charm air-use still summons/stores the parent; living Bits are parked into that list instead of deleted.
-- Menu badge (top-left) shows **stored/max**; tooltip: *Stored children: N / max M â click charm on companion to call*. Badge click also calls next.
+- Menu badge (top-left) shows **stored/max**; tooltip: *Stored children: N / max M Ã¢Â€Â” click charm on companion to call*. Badge click also calls next.
 - CCI: `dismiss_child` / `companion_dismiss_child` / `store_bit` (works without teamfight).
-- **CCI interaction spawn:** `companion_interaction` / `support_spawn` (aliases include `companion_spawn_child`). Message `amount=500;user=Alice` â spawn count = `amount Ã· supportAmountPerCompanion` (default **100** â **5**). Explicit `count=` overrides. No amount/sub/fight-spawn ceilings; only per-companion `maxChildren` (default 3). Gear tiers still scale from amount. CCI-first â no hardcoded cheer/gift chat parser.
+- **CCI interaction spawn:** `companion_interaction` / `support_spawn` (aliases include `companion_spawn_child`). Message `amount=500;user=Alice` Ã¢Â†Â’ spawn count = `amount ÃƒÂ· supportAmountPerCompanion` (default **100** Ã¢Â†Â’ **5**). Explicit `count=` overrides. No amount/sub/fight-spawn ceilings; only per-companion `maxChildren` (default 3). Gear tiers still scale from amount. CCI-first Ã¢Â€Â” no hardcoded cheer/gift chat parser.
 
 ### Companion chunk loading
 - Summoned companions **and child Bits** each hold an entity chunk ticket for the chunk they occupy (AI/follow/sleep stay active when the owner walks away).
@@ -656,25 +694,25 @@ Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6
 - Ticket updates on chunk move; released on despawn / death / charm store. Only while the owner is in the same dimension (or offline). Not an FTB claim.
 
 ### Companion AI
-- **Server-loaded LLM:** `serverLlmOnly` (default true) â configure provider once on the dedicated/LAN host; all companions share that **endpoint**. Clients need no local LM Studio or API keys. Ask / name-mention / idle / CCI AI run server-side.
-- **Separate minds:** `perCompanionMemory` (default true) + `memoryMaxMessages` (default 16) â each companion UUID keeps its own chat buffer; system prompt uses that companionâs name/form/attitude/child-parent only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md) (âshared server LLM, separate mindsâ).
-- **Chat listen:** `chatListenMode` = `off` (default) | `player` | `global` â auto LLM replies to chat (ignores `/`, cooldowns, range).
-- **Name mention:** `nameListen` (default true) â `Bit, come here` triggers that companion; owner vs stranger modes. Strangers get helpful social play; grief/inventory actions blocked.
+- **Server-loaded LLM:** `serverLlmOnly` (default true) Ã¢Â€Â” configure provider once on the dedicated/LAN host; all companions share that **endpoint**. Clients need no local LM Studio or API keys. Ask / name-mention / idle / CCI AI run server-side.
+- **Separate minds:** `perCompanionMemory` (default true) + `memoryMaxMessages` (default 16) Ã¢Â€Â” each companion UUID keeps its own chat buffer; system prompt uses that companionÃ¢Â€Â™s name/form/attitude/child-parent only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md) (Ã¢Â€Âœshared server LLM, separate mindsÃ¢Â€Â).
+- **Chat listen:** `chatListenMode` = `off` (default) | `player` | `global` Ã¢Â€Â” auto LLM replies to chat (ignores `/`, cooldowns, range).
+- **Name mention:** `nameListen` (default true) Ã¢Â€Â” `Bit, come here` triggers that companion; owner vs stranger modes. Strangers get helpful social play; grief/inventory actions blocked.
 - **Censor:** `censorChat` (default true) + optional `censorExtraWords` on AI input/`speakLine`.
 - **Idle + call-away:** `idleChat`, `callPlayerWhenAway` (+ interval/distance keys); defaults off.
-- **World actions:** `enableAiActions` (default false) â LLM JSON/tool actions: `mine`, `place`/`build`, `craft`, move/modes, play (`run_at_player`, hide/seek, danceâ¦), inventory (`pickup`, `use_item`, `equip`, `drop`, â¦). Craft/build/mine run via real task queue ticks.
-- **Child Bits:** inherit parent form/skin/attitude/team/armor visibility; `childAutonomy` cling/balanced/curious + soft parent leash; less frequent idle; AI tools when enabled; **own** AI memory (not the parentâs).
+- **World actions:** `enableAiActions` (default false) Ã¢Â€Â” LLM JSON/tool actions: `mine`, `place`/`build`, `craft`, move/modes, play (`run_at_player`, hide/seek, danceÃ¢Â€Â¦), inventory (`pickup`, `use_item`, `equip`, `drop`, Ã¢Â€Â¦). Craft/build/mine run via real task queue ticks.
+- **Child Bits:** inherit parent form/skin/attitude/team/armor visibility; `childAutonomy` cling/balanced/curious + soft parent leash; less frequent idle; AI tools when enabled; **own** AI memory (not the parentÃ¢Â€Â™s).
 - Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
 
 ### CCI
 - **Full manual:** [docs/CCI.md](docs/CCI.md) (install, all subjects, teamfight, AI, troubleshooting).
 - **AI subjects:** `companion_ask` / `ai_ask`, `ai_status`, `ai_chat` / `stream_chat`, **`ai_config`** (session `chatListenMode=` / `enableAiActions=`).
-- **Persona:** `companion_persona` (+ summon/modify keys `whoAmI`/`whatAmIDoing`/`howWillIBe`/â¦); `op=get|clear`; marks initialized â skips first-create onboarding.
+- **Persona:** `companion_persona` (+ summon/modify keys `whoAmI`/`whatAmIDoing`/`howWillIBe`/Ã¢Â€Â¦); `op=get|clear`; marks initialized Ã¢Â†Â’ skips first-create onboarding.
 - **Play:** `companion_play` / `companion_rush` / `companion_hide_seek` (dance/peekaboo/stop via `mode=`).
 - **FTB claim:** `claim_chunk` / `unclaim_chunk` (owner quota; needs Chunks + `ftbChunksAiClaim`).
 - **Chunk loading:** `companion_modify` `chunkLoading=true|false` per-companion override (server global must allow tickets).
 - **Behavior spacing** (already on modify): `followRadius` / `personalSpace` / `wanderRadius`; **showArmor** unchanged.
-- **CCI summon â chat + AI:** greet/wave use LLM when provider enabled (canned fallback); ask/chat-listen/idle share the charm-companion pipeline; ownership stays on the streamer.
+- **CCI summon Ã¢Â†Â’ chat + AI:** greet/wave use LLM when provider enabled (canned fallback); ask/chat-listen/idle share the charm-companion pipeline; ownership stays on the streamer.
 - Fabric + NeoForge CCI parity. Examples under `cci-examples/`.
 
 ### Loaders
@@ -682,30 +720,30 @@ Release: [v0.3.6](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.6
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.3.6+1.21.1.jar` | `azscompanions-fabric-0.3.6+1.21.1.jar` | `azscompanions-neoforge-cci-0.3.6+1.21.1.jar` | `azscompanions-fabric-cci-0.3.6+1.21.1.jar` |
 
-**Not in this release:** NeoForge **26.2** (`:neoforge-26`) â port in progress (Java 25 / unobfuscated); no jar shipped. See [MULTI_VERSION.md](docs/MULTI_VERSION.md).
+**Not in this release:** NeoForge **26.2** (`:neoforge-26`) Ã¢Â€Â” port in progress (Java 25 / unobfuscated); no jar shipped. See [MULTI_VERSION.md](docs/MULTI_VERSION.md).
 
 ## 0.3.5
 
-Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Companion AI (text-only)
-- Optional LLM replies via `/azscompanions ask <message>` Â· `/azscompanions ai status`.
+- Optional LLM replies via `/azscompanions ask <message>` Ã‚Â· `/azscompanions ai status`.
 - Providers: `disabled` (default, offline-safe), `local`, `openai_compatible`, `mcp`.
-- **Dedicated config files:** Fabric `config/azscompanions-ai.json` Â· NeoForge `config/azscompanions-ai.toml` (not inside `azscompanions-server.toml`).
-- No VoiceMod / TTS â owner chat / `speakLine` only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
+- **Dedicated config files:** Fabric `config/azscompanions-ai.json` Ã‚Â· NeoForge `config/azscompanions-ai.toml` (not inside `azscompanions-server.toml`).
+- No VoiceMod / TTS Ã¢Â€Â” owner chat / `speakLine` only. Docs: [COMPANION_AI.md](docs/COMPANION_AI.md).
 
 ### Customize / UI
-- **Armor visibility:** Customize â Name tab toggle **Armor: Show/Hide** (equipment stays equipped; render only). Persists per companion (`ShowArmor` NBT / synched data).
+- **Armor visibility:** Customize Ã¢Â†Â’ Name tab toggle **Armor: Show/Hide** (equipment stays equipped; render only). Persists per companion (`ShowArmor` NBT / synched data).
 - **Donate:** Shift+RMB companion menu has a donate icon button (top-right) opening `https://paypal.me/azturax`.
 
 ### CCI
 - **`companion_modify`:** `showArmor=true|false` (aliases `show_armor`, `armor_visible`) toggles armor rendering remotely.
 
-### CCI â team fights + Bit children
+### CCI Ã¢Â€Â” team fights + Bit children
 - **Enable:** `/azscompanions teamfight on|off|status` (ops) or CCI `teamfight_enable` / `teamfight_disable` / `teamfight_toggle`.
 - **HUD:** left/right team scoreboard (scores, bits, members, tier table, top bits/kills); `teamfight_scoreboard` show/hide/reset. Synced on login.
-- **`companion_spawn_leader`:** subs â hostile team leader (form/name/gear); requires teamfight ON.
-- **`companion_spawn_child`:** bits â Bits under leader with tiered gear (100 leather+stick â 1000 netherite); aliases `spawn_child`, `spawn_bit`, â¦
+- **`companion_spawn_leader`:** subs Ã¢Â†Â’ hostile team leader (form/name/gear); requires teamfight ON.
+- **`companion_spawn_child`:** bits Ã¢Â†Â’ Bits under leader with tiered gear (100 leather+stick Ã¢Â†Â’ 1000 netherite); aliases `spawn_child`, `spawn_bit`, Ã¢Â€Â¦
 - **Auto kills:** rival-team companion deaths score the HUD automatically.
 - Shared helpers: `spawnChild` / `spawnFightLeader`; cake also calls `spawnChild`.
 - Caps: default **3** children/leader (`maxChildrenPerCompanion`); CCI `maxChildren=`/`childCap=` per parent (hard max 64). Docs: [CCI_STREAMING_GUIDE](docs/CCI_STREAMING_GUIDE.md).
@@ -717,7 +755,7 @@ Release: [v0.3.5](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.5
 
 ## 0.3.4
 
-Release: [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fixes
 - **Player form armor:** companions render equipped helmet/chest/legs/boots (and elytra) via `HumanoidArmorLayer` / `ElytraLayer` like a normal player.
@@ -730,11 +768,11 @@ Release: [v0.3.4](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.4
 
 ## 0.3.3
 
-Release: [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Sleep
-- **Nearest bed:** at night (Follow mode), companions path to the closest usable empty bed â no longer lock to a stored home bed.
-- **Search radius:** **48** blocks horizontal **and** vertical (was Â±4 vertical).
+- **Nearest bed:** at night (Follow mode), companions path to the closest usable empty bed Ã¢Â€Â” no longer lock to a stored home bed.
+- **Search radius:** **48** blocks horizontal **and** vertical (was Ã‚Â±4 vertical).
 - Occupied beds (block flag or another sleeper) are skipped; Kon-named companions still prefer Kon beds first.
 
 ### Loaders
@@ -744,11 +782,11 @@ Release: [v0.3.3](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.3
 
 ## 0.3.2
 
-Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fixes
 - **Inventory GUI:** `companion_inventory.png` panel fill is vanilla light gray (no solid black interiors); slot layout unchanged.
-- **Nametag height:** form/scale sync refreshes hitbox + name-tag attachment on clients; renderers recompute nametag Y from the **current** form/scale every frame (chickenâplayer swaps no longer stick).
+- **Nametag height:** form/scale sync refreshes hitbox + name-tag attachment on clients; renderers recompute nametag Y from the **current** form/scale every frame (chickenÃ¢Â†Â”player swaps no longer stick).
 - **Mob form animations:** proxy visuals copy walk limb position/speed, attack swing, and aggressive state each frame so animal/hostile forms walk/idle/attack like vanilla.
 - **Mob held items:** equipment synced to proxy (zombie/skeleton/armor layers); animals/spider get mainhand/offhand drawn via `ItemInHandRenderer`.
 
@@ -757,8 +795,8 @@ Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2
 
 ### CCI
 - **`companion_modify`:** edit the owner's currently called/summoned companion (form, skin, name, attitude, team, equipment) without recruiting a new one. Aliases: `modify`, `customize`, `edit`.
-- **`companion_turn_evil`:** playful temporary HOSTILE (5â15s, default 10) toward nearby non-owner targets, then restore prior attitude. Aliases: `turn_evil`, `go_evil`, `berserk`.
-- Hidden: right-click companion with a **fermented spider eye** â same playful evil burst (~10s). Ownership/charm unchanged.
+- **`companion_turn_evil`:** playful temporary HOSTILE (5Ã¢Â€Â“15s, default 10) toward nearby non-owner targets, then restore prior attitude. Aliases: `turn_evil`, `go_evil`, `berserk`.
+- Hidden: right-click companion with a **fermented spider eye** Ã¢Â†Â’ same playful evil burst (~10s). Ownership/charm unchanged.
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
@@ -767,12 +805,12 @@ Release: [v0.3.2](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.2
 
 ## 0.3.1
 
-Release: [v0.3.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.1) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.1) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fixes
 - **Form crash:** non-player forms no longer pass `CompanionEntity` into vanilla models that cast to Wolf/Fox/etc. (`ClassCastException` in `CompanionMobFormRenderer`). Forms render via client-only proxy entities + vanilla mob renderers.
 - **Upside-down form preview:** animal/hostile Customize Form previews (and world forms) render upright with correct standing pose (no sleeping/sitting).
-- **Inventory GUI graphic:** custom `textures/gui/companion_inventory.png` sized for `194Ã220` layout â armor+shield column, 3Ã9 storage, 9-slot companion hotbar, gap, player inventory â replacing mismatched `generic_54` fills/blits.
+- **Inventory GUI graphic:** custom `textures/gui/companion_inventory.png` sized for `194ÃƒÂ—220` layout Ã¢Â€Â” armor+shield column, 3ÃƒÂ—9 storage, 9-slot companion hotbar, gap, player inventory Ã¢Â€Â” replacing mismatched `generic_54` fills/blits.
 
 ### Loaders
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
@@ -781,10 +819,10 @@ Release: [v0.3.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.1
 
 ## 0.3.0
 
-Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Companion forms
-- **Form system:** companions can look like a player or selected animals/hostiles (`CompanionForm` in NBT + synched data). Customize â **Form** tab: Player / Animals / Hostiles.
+- **Form system:** companions can look like a player or selected animals/hostiles (`CompanionForm` in NBT + synched data). Customize Ã¢Â†Â’ **Form** tab: Player / Animals / Hostiles.
 - **Animals:** Chicken, Wolf, Cat, Cow, Pig, Sheep, Fox, Rabbit, Bee
 - **Hostiles:** Zombie, Skeleton, Spider, Enderman, Husk, Stray (no Creeper)
 - Ownership, charm store/recall, Follow/Stay/Wander, inventory, and CCI actions still apply to any form
@@ -793,13 +831,13 @@ Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0
 ### Attitude / teams (CCI + NBT)
 - Persisted **`Attitude`**: `PASSIVE` (defend-owner) or `HOSTILE` (aggro nearby players/mobs except owner/trusted)
 - Persisted **`TeamId`**: different teams fight each other; same team allied; never attack owner
-- Nametag tint for known team colors (red/blue/â¦)
+- Nametag tint for known team colors (red/blue/Ã¢Â€Â¦)
 
 ### CCI IMC (full parity in NeoForge CCI + Fabric CCI jars)
 - Modes/chat: `companion_say` / `greet` / `wave` / `follow` / `sit` / `stay`
 - `companion_set_attitude`, `companion_set_team`
 - `companion_summon` / `companion_summon_passive` / `companion_summon_hostile` with `form=` / `skin=` / `team=` / `attitude=`
-- Equipment: `companion_set_mainhand` / `set_offhand` / `set_armor` / `set_hand` (`mainhand=â¦;helmet=â¦;clear`)
+- Equipment: `companion_set_mainhand` / `set_offhand` / `set_armor` / `set_hand` (`mainhand=Ã¢Â€Â¦;helmet=Ã¢Â€Â¦;clear`)
 - Docs: `docs/CCI_STREAMING_GUIDE.md` + `cci-examples/`
 
 ### UI / polish
@@ -821,15 +859,15 @@ Release: [v0.3.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.3.0
 
 ## 0.2.1
 
-Release: [v0.2.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.1) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.2.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.1) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### UI
-- **Companion inventory layout:** left vertical armor column (helmetâboots) with vanilla empty armor icons; 3Ã9 storage to the right; companion hotbar/tools on a separated strip still inside the companion panel; player inventory below with normal spacing (no floating equipment row in the gap)
+- **Companion inventory layout:** left vertical armor column (helmetÃ¢Â†Â’boots) with vanilla empty armor icons; 3ÃƒÂ—9 storage to the right; companion hotbar/tools on a separated strip still inside the companion panel; player inventory below with normal spacing (no floating equipment row in the gap)
 
 ### AI / teleport
-- **Happy Ghastâinspired Wander:** slow leisurely strolls (speed 0.55), rare starts, linger pauses between legs, soft looks; roam radius 3â16 (owner) / 2â10 (home bed); if outside radius **walks back** â never teleports for that
-- **Wander / home-idle no short-range snaps:** removed home-bed leash teleport at ~8 blocks (`PREFERRED+2`); any teleport-to-owner now requires â¥ **24** blocks (`MIN_TELEPORT_DISTANCE`)
-- **Wander mode teleports:** zero FollowGoal / stuck / ground-leash teleports â only the home-bed rule (owner >35 from bed) may teleport, and only if also â¥24 from owner
+- **Happy GhastÃ¢Â€Â“inspired Wander:** slow leisurely strolls (speed 0.55), rare starts, linger pauses between legs, soft looks; roam radius 3Ã¢Â€Â“16 (owner) / 2Ã¢Â€Â“10 (home bed); if outside radius **walks back** Ã¢Â€Â” never teleports for that
+- **Wander / home-idle no short-range snaps:** removed home-bed leash teleport at ~8 blocks (`PREFERRED+2`); any teleport-to-owner now requires Ã¢Â‰Â¥ **24** blocks (`MIN_TELEPORT_DISTANCE`)
+- **Wander mode teleports:** zero FollowGoal / stuck / ground-leash teleports Ã¢Â€Â” only the home-bed rule (owner >35 from bed) may teleport, and only if also Ã¢Â‰Â¥24 from owner
 - Special perk land-snap no longer teleports when floating while already close (<24)
 
 ### Loaders / editions (jar matrix)
@@ -846,7 +884,7 @@ Jar names use `0.2.1+<minecraft>` so the game version is visible in the filename
 
 ## 0.2.0
 
-Release: [v0.2.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.0) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.2.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.2.0) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Gameplay
 - **Kon-only gating:** sleep purr (`CAT_PURR`), Kon Bed sleep priority, Kon skin easter egg + one-time Kon Bed grant apply only when the companion display name equals `Kon` (case-insensitive). Non-Kon companions use generic sleep/bed/skin defaults. UUID special perks (ears, fly/glow, Wiggly) unchanged.
@@ -857,9 +895,9 @@ Jar names use `0.2.0+<minecraft>` so the game version is visible in the filename
 | Minecraft | NeoForge | Fabric | NeoForge CCI | Fabric CCI |
 |-----------|----------|--------|--------------|------------|
 | **1.21.1** | `azscompanions-neoforge-0.2.0+1.21.1.jar` | `azscompanions-fabric-0.2.0+1.21.1.jar` | `azscompanions-neoforge-cci-0.2.0+1.21.1.jar` | `azscompanions-fabric-cci-0.2.0+1.21.1.jar` |
-| **1.20.1** | *not shipped â no NeoForge 20.1 on releases Maven; Forge port deferred* | *deferred â API backport* | *CCI: no NeoForge build (Forge-only on Modrinth)* | *CCI available (see table) but Az port deferred* |
-| **26.1.2** | *deferred â unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
-| **26.2** | *deferred â unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
+| **1.20.1** | *not shipped Ã¢Â€Â” no NeoForge 20.1 on releases Maven; Forge port deferred* | *deferred Ã¢Â€Â” API backport* | *CCI: no NeoForge build (Forge-only on Modrinth)* | *CCI available (see table) but Az port deferred* |
+| **26.1.2** | *deferred Ã¢Â€Â” unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
+| **26.2** | *deferred Ã¢Â€Â” unobfuscated MC + Java 25 rewrite* | *deferred* | *CCI: none on Modrinth* | *CCI: none on Modrinth* |
 
 ### CCI / iChunUtil dependency pins (Modrinth lookup)
 
@@ -869,9 +907,9 @@ Jar names use `0.2.0+<minecraft>` so the game version is visible in the filename
 | **1.21.1** | Fabric | **1.13.0** | `PERd6IT9` | **1.0.3** | `gfAOoiwe` | Yes (`fabric-cci`) |
 | **1.20.1** | Fabric | **1.13.0** | `7tk12xkN` | **1.0.3** | `JjEWQx5u` | No (port deferred) |
 | **1.20.1** | Forge | **1.13.0** | `nNaAlKHI` | **1.0.3** | `W6d0pCyu` | No (no NeoForge CCI; Forge module deferred) |
-| **1.20.1** | NeoForge | â | none | â | none | N/A |
-| **26.1.2** | any | â | none | â | none | N/A â ship standalone only when ported |
-| **26.2** | any | â | none | â | none | N/A â ship standalone only when ported |
+| **1.20.1** | NeoForge | Ã¢Â€Â” | none | Ã¢Â€Â” | none | N/A |
+| **26.1.2** | any | Ã¢Â€Â” | none | Ã¢Â€Â” | none | N/A Ã¢Â€Â” ship standalone only when ported |
+| **26.2** | any | Ã¢Â€Â” | none | Ã¢Â€Â” | none | N/A Ã¢Â€Â” ship standalone only when ported |
 
 **Shipped this release:** four jars for Minecraft **1.21.1** (NeoForge + Fabric standalone and CCI). See `docs/MULTI_VERSION.md`.
 
@@ -881,13 +919,13 @@ Jar names use `0.2.0+<minecraft>` so the game version is visible in the filename
 
 ## 0.1.1
 
-Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Fixes
-- **Dedicated NeoForge server:** `RegisterPayloadHandlersEvent` no longer classloads client GUI (`Screen`) via `OpenCompanionCreatorPacket` / `OpenCompanionMenuPacket` / `CompanionDialoguePacket` handlers â S2C handlers live in `ClientNetworkHandlers` (client dist only)
+- **Dedicated NeoForge server:** `RegisterPayloadHandlersEvent` no longer classloads client GUI (`Screen`) via `OpenCompanionCreatorPacket` / `OpenCompanionMenuPacket` / `CompanionDialoguePacket` handlers Ã¢Â€Â” S2C handlers live in `ClientNetworkHandlers` (client dist only)
 
 ### UX / commands
-- Shift+RMB **Companion Menu** (shared on NeoForge + Fabric): Customize Â· **Command** (Follow / Stay / Wander) Â· Inventory â server packets only
+- Shift+RMB **Companion Menu** (shared on NeoForge + Fabric): Customize Ã‚Â· **Command** (Follow / Stay / Wander) Ã‚Â· Inventory Ã¢Â€Â” server packets only
 - Removed V-key **radial** command UI (and related menus/packets/keybinds); Command lives in the companion menu
 - Clearer Follow / Stay / Wander AI (no idle free-roam that ignores commands)
 - Ownership denial message for non-owners; inventory / command / customize stay owner-gated
@@ -900,7 +938,7 @@ Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1
 - Fabric customize / creator parity improvements (appearance draft, skin lookup, shared menu screens)
 
 ### Home bed / follow
-- **Home-bed proximity (35 blocks, configurable on NeoForge):** near bed â home-idle; owner farther than 35 from bed â teleport + follow. Stay ignores the auto rule; Wander strolls near the bed until the owner leaves radius
+- **Home-bed proximity (35 blocks, configurable on NeoForge):** near bed Ã¢Â†Â’ home-idle; owner farther than 35 from bed Ã¢Â†Â’ teleport + follow. Stay ignores the auto rule; Wander strolls near the bed until the owner leaves radius
 - Night sleep **prefers Kon Bed**, then home bed; leave bed if owner moves far (~35) with wake cooldown to avoid thrashing
 - Follow bands: personal space **2**, preferred **~6**, start **10**, stop **5**, teleport **48**; home-bed radius **35**
 - Owner **explore vs idle** still used for soft stroll when no home bed is set
@@ -908,26 +946,26 @@ Release: [v0.1.1](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.1
 ### Loaders / editions
 - Four jars for Minecraft 1.21.1: NeoForge + Fabric **standalone**, NeoForge + Fabric **CCI** (same dependency story as 0.1.0)
 
-## 0.1.0 â first public
+## 0.1.0 Ã¢Â€Â” first public
 
-Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0) Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
+Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0) Ã‚Â· Repo: [Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
 
 ### Breaking
-- Mod id / namespace renamed from `koncompanions` â `azscompanions` (display name **Az's Companions**). Old worlds with `koncompanions:*` items/entities will not load those content ids.
+- Mod id / namespace renamed from `koncompanions` Ã¢Â†Â’ `azscompanions` (display name **Az's Companions**). Old worlds with `koncompanions:*` items/entities will not load those content ids.
 
 ### Gameplay
 - Companion Charm (desert pyramid loot): summon / store; **one companion per player**
 - First summon defaults to player name + player skin
 - Follow by day; night sleep in nearest bed (any bed / Kon Bed)
-- Owner **explore vs idle**: exploring â loose follow; standing still (~2.5s) â free wander **24â40**, **no teleport / no approach**
-- Loose follow bands: personal space **2**, comfort stroll **2â12**, preferred **~6**, start **32**, stop **8**, teleport **48** (exploring only, never while fighting)
+- Owner **explore vs idle**: exploring Ã¢Â†Â’ loose follow; standing still (~2.5s) Ã¢Â†Â’ free wander **24Ã¢Â€Â“40**, **no teleport / no approach**
+- Loose follow bands: personal space **2**, comfort stroll **2Ã¢Â€Â“12**, preferred **~6**, start **32**, stop **8**, teleport **48** (exploring only, never while fighting)
 - Environmental hazard immunity: fall, cactus, sweet berry bush, drowning, in-wall, campfire (still take combat damage)
 - **Combat:** defend living attackers of the owner (ignores environmental damage); SIT/sleep suppress combat targeting
-- **Hands:** give items into main â offhand (swap if both full); empty-hand take
+- **Hands:** give items into main Ã¢Â†Â’ offhand (swap if both full); empty-hand take
 - **Potions:** ground auto-pickup **beneficial only** (skip harmful + water/awkward neutrals); manually given harmful splash thrown at enemies
 - Customize (NeoForge): name, gender, Mojang skin, size/proportions; **Done** saves, Cancel discards
 - Typing a valid Minecraft username fetches that player's Mojang skin (live preview + entity sync); **Kon** applies Kon special skin + one-time Kon Bed
-- Skin lookup waits for texture download + legacy 64Ã32â64Ã64 processing before applying `player:<uuid>`
+- Skin lookup waits for texture download + legacy 64ÃƒÂ—32Ã¢Â†Â’64ÃƒÂ—64 processing before applying `player:<uuid>`
 - Skins are Mojang-only (no local PNG import)
 - Charm store/recall persists appearance (name, skin, gender, size, proportions, home bed, etc.)
 - Charm Hello / Bye chat lines (owner only)
@@ -942,6 +980,6 @@ Release: [v0.1.0](https://github.com/Azturax/Az_s_Companions/releases/tag/v0.1.0
 - Standalone jars unchanged (no CCI required); never install standalone + CCI together
 
 ### Deferred / foundation
-- **Baritone** pathfinding not bundled this pass â prefer future home beacon + owned deposit box foundation
+- **Baritone** pathfinding not bundled this pass Ã¢Â€Â” prefer future home beacon + owned deposit box foundation
 - Auto-equip tools config exists (default **off**); full auto-equip logic deferred
 - Sharing companions with other players deferred (ownership UUID hooks left extensible)

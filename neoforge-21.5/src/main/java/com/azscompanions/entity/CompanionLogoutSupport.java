@@ -113,6 +113,8 @@ public final class CompanionLogoutSupport {
         }
     }
 
+    
+
     public static void restoreParkedCompanions(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         ListTag parked = persistent.contains(CompanionLogoutPersistence.PLAYER_LIST_TAG)

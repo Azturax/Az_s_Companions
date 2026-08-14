@@ -1,4 +1,21 @@
 package com.azscompanions.entity;
+import java.util.Arrays;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.ai.goal.RangedBowAttackGoal;
+
+import org.jetbrains.annotations.Nullable;
+
+import net.minecraft.world.item.ProjectileWeaponItem;
+
+import net.minecraft.world.entity.monster.RangedAttackMob;
+
+import net.minecraft.world.damagesource.DamageSource;
 
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiChatSupport;
@@ -70,7 +87,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class FabricCompanionEntity extends PathfinderMob {
+public class FabricCompanionEntity extends PathfinderMob implements RangedAttackMob {
     public static final float MIN_BODY_SCALE = 0.5f;
     public static final float MAX_BODY_SCALE = 3.0f;
     public static final float DEFAULT_BODY_SCALE = 0.7f;
@@ -144,7 +161,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     /** Last-known owner profile name (NBT); hosted-world UUID remap fallback. */
     private String ownerName = "";
     private boolean konBedGranted;
-    /** Transient playful “turn evil” countdown (ticks). Not persisted. */
+    /** Transient playful Ã¢â‚¬Å“turn evilÃ¢â‚¬Â countdown (ticks). Not persisted. */
     private int playfulEvilTicks;
     /** Duration set at the start of the current playful-evil burst. */
     private int playfulEvilDurationTicks;
@@ -196,7 +213,7 @@ public class FabricCompanionEntity extends PathfinderMob {
                 .add(Attributes.ATTACK_DAMAGE, CompanionCombatDamage.NETHERITE_SWORD_ATTACK_DAMAGE)
                 .add(Attributes.FOLLOW_RANGE, 64.0d)
                 .add(Attributes.SCALE, DEFAULT_BODY_SCALE)
-                // Clear full 1-block steps at any body scale (0.5–3); vanilla step is only 0.6.
+                // Clear full 1-block steps at any body scale (0.5Ã¢â‚¬â€œ3); vanilla step is only 0.6.
                 .add(Attributes.STEP_HEIGHT, CompanionMovementAttributes.STEP_HEIGHT)
                 .add(Attributes.JUMP_STRENGTH, CompanionMovementAttributes.JUMP_STRENGTH);
     }
@@ -246,13 +263,14 @@ public class FabricCompanionEntity extends PathfinderMob {
         goalSelector.addGoal(1, new FabricSitGoal(this));
         goalSelector.addGoal(2, new FabricCompanionSleepInBedGoal(this));
         goalSelector.addGoal(3, new FabricPotionBehaviorGoal(this));
-        goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25d, true));
-        goalSelector.addGoal(5, new FabricCompanionRideAlongGoal(this));
-        goalSelector.addGoal(6, new FabricFollowOwnerGoal(this));
-        goalSelector.addGoal(7, new FabricWanderMobInteractGoal(this));
-        goalSelector.addGoal(8, new FabricWanderNearOwnerGoal(this));
-        goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        goalSelector.addGoal(10, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(4, new FabricCompanionBowAttackGoal(this, CompanionBowCombatSupport.BOW_MOVE_SPEED, CompanionBowCombatSupport.BOW_ATTACK_INTERVAL_TICKS, CompanionBowCombatSupport.BOW_ATTACK_RADIUS));
+        goalSelector.addGoal(5, new FabricMeleeAttackGoal(this, 1.25d, true));
+        goalSelector.addGoal(6, new FabricCompanionRideAlongGoal(this));
+        goalSelector.addGoal(7, new FabricFollowOwnerGoal(this));
+        goalSelector.addGoal(8, new FabricWanderMobInteractGoal(this));
+        goalSelector.addGoal(9, new FabricWanderNearOwnerGoal(this));
+        goalSelector.addGoal(10, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(11, new RandomLookAroundGoal(this));
 
         targetSelector.addGoal(1, new FabricOwnerDefendTargetGoal(this));
         targetSelector.addGoal(2, new FabricHostileTargetGoal(this));
@@ -294,7 +312,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             tickPlayBehavior();
             tickChildParentLeash();
             tickRideAlongSync();
-            // Follow-only ground leash — never during Wander stroll / home-idle.
+            // Follow-only ground leash Ã¢â‚¬â€ never during Wander stroll / home-idle.
             if (getMode() == FabricCompanionMode.FOLLOW
                     && shouldActivelyFollowOwner()
                     && isOwnerExploring()
@@ -607,7 +625,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (child && settings.childAutonomy().prefersTalkToParent() && level() instanceof ServerLevel sl
                 && sl.getEntity(getLeaderUuid()) instanceof FabricCompanionEntity parent) {
             prompt = "[ambient child] Talk briefly to your parent " + parent.getChatDisplayName()
-                    + " — one short wholesome line.";
+                    + " Ã¢â‚¬â€ one short wholesome line.";
         } else {
             prompt = CompanionAiChatSupport.ambientPromptWithRecent(ownerName, focus, recent);
         }
@@ -729,7 +747,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
     }
 
-    /** Soft cat purr every few seconds while asleep — Kon-named companions only. */
+    /** Soft cat purr every few seconds while asleep Ã¢â‚¬â€ Kon-named companions only. */
     private void tickSleepPurr() {
         if (!isSleeping() || !isKonNamed()) {
             return;
@@ -824,7 +842,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             if (FabricCompanionCharmItem.isCharm(held)) {
                 return InteractionResult.PASS;
             }
-            // Hidden easter egg: fermented spider eye → brief playful HOSTILE burst.
+            // Hidden easter egg: fermented spider eye Ã¢â€ â€™ brief playful HOSTILE burst.
             if (held.is(net.minecraft.world.item.Items.FERMENTED_SPIDER_EYE)) {
                 return feedPlayfulEvil(serverPlayer, hand);
             }
@@ -847,7 +865,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     /**
-     * Brief playful “evil mode”: temporary {@link CompanionAttitude#HOSTILE} toward nearby
+     * Brief playful Ã¢â‚¬Å“evil modeÃ¢â‚¬Â: temporary {@link CompanionAttitude#HOSTILE} toward nearby
      * non-owner targets, then auto-revert. Never attacks the owner. Ownership unchanged.
      */
     public void activatePlayfulEvil(int durationTicks) {
@@ -1060,32 +1078,131 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public boolean canAttackTarget(LivingEntity target) {
-        if (!FabricServerConfig.ALLOW_COMBAT) {
-            return false;
-        }
-        if (!isAllowedCombatant(target)) {
-            return false;
-        }
-        if (isTeamRival(target)) {
-            return true;
-        }
-        if (getAttitude().isHostile()) {
-            return true;
-        }
-        // Never pick random passives. Hostiles only if targeting us/owner or recent hurt link.
-        if (!target.getType().getCategory().isFriendly()) {
-            if (target instanceof Mob mob && (mob.getTarget() == this || mob.getTarget() == getOwner())) {
-                return true;
-            }
-            return getLastHurtByMob() == target
-                    || target.getLastHurtByMob() == this
-                    || target.getLastHurtByMob() == getOwner();
-        }
-        return target.getLastHurtByMob() == this || target.getLastHurtByMob() == getOwner();
+        boolean hurtLink = target.getLastHurtByMob() == this
+                || target.getLastHurtByMob() == getOwner()
+                || getLastHurtByMob() == target;
+        return CompanionCombatTargetSupport.canAttackAcquiredTarget(
+                FabricServerConfig.ALLOW_COMBAT,
+                isAllowedCombatant(target),
+                false,
+                isTeamRival(target),
+                getAttitude().isHostile(),
+                target.getType().getCategory().isFriendly(),
+                true,
+                hurtLink);
     }
 
     public void openInventory(ServerPlayer player) {
         player.openMenu(new FabricCompanionInventoryMenu.ExtendedProvider(this));
+    }
+
+
+    public boolean shouldPreferBowCombat() {
+        if (!CompanionBowCombatSupport.formCanUseBow(getForm())) {
+            return false;
+        }
+        ItemStack weapon = getMainHandItem();
+        if (weapon.isEmpty()) {
+            weapon = getOffhandItem();
+        }
+        if (weapon.isEmpty()) {
+            return false;
+        }
+        String id = BuiltInRegistries.ITEM.getKey(weapon.getItem()).toString();
+        boolean bow = CompanionBowCombatSupport.isBowItemId(id) || weapon.getItem() instanceof BowItem
+                || weapon.getItem() instanceof ProjectileWeaponItem;
+        if (!bow) {
+            return false;
+        }
+        boolean infinity = hasInfinityEnchant(weapon);
+        return CompanionBowCombatSupport.shouldPreferRanged(true, true, infinity, hasArrowAmmo());
+    }
+
+    private boolean hasInfinityEnchant(ItemStack weapon) {
+        var infinity = level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .get(Enchantments.INFINITY);
+        return infinity.isPresent() && EnchantmentHelper.getItemEnchantmentLevel(infinity.get(), weapon) > 0;
+    }
+
+    private boolean hasArrowAmmo() {
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack.isEmpty()) continue;
+            String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            if (CompanionBowCombatSupport.isArrowItemId(id) || stack.is(Items.ARROW)
+                    || stack.is(Items.SPECTRAL_ARROW) || stack.is(Items.TIPPED_ARROW)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable
+    private ItemStack findAndConsumeArrow(boolean infinity) {
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack.isEmpty()) continue;
+            String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            if (!(CompanionBowCombatSupport.isArrowItemId(id) || stack.is(Items.ARROW)
+                    || stack.is(Items.SPECTRAL_ARROW) || stack.is(Items.TIPPED_ARROW))) {
+                continue;
+            }
+            ItemStack arrow = stack.copyWithCount(1);
+            if (!infinity) {
+                stack.shrink(1);
+                inventory.setItem(i, stack);
+            }
+            return arrow;
+        }
+        return infinity ? new ItemStack(Items.ARROW) : null;
+    }
+
+    @Override
+    public boolean canFireProjectileWeapon(ProjectileWeaponItem weapon) {
+        return shouldPreferBowCombat();
+    }
+
+    @Override
+    public void performRangedAttack(LivingEntity target, float velocity) {
+        if (!CompanionBowCombatSupport.formCanUseBow(getForm())) {
+            return;
+        }
+        if (!(level() instanceof ServerLevel serverLevel) || target == null || !canAttackTarget(target)) {
+            return;
+        }
+        ItemStack weapon = getMainHandItem();
+        if (weapon.isEmpty()) {
+            weapon = getOffhandItem();
+        }
+        boolean infinity = hasInfinityEnchant(weapon);
+        ItemStack ammo = findAndConsumeArrow(infinity);
+        if (ammo == null || ammo.isEmpty()) {
+            return;
+        }
+        AbstractArrow arrow = ProjectileUtil.getMobArrow(this, ammo, velocity, weapon);
+        double dx = target.getX() - getX();
+        double dy = target.getY(0.3333333333333333d) - arrow.getY();
+        double dz = target.getZ() - getZ();
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        arrow.shoot(dx, dy + dist * 0.2d, dz, 1.6f, 14 - level().getDifficulty().getId() * 4);
+        playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (getRandom().nextFloat() * 0.4f + 0.8f));
+        serverLevel.addFreshEntity(arrow);
+    }
+
+    @Override
+    protected void dropEquipment() {
+        if (CompanionInventoryPersistence.shouldKeepInventoryOnDeath(FabricServerConfig.KEEP_INVENTORY_ON_DEATH)) {
+            return;
+        }
+        super.dropEquipment();
+    }
+
+    @Override
+    protected void dropAllDeathLoot(ServerLevel level, DamageSource damageSource) {
+        if (CompanionInventoryPersistence.shouldKeepInventoryOnDeath(FabricServerConfig.KEEP_INVENTORY_ON_DEATH)) {
+            return;
+        }
+        super.dropAllDeathLoot(level, damageSource);
     }
 
     public void speakSuccess() {
@@ -1290,6 +1407,25 @@ public class FabricCompanionEntity extends PathfinderMob {
         child.discard();
         return true;
     }
+
+    /** Snapshot a dying Bit onto this parent (inventory kept). */
+    public boolean storeDyingChildSnapshot(FabricCompanionEntity child) {
+        if (level().isClientSide || child == null || isChildCompanion()) {
+            return false;
+        }
+        if (!getUUID().equals(child.getLeaderUuid())) {
+            return false;
+        }
+        CompoundTag entry = new CompoundTag();
+        entry.putUUID(CompanionStoredChildren.ENTRY_UUID, child.getUUID());
+        CompoundTag data = new CompoundTag();
+        child.saveWithoutId(data);
+        entry.put(CompanionStoredChildren.ENTRY_DATA, data);
+        storedChildren.add(entry);
+        syncStoredChildCount();
+        return true;
+    }
+
 
     public boolean storeNextLivingChild() {
         List<FabricCompanionEntity> living = listLivingChildren();
@@ -1595,7 +1731,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     /**
-     * Form/scale are synched data — clients must refresh hitbox + name-tag attachment
+     * Form/scale are synched data Ã¢â‚¬â€ clients must refresh hitbox + name-tag attachment
      * when they arrive, or nametag height sticks to the previous form after a swap.
      */
     @Override
@@ -1662,7 +1798,7 @@ public class FabricCompanionEntity extends PathfinderMob {
     public void setFollowRadius(float radius) {
         float follow = CompanionFollowDistances.clampFollowRadius(radius);
         entityData.set(DATA_FOLLOW_RADIUS, follow);
-        // Wander must stay ≥ follow (bump when follow is raised past wander).
+        // Wander must stay Ã¢â€°Â¥ follow (bump when follow is raised past wander).
         if (getWanderRadius() < follow) {
             entityData.set(DATA_WANDER_RADIUS, CompanionFollowDistances.clampWanderRadius(follow));
         }
@@ -1722,17 +1858,17 @@ public class FabricCompanionEntity extends PathfinderMob {
     }
 
     public boolean wantsAggressiveTargets() {
-        return getAttitude().isHostile() || (getTeamId() != null && !getTeamId().isBlank());
+        return CompanionCombatTargetSupport.wantsCombatTargets();
     }
 
     public boolean isValidHostilePrey(LivingEntity target) {
-        if (!isAllowedCombatant(target)) {
-            return false;
-        }
-        if (isTeamRival(target)) {
-            return true;
-        }
-        return getAttitude().isHostile();
+        return CompanionCombatTargetSupport.isValidHostilePrey(
+                isAllowedCombatant(target),
+                false,
+                isTeamRival(target),
+                getAttitude().isHostile(),
+                target.getType().getCategory().isFriendly(),
+                target instanceof Player);
     }
 
     private boolean isAllowedCombatant(LivingEntity target) {

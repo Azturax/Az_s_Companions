@@ -1253,6 +1253,15 @@ public class CompanionEntity extends PathfinderMob {
         return ProtectionHelper.canCompanionModify(level(), pos, this);
     }
 
+    
+    @Override
+    protected void dropEquipment() {
+        if (CompanionInventoryPersistence.shouldKeepInventoryOnDeath(ServerConfig.KEEP_INVENTORY_ON_DEATH.get())) {
+            return;
+        }
+        super.dropEquipment();
+    }
+
     public void speak(DialogueCategory category) {
         CompanionDefinition definition = getDefinition();
         definition.dialogue().pick(category.lines(definition.dialogue()), random)
@@ -1952,18 +1961,18 @@ public class CompanionEntity extends PathfinderMob {
     }
 
     public boolean wantsAggressiveTargets() {
-        return getAttitude().isHostile() || (getTeamId() != null && !getTeamId().isBlank());
+        return CompanionCombatTargetSupport.wantsCombatTargets();
     }
 
     /** Prey filter for hostile attitude / team rivals — never owner or trusted. */
     public boolean isValidHostilePrey(LivingEntity target) {
-        if (!isAllowedCombatant(target) || ProtectionHelper.isProtectedEntity(target)) {
-            return false;
-        }
-        if (isTeamRival(target)) {
-            return true;
-        }
-        return getAttitude().isHostile();
+        return CompanionCombatTargetSupport.isValidHostilePrey(
+                isAllowedCombatant(target),
+                ProtectionHelper.isProtectedEntity(target),
+                isTeamRival(target),
+                getAttitude().isHostile(),
+                target.getType().getCategory().isFriendly(),
+                target instanceof Player);
     }
 
     private boolean isAllowedCombatant(LivingEntity target) {

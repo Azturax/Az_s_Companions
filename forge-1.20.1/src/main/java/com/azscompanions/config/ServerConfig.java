@@ -1,5 +1,6 @@
 package com.azscompanions.config;
 
+import com.azscompanions.entity.CompanionInventoryPersistence;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public final class ServerConfig {
     public static final ForgeConfigSpec.IntValue SUPPORT_AMOUNT_PER_COMPANION;
     public static final ForgeConfigSpec.BooleanValue ALLOW_COMBAT;
     public static final ForgeConfigSpec.BooleanValue ATTACK_NEUTRALS_ONLY_IF_HIT;
+    public static final ForgeConfigSpec.BooleanValue KEEP_INVENTORY_ON_DEATH;
     public static final ForgeConfigSpec.BooleanValue ALLOW_GRIEFING;
     public static final ForgeConfigSpec.BooleanValue REQUIRE_OWNER_ONLINE;
     public static final ForgeConfigSpec.BooleanValue ALLOW_TEAM_TRUST;
@@ -76,6 +78,9 @@ public final class ServerConfig {
         ALLOW_COMBAT = builder.define("allowCombat", true);
         ATTACK_NEUTRALS_ONLY_IF_HIT = builder.define("attackNeutralsOnlyIfHit", true);
         LOW_HEALTH_RETREAT_RATIO = builder.defineInRange("lowHealthRetreatRatio", 0.25d, 0.05d, 0.9d);
+        KEEP_INVENTORY_ON_DEATH = builder
+                .comment("Keep companion/Bit inventory and equipment on death (no world drops). Snapshots go to charm / parent Bits store. Default true.")
+                .define("keepInventoryOnDeath", CompanionInventoryPersistence.DEFAULT_KEEP_INVENTORY_ON_DEATH);
         builder.pop();
 
         builder.push("permissions");

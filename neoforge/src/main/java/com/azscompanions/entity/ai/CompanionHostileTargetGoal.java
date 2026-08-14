@@ -35,6 +35,9 @@ public final class CompanionHostileTargetGoal extends NearestAttackableTargetGoa
         if (!companion.wantsAggressiveTargets()) {
             return false;
         }
+        if (companion.isSitting() || companion.isSleeping()) {
+            return false;
+        }
         return super.canContinueToUse();
     }
 }

@@ -1,6 +1,7 @@
 package com.azscompanions.event;
 
 import com.azscompanions.config.FabricServerConfig;
+import com.azscompanions.entity.FabricCompanionDeathPersistenceSupport;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.teamfight.TeamFightSession;
@@ -23,6 +24,9 @@ public final class FabricTeamFightEvents {
         });
 
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            if (entity instanceof FabricCompanionEntity companion) {
+                FabricCompanionDeathPersistenceSupport.persistOnDeath(companion);
+            }
             if (!(entity instanceof FabricCompanionEntity victim)) {
                 return;
             }

@@ -102,6 +102,27 @@ public final class FabricCompanionLogoutSupport {
         }
     }
 
+    /** Merge a death snapshot into the offline store so inventory survives without immediate respawn. */
+    public static void mergeDeathSnapshot(ServerPlayer player, UUID id, CompoundTag data) {
+        MinecraftServer server = player.getServer();
+        if (server == null || id == null || data == null) {
+            return;
+        }
+        FabricCompanionOfflineStore store = FabricCompanionOfflineStore.get(server);
+        ListTag parked = store.take(player.getUUID());
+        ListTag next = new ListTag();
+        for (int i = 0; i < parked.size(); i++) {
+            CompoundTag e = parked.getCompound(i);
+            if (e.hasUUID(CompanionLogoutPersistence.ENTRY_UUID)
+                    && id.equals(e.getUUID(CompanionLogoutPersistence.ENTRY_UUID))) {
+                continue;
+            }
+            next.add(e.copy());
+        }
+        next.add(entry(id, data.copy()));
+        store.put(player.getUUID(), next);
+    }
+
     public static void restoreParkedCompanions(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
