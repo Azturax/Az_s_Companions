@@ -169,7 +169,7 @@ public final class AiConfig {
                 .defineInRange("chatReactCooldownSeconds",
                         CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS, 5, 600);
         IDLE_CHAT = builder.comment(
-                        "Occasional ambient LLM/scripted lines near the owner.")
+                        "Rare ambient LLM/scripted lines near the owner (default 8–20 minutes, often skipped).")
                 .define("idleChat", true);
         REACTIVE_CHAT = builder.comment(
                         "React to recent-action events (explosion, darkness, crafts, damage, custom). Default true.")

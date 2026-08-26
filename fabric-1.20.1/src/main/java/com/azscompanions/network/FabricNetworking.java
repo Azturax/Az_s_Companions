@@ -9,6 +9,7 @@ import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionGender;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
+import com.azscompanions.entity.FabricCompanionPlayerDataSupport;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.item.FabricCharmData;
 import com.azscompanions.item.FabricCompanionCharmItem;
@@ -84,18 +85,22 @@ public final class FabricNetworking {
                         case "OPEN_STATS" -> openStats(player, companion);
                         case "FOLLOW" -> {
                             companion.setMode(FabricCompanionMode.FOLLOW);
+                            FabricCompanionPlayerDataSupport.save(companion);
                             toastMode(player, companion, "message.azscompanions.mode_follow");
                         }
                         case "STAY" -> {
                             companion.setMode(FabricCompanionMode.STAY);
+                            FabricCompanionPlayerDataSupport.save(companion);
                             toastMode(player, companion, "message.azscompanions.mode_stay");
                         }
                         case "SIT" -> {
                             companion.setMode(FabricCompanionMode.SIT);
+                            FabricCompanionPlayerDataSupport.save(companion);
                             toastMode(player, companion, "message.azscompanions.mode_sit");
                         }
                         case "WANDER" -> {
                             companion.setMode(FabricCompanionMode.WANDER);
+                            FabricCompanionPlayerDataSupport.save(companion);
                             toastMode(player, companion, "message.azscompanions.mode_wander");
                         }
                         case "REMOVE_CHILD" -> {
@@ -198,6 +203,7 @@ public final class FabricNetworking {
                             && (payload.flags() & SettingsPayload.FLAG_NAME) != 0) {
                         com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, companion);
                     }
+                    FabricCompanionPlayerDataSupport.save(companion);
                 });
         });
 
@@ -214,6 +220,7 @@ public final class FabricNetworking {
                     }
                     companion.setContextSkins(
                             payload.sleepingSkin(), payload.bathingSkin(), payload.adventuringSkin());
+                    FabricCompanionPlayerDataSupport.save(companion);
                 });
         });
 
@@ -231,6 +238,7 @@ public final class FabricNetworking {
                     companion.setFollowRadius(CompanionFollowDistances.clampFollowRadius(payload.followRadius()));
                     companion.setPersonalSpace(CompanionFollowDistances.clampPersonalSpace(payload.personalSpace()));
                     companion.setWanderRadius(CompanionFollowDistances.clampWanderRadius(payload.wanderRadius()));
+                    FabricCompanionPlayerDataSupport.save(companion);
                 });
         });
 
@@ -254,6 +262,7 @@ public final class FabricNetworking {
                                     true);
                     companion.setPersona(next);
                     com.azscompanions.entity.FabricCompanionDimensionTravelSupport.rememberIdentity(player, companion);
+                    FabricCompanionPlayerDataSupport.save(companion);
                     player.displayClientMessage(Component.literal(
                             companion.getChatDisplayName() + " — persona "
                                     + (payload.skip() ? "skipped (defaults)" : "saved")), true);

@@ -18,7 +18,9 @@ public final class BuiltinCompanions {
         }
         CompanionDefinition.DialogueSet dialogue = new CompanionDefinition.DialogueSet(
                 List.of("I'm here. What should we do next?", "Hello. I'll stay close.", "Ready when you are."),
-                List.of("The path ahead looks peaceful.", "Take your time. I'll watch our surroundings."),
+                List.of("The path ahead looks peaceful.", "Take your time. I'll watch our surroundings.",
+                        "The wind shifted. Smells like rain.", "Quiet stretch. That's fine with me.",
+                        "That hill looks promising."),
                 List.of("Working on it…", "The crops are ready to harvest."),
                 List.of("Something hostile is nearby!", "Please be careful!"),
                 List.of("I found some useful materials!", "Task complete."),

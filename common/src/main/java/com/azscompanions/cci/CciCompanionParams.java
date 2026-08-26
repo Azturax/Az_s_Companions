@@ -1,6 +1,7 @@
 package com.azscompanions.cci;
 
 import com.azscompanions.entity.CompanionAttitude;
+import com.azscompanions.entity.CompanionCciSummonSupport;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionForm;
 
@@ -127,6 +128,77 @@ public final class CciCompanionParams {
 
     public String skinUsername() {
         return first("skin", "player", "username", "ign");
+    }
+
+    /**
+     * Donor / subscriber username for CCI temporary summons.
+     * Prefers {@code name=}/{@code user=} then skin/username fallbacks.
+     */
+    public String summonDisplayName() {
+        String named = first("name", "displayname", "user", "username", "ign", "skin", "player");
+        return named == null ? "" : named.trim();
+    }
+
+    /** Companion type token ({@code type=}/{@code companion=}/{@code id=}). */
+    public String companionTypeOr(String fallback) {
+        String v = first("type", "companion", "companiontype", "id", "definition");
+        return v == null || v.isBlank() ? fallback : v.trim();
+    }
+
+    /**
+     * Timed-death window for CCI temporary summons. {@code 0} = no expiry.
+     * Unlike {@link #durationSecondsOr(int)} this is not clamped to 5–15 (that's for turn-evil).
+     */
+    public int summonDurationSecondsOr(int fallback) {
+        String v = first("duration", "durationseconds", "expire", "lifetime", "ttl", "seconds", "secs", "time");
+        if (v == null || v.isBlank()) {
+            return CompanionCciSummonSupport.clampDurationSeconds(fallback);
+        }
+        try {
+            return CompanionCciSummonSupport.clampDurationSeconds(Integer.parseInt(v.trim()));
+        } catch (NumberFormatException ex) {
+            return CompanionCciSummonSupport.clampDurationSeconds(fallback);
+        }
+    }
+
+    public Float healthOrNull() {
+        String v = first("health", "hp", "maxhealth", "max_health");
+        if (v == null || v.isBlank() || CompanionCciSummonSupport.isSkipToken(v)) {
+            return null;
+        }
+        try {
+            return CompanionCciSummonSupport.clampHealth(Float.parseFloat(v.trim()));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    public String weaponItem() {
+        return skipOrValue(first("weapon", "sword", "mainhand", "main", "hand"));
+    }
+
+    public String toolItem() {
+        return skipOrValue(first("tool", "pickaxe", "axe", "shovel"));
+    }
+
+    public String shieldItem() {
+        return skipOrValue(first("shield", "offhand", "off"));
+    }
+
+    public String armorSpec() {
+        return skipOrValue(first("armor", "armorset", "armour", "material"));
+    }
+
+    public boolean isTemporarySummon() {
+        return flag("temporary", false) || flag("cci", false) || flag("temp", false)
+                || has("duration") || has("durationseconds") || has("expire") || has("lifetime") || has("ttl");
+    }
+
+    private static String skipOrValue(String v) {
+        if (v == null || CompanionCciSummonSupport.isSkipToken(v)) {
+            return null;
+        }
+        return v.trim();
     }
 
     public String displayName() {

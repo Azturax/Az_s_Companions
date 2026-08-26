@@ -1,16 +1,43 @@
 package com.azscompanions.ai;
 
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * Shared filters / prompts for chat reactions, idle ambient speech, and call-when-away.
  */
 public final class CompanionAiChatSupport {
     public static final double DEFAULT_CHAT_REACT_RANGE = 48.0d;
     public static final int DEFAULT_CHAT_REACT_COOLDOWN_SECONDS = 12;
-    public static final int DEFAULT_IDLE_CHAT_SECONDS_MIN = 75;
-    public static final int DEFAULT_IDLE_CHAT_SECONDS_MAX = 180;
+    /** Rare idle: 8 minutes (9600 ticks). Legacy ~1–3 min configs are remapped here. */
+    public static final int DEFAULT_IDLE_CHAT_SECONDS_MIN = 480;
+    /** Rare idle: 20 minutes (24000 ticks). */
+    public static final int DEFAULT_IDLE_CHAT_SECONDS_MAX = 1200;
+    /** Config max at or below this is the old chatty default (~3 min) and is remapped. */
+    public static final int LEGACY_CHATTY_IDLE_MAX_SECONDS = 180;
+    /** Chance (0–100) that a due idle tick is skipped and a new long interval is scheduled. */
+    public static final int DEFAULT_IDLE_SKIP_PERCENT = 60;
+    /** Per-companion gap after any spoken line before idle chatter (3 min / 3600 ticks). */
+    public static final int DEFAULT_IDLE_SPEAK_COOLDOWN_SECONDS = 180;
+    /** Per-companion gap after any spoken line before event chatter (1.5 min / 1800 ticks). */
+    public static final int DEFAULT_REACTIVE_SPEAK_COOLDOWN_SECONDS = 90;
+    /** Shared per-player gap so only one companion idles at a time (4 min / 4800 ticks). */
+    public static final int DEFAULT_PLAYER_AMBIENT_GAP_SECONDS = 240;
+    /** Shared per-player gap between event lines (2 min / 2400 ticks). */
+    public static final int DEFAULT_REACTIVE_PLAYER_GAP_SECONDS = 120;
+    /** Scripted low-health / inventory / danger lines share this floor (1.5 min). */
+    public static final int DEFAULT_SCRIPTED_SPEAK_COOLDOWN_SECONDS = 90;
+    /** Low-health scripted line interval (2 min / 2400 ticks). Was every 5 seconds. */
+    public static final int LOW_HEALTH_SPEAK_INTERVAL_TICKS = 20 * 120;
+    /** Inventory-full scripted line interval (3 min / 3600 ticks). Was every 10 seconds. */
+    public static final int INVENTORY_FULL_SPEAK_INTERVAL_TICKS = 20 * 180;
+    public static final int MAX_SPOKEN_LINE_CHARS = 140;
     public static final int DEFAULT_CALL_PLAYER_AFTER_SECONDS = 90;
     public static final double DEFAULT_CALL_PLAYER_DISTANCE = 48.0d;
     public static final int DEFAULT_CALL_PLAYER_COOLDOWN_SECONDS = 60;
+
+    private static final ConcurrentHashMap<UUID, PlayerChatGate> PLAYER_GATES = new ConcurrentHashMap<>();
 
     private CompanionAiChatSupport() {
     }
@@ -121,7 +148,8 @@ public final class CompanionAiChatSupport {
 
     public static String idleAmbientPrompt(String ownerName) {
         return "[ambient] Your owner " + ownerName
-                + " is nearby. Say one short wholesome in-character line — no greeting spam.";
+                + " is nearby. One short in-character observation (under 20 words). "
+                + "Do not greet, do not say you're here, do not say let's go. Vary the topic.";
     }
 
     /**
@@ -185,16 +213,27 @@ public final class CompanionAiChatSupport {
     }
 
     public static String fallbackIdleLine(String ownerName) {
+        return fallbackIdleLine(ownerName, null);
+    }
+
+    public static String fallbackIdleLine(String ownerName, UUID playerId) {
         String name = safeName(ownerName);
         String[] lines = {
-                "Hey " + name + "… just checking you're still there.",
-                "Hmm… nice day for an adventure, " + name + ".",
-                "I'm right here if you need me, " + name + ".",
-                "Wonder what we should do next…",
-                name + ", want to explore a bit?"
+                "Clouds look different from down here.",
+                "Wonder if there's a village over that hill…",
+                "I keep spotting little caves. Maybe later.",
+                "The air smells like rain. Or maybe just dirt.",
+                "I've been counting birds. Lost track.",
+                "This biome has a mood, doesn't it?",
+                "Quiet stretch. I'm okay with that.",
+                "If we camp, I want the side facing the dark.",
+                "Don't mind me — just people-watching the wildlife.",
+                "The sky's doing that pretty thing again.",
+                "I packed… wait, did I pack anything?",
+                "Hmm. That tree looks climbable. Not that I will.",
+                name + ", this stretch of trail is nicer than I expected."
         };
-        int idx = Math.floorMod(name.hashCode() ^ (int) (System.currentTimeMillis() / 60_000L), lines.length);
-        return lines[idx];
+        return pickAvoidingLast(lines, playerId);
     }
 
     /** Scripted fallback when reacting to a recent event (LLM off or failed). */
@@ -206,19 +245,23 @@ public final class CompanionAiChatSupport {
         return switch (focus.kind()) {
             case EXPLOSION -> {
                 String[] lines = {
-                        "Whoa! That was loud!",
-                        "Ah! TNT?! Warn me next time, " + name + "!",
-                        "My ears… what exploded?"
+                        "Whoa — that was loud!",
+                        "Ah! Warn me next time, " + name + "!",
+                        "My ears… what exploded?",
+                        "Okay, who brought the boom?",
+                        "I felt that one in my teeth."
                 };
-                yield pick(lines, name, focus);
+                yield pickAvoidingLast(lines, null);
             }
             case DARKNESS -> {
                 String[] lines = {
                         "It's so dark… got a torch, " + name + "?",
-                        name + ", can we place some light? I can barely see.",
-                        "Too dark for me — need a torch!"
+                        name + ", can we place some light?",
+                        "Too dark — I keep imagining eyes.",
+                        "A lantern would be nice about now.",
+                        "I can barely see the path."
                 };
-                yield pick(lines, name, focus);
+                yield pickAvoidingLast(lines, null);
             }
             case ITEM_CRAFT -> {
                 if (focus.itemId() != null) {
@@ -235,11 +278,12 @@ public final class CompanionAiChatSupport {
                 String item = focus.itemId() == null ? "that"
                         : CompanionNotableItemSupport.prettyName(focus.itemId());
                 String[] lines = {
-                        "Ooh, " + item + "! Nice find, " + name + "!",
-                        "You found " + item + "? Neat!",
-                        "Look at that " + item + "!"
+                        "Ooh, " + item + ". That's a keeper.",
+                        "You found " + item + "? Lucky.",
+                        "Look at that " + item + ".",
+                        item + " — didn't expect that today."
                 };
-                yield pick(lines, name, focus);
+                yield pickAvoidingLast(lines, null);
             }
             case CUSTOM -> {
                 CompanionCustomChatEvent ev = CompanionChatEventSupport.findById(
@@ -252,10 +296,26 @@ public final class CompanionAiChatSupport {
                 }
                 yield fallbackIdleLine(name);
             }
-            case DAMAGE -> name + ", are you okay?!";
-            case COMBAT -> "I've got your back, " + name + "!";
-            case EATING -> "Save me a bite?";
-            case SLEEPING -> "Sleep well, " + name + "…";
+            case DAMAGE -> pickAvoidingLast(new String[] {
+                    name + ", are you okay?",
+                    "That looked like it hurt.",
+                    "Easy — I've got you."
+            }, null);
+            case COMBAT -> pickAvoidingLast(new String[] {
+                    "I've got your back!",
+                    "Stay behind me if you need to.",
+                    "Watch the flanks."
+            }, null);
+            case EATING -> pickAvoidingLast(new String[] {
+                    "Save me a bite?",
+                    "That smells better than my rations.",
+                    "Don't forget to share the leftovers."
+            }, null);
+            case SLEEPING -> pickAvoidingLast(new String[] {
+                    "Sleep well… I'll keep an ear out.",
+                    "Rest. I'll be nearby.",
+                    "Night watch is on me."
+            }, null);
             case BLOCK_PLACE, BLOCK_BREAK -> fallbackIdleLine(name);
         };
     }
@@ -264,11 +324,21 @@ public final class CompanionAiChatSupport {
         return ownerName == null || ownerName.isBlank() ? "friend" : ownerName.trim();
     }
 
-    private static String pick(String[] lines, String name, CompanionRecentAction focus) {
-        int salt = name.hashCode()
-                ^ (focus.kind().ordinal() * 31)
-                ^ (focus.itemId() == null ? 0 : focus.itemId().hashCode());
-        return lines[Math.floorMod(salt, lines.length)];
+    private static String pickAvoidingLast(String[] lines, UUID playerId) {
+        if (lines == null || lines.length == 0) {
+            return "";
+        }
+        if (lines.length == 1) {
+            return lines[0];
+        }
+        String last = lastSpokenLine(playerId);
+        IntRandom rng = ThreadLocalRandom.current()::nextInt;
+        int idx = rng.nextInt(lines.length);
+        String pick = lines[idx];
+        if (last != null && last.equals(pick)) {
+            pick = lines[(idx + 1) % lines.length];
+        }
+        return pick;
     }
 
     public static String fallbackCallLine(String ownerName) {
@@ -279,6 +349,115 @@ public final class CompanionAiChatSupport {
     /** True when ambient speech should wait because the companion spoke recently. */
     public static boolean spokeTooRecently(int ticksSinceSpeak, int cooldownSeconds) {
         return ticksSinceSpeak >= 0 && ticksSinceSpeak < Math.max(5, cooldownSeconds) * 20;
+    }
+
+    public static int idleSpeakCooldownSeconds() {
+        return DEFAULT_IDLE_SPEAK_COOLDOWN_SECONDS;
+    }
+
+    public static int reactiveSpeakCooldownSeconds() {
+        return DEFAULT_REACTIVE_SPEAK_COOLDOWN_SECONDS;
+    }
+
+    public static int scriptedSpeakCooldownSeconds() {
+        return DEFAULT_SCRIPTED_SPEAK_COOLDOWN_SECONDS;
+    }
+
+    public static void clearPlayerChatGates() {
+        PLAYER_GATES.clear();
+    }
+
+    public static boolean playerAmbientTooRecent(UUID playerId, long gameTime, boolean reactive) {
+        if (playerId == null) {
+            return false;
+        }
+        PlayerChatGate gate = PLAYER_GATES.get(playerId);
+        if (gate == null) {
+            return false;
+        }
+        int gap = reactive ? DEFAULT_REACTIVE_PLAYER_GAP_SECONDS : DEFAULT_PLAYER_AMBIENT_GAP_SECONDS;
+        synchronized (gate) {
+            return gameTime - gate.lastSpeakTick < (long) Math.max(5, gap) * 20L;
+        }
+    }
+
+    public static void recordAmbientSpeak(UUID playerId, long gameTime, String line) {
+        if (playerId == null) {
+            return;
+        }
+        PlayerChatGate gate = PLAYER_GATES.computeIfAbsent(playerId, id -> new PlayerChatGate());
+        synchronized (gate) {
+            gate.lastSpeakTick = gameTime;
+            if (line != null && !line.isBlank()) {
+                gate.lastLine = line.trim();
+            }
+        }
+    }
+
+    public static boolean isSameAsLastLine(UUID playerId, String line) {
+        if (playerId == null || line == null || line.isBlank()) {
+            return false;
+        }
+        String last = lastSpokenLine(playerId);
+        return last != null && last.equalsIgnoreCase(line.trim());
+    }
+
+    public static String lastSpokenLine(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        PlayerChatGate gate = PLAYER_GATES.get(playerId);
+        if (gate == null) {
+            return null;
+        }
+        synchronized (gate) {
+            return gate.lastLine;
+        }
+    }
+
+    /** First line only, capped — no multi-line dumps in owner chat. */
+    public static String shortenSpokenLine(String text) {
+        if (text == null) {
+            return "";
+        }
+        String t = text.replace('\r', ' ').trim();
+        int nl = t.indexOf('\n');
+        if (nl >= 0) {
+            t = t.substring(0, nl).trim();
+        }
+        if (t.length() > MAX_SPOKEN_LINE_CHARS) {
+            t = t.substring(0, MAX_SPOKEN_LINE_CHARS - 1) + "…";
+        }
+        return t;
+    }
+
+    public static boolean shouldSkipIdleRoll(IntRandom random) {
+        IntRandom rng = random == null ? ThreadLocalRandom.current()::nextInt : random;
+        return rng.nextInt(100) < DEFAULT_IDLE_SKIP_PERCENT;
+    }
+
+    /**
+     * Old chatty configs (~1–3 min max) become the rare 8–20 min range so existing
+     * worlds get fewer messages without requiring a settings reset.
+     */
+    public static int[] effectiveIdleBounds(int minSeconds, int maxSeconds) {
+        int min = clampIdleSeconds(Math.min(minSeconds, maxSeconds));
+        int max = clampIdleSeconds(Math.max(minSeconds, maxSeconds));
+        if (max <= LEGACY_CHATTY_IDLE_MAX_SECONDS) {
+            return new int[] { DEFAULT_IDLE_CHAT_SECONDS_MIN, DEFAULT_IDLE_CHAT_SECONDS_MAX };
+        }
+        return new int[] { min, max };
+    }
+
+    public static int nextRareIdleIntervalSeconds(int minSeconds, int maxSeconds, IntRandom random) {
+        int[] bounds = effectiveIdleBounds(minSeconds, maxSeconds);
+        return nextIdleIntervalSeconds(bounds[0], bounds[1], random);
+    }
+
+    public static int nextIdleDelayTicks(int minSeconds, int maxSeconds, double idleMul, IntRandom random) {
+        double mul = idleMul <= 0.0d ? 1.0d : idleMul;
+        int secs = (int) Math.round(nextRareIdleIntervalSeconds(minSeconds, maxSeconds, random) * mul);
+        return Math.max(40, secs * 20);
     }
 
     public static int clampIdleSeconds(int value) {
@@ -305,6 +484,11 @@ public final class CompanionAiChatSupport {
             return min;
         }
         return min + random.nextInt(max - min + 1);
+    }
+
+    private static final class PlayerChatGate {
+        private long lastSpeakTick;
+        private String lastLine;
     }
 
     /** Minimal RNG bridge so common code stays free of Minecraft types. */

@@ -23,6 +23,14 @@ public final class FabricTeamFightEvents {
             FabricNetworking.sendTeamFightHud(player, session.snapshot().encode());
         });
 
+        ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
+            if (entity instanceof FabricCompanionEntity companion && companion.isFullyInvincible()) {
+                companion.setHealth(companion.getMaxHealth());
+                return false;
+            }
+            return true;
+        });
+
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (entity instanceof FabricCompanionEntity companion) {
                 FabricCompanionDeathPersistenceSupport.persistOnDeath(companion);

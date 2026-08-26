@@ -40,12 +40,16 @@ public final class WigglyDogPerk {
         }
         Wolf dog = findOrCullOwned(player);
         if (dog == null || !dog.isAlive()) {
+            if (com.azscompanions.entity.CompanionSpawnGuardSupport.inLoginGrace(player.tickCount)) {
+                return;
+            }
             dog = spawn(level, player);
             if (dog == null) {
                 return;
             }
         }
         dog.setOwnerUUID(player.getUUID());
+        dog.setInvulnerable(true);
         clearGlow(dog);
         if (SpecialPlayerPerks.isOwnerActivelyFlying(player)) {
             dog.setOrderedToSit(false);
@@ -58,8 +62,7 @@ public final class WigglyDogPerk {
                 dog.setOrderedToSit(!dog.isOrderedToSit());
             }
             if (dog.distanceTo(player) > 24.0d) {
-                dog.teleportTo(player.getX() + 0.6d, player.getY(), player.getZ() + 0.6d);
-                dog.setDeltaMovement(Vec3.ZERO);
+                SpecialPlayerPerks.safeTeleportBeside(dog, player, 2.5d);
                 dog.setOrderedToSit(false);
             }
         }
@@ -152,7 +155,9 @@ public final class WigglyDogPerk {
     }
 
     private static boolean isToggleDog(Wolf wolf) {
-        return wolf.getTags().contains(WigglyDogPerkSupport.ENTITY_TAG);
+        return wolf.getTags().contains(WigglyDogPerkSupport.ENTITY_TAG)
+                || WigglyDogPerkSupport.isToggleDogName(
+                        wolf.getCustomName() != null ? wolf.getCustomName().getString() : null);
     }
 
     private static Wolf spawn(ServerLevel level, ServerPlayer player) {

@@ -39,6 +39,18 @@ public final class CompanionLogoutSupport {
         List<CompanionEntity> roots = new ArrayList<>();
         for (ServerLevel level : server.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
+                if (!(entity instanceof CompanionEntity companion)
+                        || !companion.isAlive()
+                        || !owner.equals(companion.getOwnerUuid())) {
+                    continue;
+                }
+                if (!CompanionLogoutPersistence.shouldParkOnLogout(companion.isCciSummoned())) {
+                    companion.discard();
+                }
+            }
+        }
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof CompanionEntity companion
                         && companion.isAlive()
                         && owner.equals(companion.getOwnerUuid())
@@ -186,6 +198,8 @@ public final class CompanionLogoutSupport {
                 }
             }
         }
+
+        CompanionRecruitment.cullExtraPrimaries(player);
 
         if (remaining.isEmpty()) {
             persistent.remove(CompanionLogoutPersistence.PLAYER_LIST_TAG);

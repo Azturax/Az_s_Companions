@@ -1,6 +1,8 @@
 package com.azscompanions.entity;
 
 import com.azscompanions.config.ServerConfig;
+import com.azscompanions.item.CharmData;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModEntities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -9,8 +11,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class CompanionRecruitment {
@@ -76,6 +83,87 @@ public final class CompanionRecruitment {
         return null;
     }
 
+    /**
+     * First living primary companion for this owner (not a Bit / fight spawn).
+     */
+    @Nullable
+    public static CompanionEntity findAnyPrimary(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return null;
+        }
+        UUID owner = player.getUUID();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(companion.getOwnerUuid())
+                        && !companion.isFightSpawn()) {
+                    return companion;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Discard extra primary companions over {@link ServerConfig#MAX_COMPANIONS_PER_PLAYER}.
+     * Also collapses same-UUID copies. Does not touch Bits / fight spawns except UUID dupes.
+     */
+    public static void cullExtraPrimaries(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        UUID owner = player.getUUID();
+        List<CompanionEntity> primaries = new ArrayList<>();
+        Map<UUID, CompanionEntity> byId = new HashMap<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (!(entity instanceof CompanionEntity companion)
+                        || !companion.isAlive()
+                        || !owner.equals(companion.getOwnerUuid())) {
+                    continue;
+                }
+                CompanionEntity seen = byId.putIfAbsent(companion.getUUID(), companion);
+                if (seen != null && seen != companion) {
+                    companion.discard();
+                    continue;
+                }
+                if (!companion.isFightSpawn()) {
+                    primaries.add(companion);
+                }
+            }
+        }
+        int max = ServerConfig.MAX_COMPANIONS_PER_PLAYER.get();
+        if (primaries.size() <= max) {
+            return;
+        }
+        UUID bound = null;
+        ItemStack charm = findCharm(player);
+        if (charm != null) {
+            bound = CharmData.getBoundUuid(charm);
+        }
+        CompanionEntity keep = CompanionSpawnGuardSupport.pickPrimaryToKeep(
+                primaries, bound, CompanionEntity::getUUID, c -> c.distanceToSqr(player));
+        for (CompanionEntity extra : primaries) {
+            if (extra != keep) {
+                extra.discard();
+            }
+        }
+    }
+
+    @Nullable
+    private static ItemStack findCharm(ServerPlayer player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (CompanionCharmItem.isCharm(stack)) {
+                return stack;
+            }
+        }
+        return null;
+    }
+
     @Nullable
     public static CompanionEntity resolveLeader(ServerPlayer player, CompanionEntity candidate) {
         if (candidate == null || !candidate.isAlive()) {
@@ -117,7 +205,47 @@ public final class CompanionRecruitment {
         companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
         companion.setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
-        level.addFreshEntity(companion);
+        if (!level.addFreshEntity(companion)) {
+            return null;
+        }
+        companion.safeTeleportNear(player.blockPosition());
+        return companion;
+    }
+
+    /**
+     * CCI / streamer temporary companion. Does not count toward maxCompanionsPerPlayer,
+     * is not charm-bound, and does not replace the owner's persistent Kon.
+     */
+    @Nullable
+    public static CompanionEntity spawnCciSummon(ServerPlayer player, String definitionId) {
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        ServerLevel level = player.serverLevel();
+        ResourceLocation id = ResourceLocation.tryParse(definitionId);
+        if (id == null) {
+            id = CompanionRegistry.KON_ID;
+        }
+        CompanionDefinition definition = CompanionRegistry.getOrKon(id);
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level);
+        if (companion == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        companion.moveTo(
+                player.getX() + Math.cos(angle) * 2.0d,
+                player.getY(),
+                player.getZ() + Math.sin(angle) * 2.0d,
+                player.getYRot(), 0);
+        companion.setOwner(player);
+        companion.applyDefinition(definition);
+        companion.setFightSpawn(true);
+        companion.setMode(CompanionMode.FOLLOW);
+        companion.setHomePos(player.blockPosition());
+        companion.setNameTagVisible(true);
+        if (!level.addFreshEntity(companion)) {
+            return null;
+        }
         return companion;
     }
 
@@ -208,6 +336,10 @@ public final class CompanionRecruitment {
 
     @Nullable
     public static CompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {
+        CompanionEntity existing = findOwned(player, boundUuid);
+        if (existing != null && existing.isAlive()) {
+            return existing;
+        }
         ServerLevel level = player.serverLevel();
         CompanionEntity companion = ModEntities.COMPANION.get().create(level);
         if (companion == null) {
@@ -216,9 +348,16 @@ public final class CompanionRecruitment {
         companion.load(stored);
         companion.setUUID(boundUuid);
         companion.setOwner(player);
-        companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
-        companion.setMode(CompanionMode.FOLLOW);
-        level.addFreshEntity(companion);
+        companion.moveTo(player.getX() + 2.5d, player.getY(), player.getZ() + 0.5d, player.getYRot(), 0);
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            companion.setMode(CompanionMode.FOLLOW);
+        }
+        if (!level.addFreshEntity(companion)) {
+            CompanionEntity again = findOwned(player, boundUuid);
+            return again != null && again.isAlive() ? again : null;
+        }
+        companion.safeTeleportNear(player.blockPosition());
+        CompanionPlayerDataSupport.apply(companion);
         return companion;
     }
 
@@ -231,6 +370,10 @@ public final class CompanionRecruitment {
         }
         if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
             return null;
+        }
+        CompanionEntity existingChild = findOwned(player, childUuid);
+        if (existingChild != null && existingChild.isAlive()) {
+            return existingChild;
         }
         ServerLevel level = parent.level() instanceof ServerLevel leaderLevel
                 ? leaderLevel
@@ -249,8 +392,11 @@ public final class CompanionRecruitment {
         child.moveTo(parent.getX() + Math.cos(angle) * dist, parent.getY(),
                 parent.getZ() + Math.sin(angle) * dist, parent.getYRot(), 0);
         child.setHomePos(parent.blockPosition());
-        child.setMode(CompanionMode.FOLLOW);
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            child.setMode(CompanionMode.FOLLOW);
+        }
         level.addFreshEntity(child);
+        CompanionPlayerDataSupport.apply(child);
         return child;
     }
 }

@@ -90,4 +90,16 @@ class WigglyDogPerkSupportTest {
             default -> 9.0d;
         }));
     }
+
+    @Test
+    void ownedWigglyMatchesNameOrTags() {
+        UUID owner = AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID;
+        assertTrue(WigglyDogPerkSupport.looksLikeOwnedWiggly(true, false, null, owner, owner));
+        assertTrue(WigglyDogPerkSupport.looksLikeOwnedWiggly(false, true, "Wiggly", owner, owner));
+        assertTrue(WigglyDogPerkSupport.looksLikeOwnedWiggly(false, false, "Wiggly", owner, owner));
+        assertFalse(WigglyDogPerkSupport.looksLikeOwnedWiggly(false, false, "Wolfy", owner, owner));
+        assertFalse(WigglyDogPerkSupport.looksLikeOwnedWiggly(true, false, "Wiggly", owner, UUID.randomUUID()));
+        assertTrue(WigglyDogPerkSupport.keepScore(true, true, false, 100.0d)
+                < WigglyDogPerkSupport.keepScore(true, false, true, 1.0d));
+    }
 }

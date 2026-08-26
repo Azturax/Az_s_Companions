@@ -1,6 +1,7 @@
 package com.azscompanions.item;
 
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.perk.MisterWigglySidekick;
@@ -99,6 +100,7 @@ public final class CompanionCharmItem extends Item {
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
+            CompanionPlayerDataSupport.apply(created);
             MisterWigglySidekick.ensureFor(created);
             created.sayHello();
             player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_bound"));

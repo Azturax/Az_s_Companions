@@ -27,7 +27,7 @@ public final class VoiceService {
         String name = companion.getChatDisplayName();
         companion.setCustomName(companion.hasCustomName() ? companion.getCustomName() : Component.literal(name));
         if (companion.getOwner() instanceof ServerPlayer owner) {
-            owner.displayClientMessage(Component.literal("<" + name + "> " + line), false);
+            // Overlay + sound only. AI idle/react uses speakLine (chat). Sending both was spam.
             com.azscompanions.network.ModNetworking.sendToPlayer(owner, new CompanionDialoguePacket(
                     companion.getId(),
                     category.name(),

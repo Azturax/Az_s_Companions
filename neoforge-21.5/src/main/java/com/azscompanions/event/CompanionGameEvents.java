@@ -3,6 +3,7 @@ package com.azscompanions.event;
 import com.azscompanions.util.OwnableUuids;
 
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.ai.CompanionSleepInBedGoal;
 import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.perk.SpecialPlayerPerks;
@@ -33,6 +34,9 @@ public final class CompanionGameEvents {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SpecialPlayerPerks.applyPlayerPerks(player);
+            if (player.tickCount % 20 == 0) {
+                CompanionRecruitment.cullExtraPrimaries(player);
+            }
         }
     }
 

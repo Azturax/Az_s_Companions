@@ -136,6 +136,11 @@ public final class CompanionDimensionTravelSupport {
         int ox = (int) Math.round(Math.cos(angle) * ring);
         int oz = (int) Math.round(Math.sin(angle) * ring);
         BlockPos base = player.blockPosition().offset(ox, 0, oz);
+        if (Math.abs(ox) < 2 && Math.abs(oz) < 2) {
+            ox = ox == 0 ? 2 : ox;
+            oz = oz == 0 ? 2 : oz;
+            base = player.blockPosition().offset(ox, 0, oz);
+        }
         ServerLevel level = player.serverLevel();
         if (level.getBlockState(base).isAir() && level.getBlockState(base.below()).isSolid()) {
             return base;

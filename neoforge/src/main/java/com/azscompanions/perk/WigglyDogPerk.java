@@ -1,6 +1,9 @@
 package com.azscompanions.perk;
 
 import com.azscompanions.AzsCompanionsConstants;
+import com.azscompanions.entity.CompanionLogoutPersistence;
+import com.azscompanions.entity.CompanionSafeTeleportSupport;
+import com.azscompanions.entity.CompanionSpawnGuardSupport;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -11,7 +14,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +39,7 @@ public final class WigglyDogPerk {
         if (!WigglyDogPerkSupport.isEligible(player.getUUID())) {
             return;
         }
+        cullAllOwnedWigglyNamed(player);
         // Prefer companion-of-companion sidekick so Mister Wiggly never has two Wigglys.
         if (MisterWigglySidekick.isWigglyOwner(player.getUUID())
                 && MisterWigglySidekick.hasSummonedCompanion(player)) {
@@ -49,12 +52,17 @@ public final class WigglyDogPerk {
         }
         Wolf dog = findOrCullOwned(player);
         if (dog == null || !dog.isAlive()) {
+            if (CompanionSpawnGuardSupport.inLoginGrace(player.tickCount)) {
+                return;
+            }
             dog = spawn(level, player);
             if (dog == null) {
                 return;
             }
         }
+        rememberUuid(player, dog.getUUID());
         dog.setOwnerUUID(player.getUUID());
+        dog.setInvulnerable(true);
         clearGlow(dog);
         if (SpecialPlayerPerks.isOwnerActivelyFlying(player)) {
             dog.setOrderedToSit(false);
@@ -67,8 +75,7 @@ public final class WigglyDogPerk {
                 dog.setOrderedToSit(!dog.isOrderedToSit());
             }
             if (dog.distanceTo(player) > 24.0d) {
-                dog.teleportTo(player.getX() + 0.6d, player.getY(), player.getZ() + 0.6d);
-                dog.setDeltaMovement(Vec3.ZERO);
+                SpecialPlayerPerks.safeTeleportBeside(dog, player, 2.5d);
                 dog.setOrderedToSit(false);
             }
         }
@@ -105,15 +112,10 @@ public final class WigglyDogPerk {
             player.addTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
         } else {
             player.removeTag(WigglyDogPerkSupport.PLAYER_SHOWN_TAG);
-            // Required so default-ON recipients stay dismissed (empty tags ⇒ defaultsVisible).
             player.addTag(WigglyDogPerkSupport.PLAYER_HIDDEN_TAG);
         }
     }
 
-    /**
-     * Server-wide: keep at most one owned toggle dog (closest in the player's dimension
-     * preferred, else any closest). Discard extras so teleport/unload cannot multi-spawn.
-     */
     private static Wolf findOrCullOwned(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
@@ -145,6 +147,55 @@ public final class WigglyDogPerk {
         return keep;
     }
 
+    /** At most one wolf named/tagged Wiggly per owner (toggle + sidekick share the slot). */
+    private static void cullAllOwnedWigglyNamed(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        UUID owner = player.getUUID();
+        boolean preferSidekick = MisterWigglySidekick.isWigglyOwner(owner)
+                && MisterWigglySidekick.hasSummonedCompanion(player);
+        List<Wolf> owned = new ArrayList<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof Wolf wolf && wolf.isAlive()
+                        && isAnyOwnedWiggly(wolf, owner)) {
+                    owned.add(wolf);
+                }
+            }
+        }
+        if (owned.size() <= 1) {
+            return;
+        }
+        ServerLevel playerLevel = (ServerLevel) player.level();
+        Wolf keep = WigglyDogPerkSupport.pickOneToKeep(owned, wolf -> WigglyDogPerkSupport.keepScore(
+                preferSidekick,
+                isSidekick(wolf),
+                isToggleDog(wolf),
+                (wolf.level() == playerLevel ? 0.0d : 1.0e12d) + wolf.distanceToSqr(player)));
+        for (Wolf wolf : owned) {
+            if (wolf != keep) {
+                wolf.discard();
+            }
+        }
+    }
+
+    public static void parkFor(ServerPlayer player) {
+        Wolf dog = findOrCullOwned(player);
+        if (dog != null && dog.isAlive()) {
+            rememberUuid(player, dog.getUUID());
+        }
+        despawnAll(player);
+    }
+
+    private static void rememberUuid(ServerPlayer player, UUID dogUuid) {
+        if (player == null || dogUuid == null) {
+            return;
+        }
+        player.getPersistentData().putUUID(CompanionLogoutPersistence.WIGGLY_ENTITY_UUID, dogUuid);
+    }
+
     private static void despawnAll(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
@@ -168,13 +219,33 @@ public final class WigglyDogPerk {
         return wolf.getOwnerUUID();
     }
 
+    private static boolean isSidekick(Wolf wolf) {
+        return wolf.getPersistentData().getBoolean(MisterWigglySidekick.TAG_SIDEKICK);
+    }
+
     private static boolean isToggleDog(Wolf wolf) {
+        if (isSidekick(wolf)) {
+            return false;
+        }
+        String name = wolf.getCustomName() != null ? wolf.getCustomName().getString() : null;
         return wolf.getPersistentData().getBoolean(WigglyDogPerkSupport.ENTITY_TAG)
-                || wolf.getTags().contains(WigglyDogPerkSupport.ENTITY_TAG);
+                || wolf.getTags().contains(WigglyDogPerkSupport.ENTITY_TAG)
+                || WigglyDogPerkSupport.isToggleDogName(name);
+    }
+
+    private static boolean isAnyOwnedWiggly(Wolf wolf, UUID owner) {
+        UUID wolfOwner = ownerOf(wolf);
+        String name = wolf.getCustomName() != null ? wolf.getCustomName().getString() : null;
+        return WigglyDogPerkSupport.looksLikeOwnedWiggly(
+                wolf.getPersistentData().getBoolean(WigglyDogPerkSupport.ENTITY_TAG)
+                        || wolf.getTags().contains(WigglyDogPerkSupport.ENTITY_TAG),
+                isSidekick(wolf),
+                name,
+                owner,
+                wolfOwner);
     }
 
     private static Wolf spawn(ServerLevel level, ServerPlayer player) {
-        // Refuse if another owned dog already exists (race / same-tick).
         Wolf existing = findOrCullOwned(player);
         if (existing != null && existing.isAlive()) {
             return existing;
@@ -183,7 +254,8 @@ public final class WigglyDogPerk {
         if (wolf == null) {
             return null;
         }
-        wolf.moveTo(player.getX() + 0.8d, player.getY(), player.getZ() + 0.8d,
+        double[] behind = CompanionSafeTeleportSupport.behindOwner(player.getYRot(), 2.5d);
+        wolf.moveTo(player.getX() + behind[0], player.getY(), player.getZ() + behind[1],
                 player.getYRot(), 0.0f);
         wolf.setPersistenceRequired();
         wolf.setTame(true, true);
@@ -191,6 +263,7 @@ public final class WigglyDogPerk {
         wolf.setCustomName(Component.literal(AzsCompanionsConstants.TOGGLE_WIGGLY_DOG_NAME));
         wolf.setCustomNameVisible(true);
         wolf.setOrderedToSit(false);
+        wolf.setInvulnerable(true);
         var nbt = new CompoundTag();
         wolf.saveWithoutId(nbt);
         nbt.putByte("CollarColor", (byte) DyeColor.PINK.getId());
@@ -199,7 +272,10 @@ public final class WigglyDogPerk {
         wolf.getPersistentData().putUUID(WigglyDogPerkSupport.OWNER_TAG, player.getUUID());
         wolf.addTag(WigglyDogPerkSupport.ENTITY_TAG);
         clearGlow(wolf);
-        level.addFreshEntity(wolf);
+        if (!level.addFreshEntity(wolf)) {
+            return findOrCullOwned(player);
+        }
+        rememberUuid(player, wolf.getUUID());
         return wolf;
     }
 

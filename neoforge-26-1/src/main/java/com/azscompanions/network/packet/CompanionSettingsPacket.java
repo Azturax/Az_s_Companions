@@ -4,6 +4,7 @@ import com.azscompanions.AzsCompanions;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
 import com.azscompanions.entity.CompanionGender;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -159,6 +160,7 @@ public record CompanionSettingsPacket(
             if ((packet.flags() & FLAG_FORM) != 0 && (packet.flags() & FLAG_NAME) != 0) {
                 com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, companion);
             }
+            CompanionPlayerDataSupport.save(companion);
         });
     }
 }

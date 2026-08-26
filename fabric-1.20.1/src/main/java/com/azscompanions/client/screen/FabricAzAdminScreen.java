@@ -317,9 +317,9 @@ public final class FabricAzAdminScreen extends Screen {
         return "Use server LLM: " + (on ? "ON" : "OFF");
     }
 
-    /** Maps to config {@code idleChat} — ambient speech every ~90–240s. */
+    /** Maps to config {@code idleChat} — rare ambient speech (8–20 minutes, often skipped). */
     private static String idleChatLabel(boolean on) {
-        return "Idle chat: " + (on ? "ON" : "OFF");
+        return "Idle chat: " + (on ? "ON (rare)" : "OFF");
     }
 
     private static String reactiveChatLabel(boolean on) {

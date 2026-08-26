@@ -69,6 +69,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -215,6 +216,19 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
     private UUID leaderUuid;
     /** Team-fight or Bit spawn; excluded from maxCompanionsPerPlayer. */
     private boolean fightSpawn;
+    /** CCI/stream temporary summon — expires and is never the player's charm companion. */
+    private boolean cciSummoned;
+    private long cciExpireAtGameTime;
+    private float cciMaxHealth;
+    private boolean applyingPlayerPersistentData;
+
+    void beginApplyingPlayerPersistentData() {
+        applyingPlayerPersistentData = true;
+    }
+
+    void endApplyingPlayerPersistentData() {
+        applyingPlayerPersistentData = false;
+    }
     private int nextIdleChatTick;
     private int ownerAwayTicks;
     private int lastCallPlayerTick = Integer.MIN_VALUE / 4;
@@ -250,6 +264,7 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         this.setPathfindingMalus(PathType.WATER, 0.0f);
         this.setPathfindingMalus(PathType.WATER_BORDER, 0.0f);
         this.setCanPickUpLoot(true);
+        inventory.setPersistenceHook(() -> CompanionPlayerDataSupport.save(this));
     }
 
     @Override
@@ -383,6 +398,8 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             if (tickCount % 20 == 0) {
                 ejectForbiddenCharm();
             }
+            tickCciSummonExpiry(serverLevel);
+            maintainInvincibility();
         }
     }
 
@@ -522,7 +539,9 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
                 a -> com.azscompanions.ai.CompanionChatEventSupport.allowReactiveAction(settings, a);
         boolean hasReactive = settings.reactiveChat()
                 && CompanionRecentActionMemory.hasReactive(owner.getUUID(), gameTime, allowReactive);
-        int speakCoolSec = hasReactive ? 25 : 45;
+        int speakCoolSec = hasReactive
+                ? CompanionAiChatSupport.reactiveSpeakCooldownSeconds()
+                : CompanionAiChatSupport.idleSpeakCooldownSeconds();
         if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, speakCoolSec)) {
             return;
         }
@@ -571,28 +590,45 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         if (dist > settings.chatReactRange()) {
             return;
         }
-        CompanionRecentAction focus = hasReactive
-                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime, allowReactive).orElse(null)
-                : null;
-        boolean reactiveNow = focus != null;
+        boolean reactiveNow = hasReactive;
         if (!reactiveNow) {
             if (nextIdleChatTick <= 0) {
-                int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
-                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
-                nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
                 return;
             }
             if (tickCount < nextIdleChatTick) {
                 return;
             }
+            if (CompanionAiChatSupport.shouldSkipIdleRoll(random::nextInt)) {
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
+                return;
+            }
         }
-        int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
-                settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
-        nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+        if (CompanionAiChatSupport.playerAmbientTooRecent(owner.getUUID(), gameTime, reactiveNow)) {
+            if (!reactiveNow) {
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
+            }
+            return;
+        }
+        CompanionRecentAction focus = hasReactive
+                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime, allowReactive).orElse(null)
+                : null;
+        reactiveNow = focus != null;
+        if (hasReactive && focus == null) {
+            return;
+        }
+        if (!reactiveNow && !settings.idleChat()) {
+            return;
+        }
+        nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
         var recent = CompanionRecentActionMemory.peek(owner.getUUID(), gameTime);
         String fallback = focus != null
                 ? CompanionAiChatSupport.fallbackReactiveLine(ownerName, focus)
-                : CompanionAiChatSupport.fallbackIdleLine(ownerName);
+                : CompanionAiChatSupport.fallbackIdleLine(ownerName, owner.getUUID());
         if (!llmOn) {
             speakLine(fallback);
             return;
@@ -817,11 +853,45 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     @Override
     public void remove(RemovalReason reason) {
+        if (isFullyInvincible() && reason == RemovalReason.KILLED) {
+            setHealth(getMaxHealth());
+            return;
+        }
         if (!level().isClientSide) {
+            CompanionPlayerDataSupport.save(this);
             MisterWigglySidekick.despawnFor(this);
             CompanionChunkTickets.release(this);
         }
         super.remove(reason);
+    }
+
+    @Override
+    protected void onBelowWorld() {
+        Player owner = getOwner();
+        if (owner != null) {
+            safeTeleportNear(owner.blockPosition());
+            setHealth(getMaxHealth());
+            return;
+        }
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return;
+        }
+        super.onBelowWorld();
+    }
+
+    @Override
+    public boolean fireImmune() {
+        return isFullyInvincible() || super.fireImmune();
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return;
+        }
+        super.die(source);
     }
 
     /** Allow following the owner through vanilla and modded dimensions. */
@@ -869,14 +939,14 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     private void tickSurvival() {
         if (getHealth() / getMaxHealth() <= ServerConfig.LOW_HEALTH_RETREAT_RATIO.get()) {
-            if (tickCount % 100 == 0) {
+            if (tickCount % CompanionAiChatSupport.LOW_HEALTH_SPEAK_INTERVAL_TICKS == 0) {
                 speak(DialogueCategory.LOW_HEALTH);
             }
             if (CommonConfig.ENABLE_HEALING_SYSTEM.get()) {
                 tryEatFood();
             }
         }
-        if (inventory.isFull() && tickCount % 200 == 0) {
+        if (inventory.isFull() && tickCount % CompanionAiChatSupport.INVENTORY_FULL_SPEAK_INTERVAL_TICKS == 0) {
             speak(DialogueCategory.INVENTORY_FULL);
         }
     }
@@ -898,19 +968,92 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         if (mode == CompanionMode.STAY || mode == CompanionMode.SIT || isSitting()) {
             return;
         }
-        // Keep personal space — land in the preferred follow ring, not on the owner's feet.
-        int ring = (int) Math.round(CompanionFollowDistances.preferredDistance(getPersonalSpace()));
-        for (int i = 0; i < 12; i++) {
-            double angle = random.nextDouble() * Math.PI * 2.0d;
-            int ox = (int) Math.round(Math.cos(angle) * ring);
-            int oz = (int) Math.round(Math.sin(angle) * ring);
-            BlockPos candidate = target.offset(ox, 0, oz);
-            if (level().getBlockState(candidate).isAir() && level().getBlockState(candidate.below()).isSolid()) {
-                teleportTo(candidate.getX() + 0.5, candidate.getY(), candidate.getZ() + 0.5);
+        double preferred = CompanionFollowDistances.preferredDistance(getPersonalSpace());
+        for (int[] off : CompanionSafeTeleportSupport.horizontalOffsets(preferred)) {
+            for (int dy : CompanionSafeTeleportSupport.Y_OFFSETS) {
+                BlockPos candidate = target.offset(off[0], dy, off[1]);
+                if (isSafeTeleportStand(candidate)) {
+                    finishSafeTeleport(candidate.getX() + 0.5d, candidate.getY(), candidate.getZ() + 0.5d);
+                    return;
+                }
+            }
+        }
+        Player owner = getOwner();
+        float yaw = owner != null ? owner.getYRot() : getYRot();
+        double[] behind = CompanionSafeTeleportSupport.behindOwner(yaw, Math.max(2.5d, preferred));
+        BlockPos fallback = target.offset(
+                (int) Math.round(behind[0]), 0, (int) Math.round(behind[1]));
+        for (int dy : CompanionSafeTeleportSupport.Y_OFFSETS) {
+            BlockPos candidate = fallback.offset(0, dy, 0);
+            if (isSafeTeleportStand(candidate)) {
+                finishSafeTeleport(candidate.getX() + 0.5d, candidate.getY(), candidate.getZ() + 0.5d);
                 return;
             }
         }
-        teleportTo(target.getX() + ring + 0.5, target.getY(), target.getZ() + 0.5);
+        finishSafeTeleport(fallback.getX() + 0.5d, fallback.getY(), fallback.getZ() + 0.5d);
+    }
+
+    private boolean isSafeTeleportStand(BlockPos pos) {
+        var feet = level().getBlockState(pos);
+        var head = level().getBlockState(pos.above());
+        var below = level().getBlockState(pos.below());
+        if (!below.isSolid()) {
+            return false;
+        }
+        if (!feet.getCollisionShape(level(), pos).isEmpty()) {
+            return false;
+        }
+        if (!head.getCollisionShape(level(), pos.above()).isEmpty()) {
+            return false;
+        }
+        if (!feet.getFluidState().isEmpty() && feet.getFluidState().is(FluidTags.LAVA)) {
+            return false;
+        }
+        Player owner = getOwner();
+        return owner == null || !pos.equals(owner.blockPosition());
+    }
+
+    private void finishSafeTeleport(double x, double y, double z) {
+        teleportTo(x, y, z);
+        setDeltaMovement(Vec3.ZERO);
+        fallDistance = 0.0f;
+        invulnerableTime = Math.max(invulnerableTime, CompanionSafeTeleportSupport.POST_TELEPORT_INVULN_TICKS);
+        if (isFullyInvincible()) {
+            setInvulnerable(true);
+            setHealth(getMaxHealth());
+        }
+    }
+
+    public boolean isFullyInvincible() {
+        return CompanionInvincibilitySupport.isFullyInvincible(
+                isKonNamed(),
+                isChildCompanion(),
+                getChatDisplayName(),
+                entityData.get(DATA_DEFINITION),
+                isCciSummoned());
+    }
+
+    @Override
+    public void setHealth(float health) {
+        if (isFullyInvincible()
+                && CompanionInvincibilitySupport.shouldRejectHealthDrop(true, getHealth(), health)) {
+            super.setHealth(getMaxHealth());
+            return;
+        }
+        super.setHealth(health);
+    }
+
+    private void maintainInvincibility() {
+        if (!isFullyInvincible()) {
+            return;
+        }
+        setInvulnerable(true);
+        if (getHealth() < getMaxHealth()) {
+            setHealth(getMaxHealth());
+        }
+        if (isOnFire()) {
+            clearFire();
+        }
     }
 
     @Override
@@ -1209,6 +1352,9 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     @Override
     public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
+        if (isFullyInvincible()) {
+            return true;
+        }
         if (CompanionHazardImmunity.ignores(source.typeHolder().unwrapKey()
                 .map(key -> key.location().getPath())
                 .orElse(""))) {
@@ -1219,6 +1365,10 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return false;
+        }
         if (source.getEntity() instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
             return false;
         }
@@ -1390,9 +1540,20 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public void speak(DialogueCategory category) {
+        if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(
+                tickCount - lastSpeakTick, CompanionAiChatSupport.scriptedSpeakCooldownSeconds())) {
+            return;
+        }
         CompanionDefinition definition = getDefinition();
         definition.dialogue().pick(category.lines(definition.dialogue()), random)
-                .ifPresent(line -> VoiceService.get().speak(this, category, line));
+                .ifPresent(line -> {
+                    lastSpeakTick = tickCount;
+                    if (getOwner() instanceof ServerPlayer owner) {
+                        long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
+                        CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, line);
+                    }
+                    VoiceService.get().speak(this, category, line);
+                });
     }
 
     /** Display name used in chat tags (custom rename, else definition name). */
@@ -1416,8 +1577,17 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         if (text == null || text.isBlank()) {
             return;
         }
-        lastSpeakTick = tickCount;
+        text = CompanionAiChatSupport.shortenSpokenLine(text);
+        if (text.isBlank()) {
+            return;
+        }
         if (getOwner() instanceof ServerPlayer owner) {
+            if (CompanionAiChatSupport.isSameAsLastLine(owner.getUUID(), text)) {
+                return;
+            }
+            lastSpeakTick = tickCount;
+            long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
+            CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
             owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
         }
     }
@@ -1537,6 +1707,29 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     public void setFightSpawn(boolean value) {
         this.fightSpawn = value;
+    }
+
+    public boolean isCciSummoned() {
+        return cciSummoned;
+    }
+
+    public void markCciSummoned(long expireAtGameTime) {
+        this.cciSummoned = true;
+        this.fightSpawn = true;
+        this.cciExpireAtGameTime = expireAtGameTime;
+        setInvulnerable(false);
+    }
+
+    public void setCciMaxHealth(float health) {
+        this.cciMaxHealth = health;
+    }
+
+    private void tickCciSummonExpiry(ServerLevel serverLevel) {
+        if (!CompanionCciSummonSupport.shouldExpire(cciSummoned, cciExpireAtGameTime, serverLevel.getGameTime())) {
+            return;
+        }
+        setInvulnerable(false);
+        hurt(damageSources().genericKill(), Float.MAX_VALUE);
     }
 
     @Nullable
@@ -1762,13 +1955,18 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
 
     public void setMode(CompanionMode mode) {
         entityData.set(DATA_MODE, mode.getSerializedName());
-        entityData.set(DATA_SITTING, mode == CompanionMode.SIT || mode == CompanionMode.STAY);
+        syncSittingFromMode();
         if (mode != CompanionMode.TASK) {
             taskQueue.cancelActive("mode_changed");
         }
         if (mode == CompanionMode.FOLLOW || mode == CompanionMode.WANDER) {
             getNavigation().stop();
         }
+    }
+
+    public void syncSittingFromMode() {
+        CompanionMode mode = getMode();
+        entityData.set(DATA_SITTING, mode == CompanionMode.SIT || mode == CompanionMode.STAY);
     }
 
     public boolean isSitting() {
@@ -2326,6 +2524,11 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             NbtUuids.put(tag, "LeaderUuid", leaderUuid);
         }
         tag.putBoolean("FightSpawn", fightSpawn);
+        tag.putBoolean(CompanionCciSummonSupport.NBT_SUMMONED, cciSummoned);
+        tag.putLong(CompanionCciSummonSupport.NBT_EXPIRE_AT, cciExpireAtGameTime);
+        if (cciMaxHealth > 0.0f) {
+            tag.putFloat(CompanionCciSummonSupport.NBT_MAX_HEALTH, cciMaxHealth);
+        }
         tag.putString("Definition", entityData.get(DATA_DEFINITION));
         tag.putString("Mode", entityData.get(DATA_MODE));
         tag.putString("VoiceProfile", voiceProfile);
@@ -2406,11 +2609,21 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         }
         leaderUuid = NbtUuids.getOrNull(tag, "LeaderUuid");
         fightSpawn = tag.getBooleanOr("FightSpawn", false);
+        cciSummoned = tag.getBooleanOr(CompanionCciSummonSupport.NBT_SUMMONED, false);
+        cciExpireAtGameTime = tag.getLongOr(CompanionCciSummonSupport.NBT_EXPIRE_AT, 0L);
+        cciMaxHealth = tag.getFloatOr(CompanionCciSummonSupport.NBT_MAX_HEALTH, 0.0f);
+        if (cciSummoned && cciMaxHealth > 0.0f && maxHealth != null) {
+            maxHealth.setBaseValue(cciMaxHealth);
+            if (getHealth() > cciMaxHealth) {
+                setHealth(cciMaxHealth);
+            }
+        }
         if (tag.contains("Definition")) {
             entityData.set(DATA_DEFINITION, tag.getStringOr("Definition", ""));
         }
         if (tag.contains("Mode")) {
             entityData.set(DATA_MODE, tag.getStringOr("Mode", ""));
+            syncSittingFromMode();
         }
         voiceProfile = tag.getStringOr("VoiceProfile", "");
         if (tag.contains("SkinPath")) {
@@ -2557,6 +2770,9 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
                     .orElse(ItemStack.EMPTY);
         } else {
             offeredFlower = ItemStack.EMPTY;
+        }
+        if (!level().isClientSide && getOwnerUuid() != null && !applyingPlayerPersistentData) {
+            CompanionPlayerDataSupport.apply(this);
         }
     }
 

@@ -26,6 +26,23 @@ public final class CompanionLogoutPersistence {
      */
     public static final String CHARM_LOGOUT_PARKED = "LogoutParked";
 
+    /**
+     * Player persistent-data UUID of the owned toggle Wiggly (prevents login tick from
+     * summoning a second dog while the original chunk is still loading).
+     */
+    public static final String WIGGLY_ENTITY_UUID = "azscompanions.WigglyEntityUuid";
+
+    /** Parked toggle-Wiggly snapshot list (same shape as {@link #PLAYER_LIST_TAG}). */
+    public static final String WIGGLY_LIST_TAG = "azscompanions.LogoutWiggly";
+
+    /**
+     * CCI temporary summons are discarded on logout, never written to charm or
+     * {@link #PLAYER_LIST_TAG}. Charm companions always park.
+     */
+    public static boolean shouldParkOnLogout(boolean cciSummoned) {
+        return CompanionCciSummonSupport.shouldParkOnLogout(cciSummoned);
+    }
+
     private CompanionLogoutPersistence() {
     }
 }

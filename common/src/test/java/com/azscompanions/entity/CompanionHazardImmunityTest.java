@@ -14,6 +14,13 @@ final class CompanionHazardImmunityTest {
         assertTrue(CompanionHazardImmunity.ignores("drown"));
         assertTrue(CompanionHazardImmunity.ignores("in_wall"));
         assertTrue(CompanionHazardImmunity.ignores("campfire"));
+        assertTrue(CompanionHazardImmunity.ignores("lava"));
+        assertTrue(CompanionHazardImmunity.ignores("in_fire"));
+        assertTrue(CompanionHazardImmunity.ignores("on_fire"));
+        assertTrue(CompanionHazardImmunity.ignores("hot_floor"));
+        assertTrue(CompanionHazardImmunity.ignores("freeze"));
+        assertTrue(CompanionHazardImmunity.ignores("cramming"));
+        assertTrue(CompanionHazardImmunity.ignores("out_of_world"));
     }
 
     @Test
@@ -22,6 +29,7 @@ final class CompanionHazardImmunityTest {
         assertFalse(CompanionHazardImmunity.ignores("mob_attack"));
         assertFalse(CompanionHazardImmunity.ignores("player_attack"));
         assertFalse(CompanionHazardImmunity.ignores("arrow"));
-        assertFalse(CompanionHazardImmunity.ignores("lava"));
+        assertFalse(CompanionHazardImmunity.ignores("magic"));
+        assertFalse(CompanionHazardImmunity.ignores("player_explosion"));
     }
 }

@@ -75,6 +75,7 @@ public final class MisterWigglySidekick {
         Wolf existing = findOrCullSidekick(level, companion);
         if (existing != null && existing.isAlive()) {
             existing.setOrderedToSit(false);
+            existing.setInvulnerable(true);
             syncScale(existing, companion);
             return;
         }
@@ -172,10 +173,13 @@ public final class MisterWigglySidekick {
         if (wolf == null) {
             return;
         }
-        wolf.moveTo(companion.getX() + 0.8d, companion.getY(), companion.getZ() + 0.8d,
+        double[] behind = com.azscompanions.entity.CompanionSafeTeleportSupport.behindOwner(
+                companion.getYRot(), 2.5d);
+        wolf.moveTo(companion.getX() + behind[0], companion.getY(), companion.getZ() + behind[1],
                 companion.getYRot(), 0.0f);
         wolf.setPersistenceRequired();
         wolf.setTame(true, true);
+        wolf.setInvulnerable(true);
         if (companion.getOwner() instanceof ServerPlayer player) {
             wolf.setOwnerUUID(player.getUUID());
         } else {
@@ -242,7 +246,7 @@ public final class MisterWigglySidekick {
                 recalc = 10;
                 double dist = wolf.distanceTo(target);
                 if (dist > 24.0d) {
-                    wolf.teleportTo(target.getX(), target.getY(), target.getZ());
+                    SpecialPlayerPerks.safeTeleportBeside(wolf, target, 2.5d);
                 } else {
                     wolf.getNavigation().moveTo(target, 1.15d);
                 }

@@ -317,16 +317,16 @@ public final class CompanionRecentActionMemory {
 
     public static long cooldownTicks(CompanionRecentActionKind kind) {
         return switch (kind) {
-            case EXPLOSION -> 20L * 45L;
-            case DARKNESS -> 20L * 90L;
-            case ITEM_CRAFT -> 20L * 20L;
-            case CRAFT_READY -> 20L * 45L;
+            case EXPLOSION -> 20L * 180L;
+            case DARKNESS -> 20L * 300L;
+            case ITEM_CRAFT -> 20L * 180L;
+            case CRAFT_READY -> 20L * 240L;
             case ITEM_FIND -> ITEM_FIND_COOLDOWN_TICKS;
-            case CUSTOM -> 20L * 60L;
-            case DAMAGE, COMBAT -> 20L * 35L;
-            case EATING -> 20L * 60L;
-            case SLEEPING -> 20L * 90L;
-            case BLOCK_PLACE, BLOCK_BREAK -> 20L * 40L;
+            case CUSTOM -> 20L * 180L;
+            case DAMAGE, COMBAT -> 20L * 180L;
+            case EATING -> 20L * 300L;
+            case SLEEPING -> 20L * 300L;
+            case BLOCK_PLACE, BLOCK_BREAK -> 20L * 240L;
         };
     }
 

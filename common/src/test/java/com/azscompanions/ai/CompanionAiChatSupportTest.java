@@ -42,6 +42,45 @@ class CompanionAiChatSupportTest {
     }
 
     @Test
+    void legacyChattyIdleBoundsRemapToRare() {
+        int[] bounds = CompanionAiChatSupport.effectiveIdleBounds(75, 180);
+        assertEquals(CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MIN, bounds[0]);
+        assertEquals(CompanionAiChatSupport.DEFAULT_IDLE_CHAT_SECONDS_MAX, bounds[1]);
+        Random r = new Random(2L);
+        for (int i = 0; i < 20; i++) {
+            int v = CompanionAiChatSupport.nextRareIdleIntervalSeconds(75, 180, r::nextInt);
+            assertTrue(v >= 480 && v <= 1200);
+        }
+        int ticks = CompanionAiChatSupport.nextIdleDelayTicks(75, 180, 1.0d, r::nextInt);
+        assertTrue(ticks >= 480 * 20 && ticks <= 1200 * 20);
+    }
+
+    @Test
+    void playerGateSerializesCompanionsAndAvoidsRepeat() {
+        java.util.UUID player = java.util.UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        CompanionAiChatSupport.clearPlayerChatGates();
+        assertFalse(CompanionAiChatSupport.playerAmbientTooRecent(player, 1000L, false));
+        CompanionAiChatSupport.recordAmbientSpeak(player, 1000L, "Quiet stretch. I'm okay with that.");
+        assertTrue(CompanionAiChatSupport.playerAmbientTooRecent(player, 1000L + 20L, false));
+        assertTrue(CompanionAiChatSupport.playerAmbientTooRecent(
+                player, 1000L + CompanionAiChatSupport.DEFAULT_PLAYER_AMBIENT_GAP_SECONDS * 20L - 1L, false));
+        assertFalse(CompanionAiChatSupport.playerAmbientTooRecent(
+                player, 1000L + CompanionAiChatSupport.DEFAULT_PLAYER_AMBIENT_GAP_SECONDS * 20L, false));
+        assertTrue(CompanionAiChatSupport.isSameAsLastLine(player, "Quiet stretch. I'm okay with that."));
+        assertFalse(CompanionAiChatSupport.isSameAsLastLine(player, "Different line."));
+        CompanionAiChatSupport.clearPlayerChatGates();
+    }
+
+    @Test
+    void shortenSpokenLineDropsExtraLines() {
+        assertEquals("Just this.", CompanionAiChatSupport.shortenSpokenLine("Just this.\nAnd more.\nEven more."));
+        String longLine = "x".repeat(200);
+        String shortened = CompanionAiChatSupport.shortenSpokenLine(longLine);
+        assertEquals(CompanionAiChatSupport.MAX_SPOKEN_LINE_CHARS, shortened.length());
+        assertTrue(shortened.endsWith("…"));
+    }
+
+    @Test
     void configRoundTripIncludesChatKeys() {
         CompanionAiSettings s = new CompanionAiSettings()
                 .setChatListenMode(ChatListenMode.PLAYER)
@@ -83,8 +122,8 @@ class CompanionAiChatSupportTest {
     @Test
     void idleChatDefaultsOn() {
         assertTrue(new CompanionAiSettings().idleChat());
-        assertEquals(75, new CompanionAiSettings().idleChatSecondsMin());
-        assertEquals(180, new CompanionAiSettings().idleChatSecondsMax());
+        assertEquals(480, new CompanionAiSettings().idleChatSecondsMin());
+        assertEquals(1200, new CompanionAiSettings().idleChatSecondsMax());
         assertEquals(12, new CompanionAiSettings().chatReactCooldownSeconds());
         assertEquals(2, new CompanionAiSettings().maxParallelRequests());
         assertEquals(8, new CompanionAiSettings().connectTimeoutSeconds());

@@ -33,10 +33,12 @@ public final class CompanionDeathPersistenceSupport {
 
         if (companion.isChildCompanion()) {
             persistBitToParent(companion, serverLevel);
+            CompanionPlayerDataSupport.save(companion);
             return;
         }
 
         persistParentToCharm(companion, serverLevel);
+        CompanionPlayerDataSupport.save(companion);
     }
 
     private static void persistBitToParent(CompanionEntity bit, ServerLevel level) {

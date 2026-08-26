@@ -9,6 +9,6 @@ public final class CompanionDeathPersistenceSupport {
     }
 
     public static void persistOnDeath(CompanionEntity companion) {
-        // Inventory kept by CompanionEntity.dropEquipment override when keepInventoryOnDeath is true.
+        CompanionPlayerDataSupport.save(companion);
     }
 }

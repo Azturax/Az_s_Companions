@@ -27,6 +27,29 @@ public final class FabricCompanionInventory extends SimpleContainer {
         super(TOTAL_SIZE);
     }
 
+    private Runnable persistenceHook;
+    private int suppressPersistence;
+
+    public void setPersistenceHook(Runnable hook) {
+        this.persistenceHook = hook;
+    }
+
+    public void beginPersistentLoad() {
+        suppressPersistence++;
+    }
+
+    public void endPersistentLoad() {
+        suppressPersistence = Math.max(0, suppressPersistence - 1);
+    }
+
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (suppressPersistence == 0 && persistenceHook != null) {
+            persistenceHook.run();
+        }
+    }
+
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
         return !FabricCompanionCharmItem.isCharm(stack);
@@ -95,13 +118,18 @@ public final class FabricCompanionInventory extends SimpleContainer {
     }
 
     public void fromTag(ListTag list, HolderLookup.Provider provider) {
-        clearContent();
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag slotTag = list.getCompound(i);
-            int slot = slotTag.getInt("Slot");
-            if (slot >= 0 && slot < getContainerSize()) {
-                setItem(slot, ItemStack.of(slotTag));
+        beginPersistentLoad();
+        try {
+            clearContent();
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag slotTag = list.getCompound(i);
+                int slot = slotTag.getInt("Slot");
+                if (slot >= 0 && slot < getContainerSize()) {
+                    setItem(slot, ItemStack.of(slotTag));
+                }
             }
+        } finally {
+            endPersistentLoad();
         }
     }
 }

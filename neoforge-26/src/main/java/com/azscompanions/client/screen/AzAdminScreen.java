@@ -317,7 +317,7 @@ public final class AzAdminScreen extends Screen {
     }
 
     private static String idleChatLabel(boolean on) {
-        return "Idle chat: " + (on ? "ON" : "OFF");
+        return "Idle chat: " + (on ? "ON (rare)" : "OFF");
     }
 
     private static String reactiveChatLabel(boolean on) {

@@ -1,6 +1,7 @@
 package com.azscompanions.item;
 
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.CompanionRegistry;
 import com.azscompanions.perk.MisterWigglySidekick;
@@ -105,10 +106,20 @@ public final class CompanionCharmItem extends Item {
             }
         }
 
-        // Last resort: recruit replacement and rebind (new companion → persona onboarding OK).
+        // Last resort: if a primary already exists (unloaded UUID mismatch), rebind instead of cloning.
+        CompanionEntity existing = CompanionRecruitment.findAnyPrimary(player);
+        if (existing != null) {
+            CharmData.bind(stack, existing.getUUID());
+            MisterWigglySidekick.ensureFor(existing);
+            existing.sayHello();
+            player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+            com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, existing);
+            return;
+        }
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
+            CompanionPlayerDataSupport.apply(created);
             MisterWigglySidekick.ensureFor(created);
             created.sayHello();
             player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);

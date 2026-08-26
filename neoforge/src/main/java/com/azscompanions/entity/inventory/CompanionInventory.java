@@ -30,8 +30,30 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
     public static final int HOTBAR_EXTRA_SLOTS = 4;
     public static final int TOTAL_SIZE = HOTBAR_EXTRA_START + HOTBAR_EXTRA_SLOTS;
 
+    private Runnable persistenceHook;
+    private int suppressPersistence;
+
     public CompanionInventory() {
         super(TOTAL_SIZE);
+    }
+
+    public void setPersistenceHook(Runnable hook) {
+        this.persistenceHook = hook;
+    }
+
+    public void beginPersistentLoad() {
+        suppressPersistence++;
+    }
+
+    public void endPersistentLoad() {
+        suppressPersistence = Math.max(0, suppressPersistence - 1);
+    }
+
+    @Override
+    protected void onContentsChanged(int slot) {
+        if (suppressPersistence == 0 && persistenceHook != null) {
+            persistenceHook.run();
+        }
     }
 
     @Override
@@ -153,6 +175,15 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
     }
 
     public void load(CompoundTag tag, HolderLookup.Provider provider) {
+        beginPersistentLoad();
+        try {
+            loadInternal(tag, provider);
+        } finally {
+            endPersistentLoad();
+        }
+    }
+
+    private void loadInternal(CompoundTag tag, HolderLookup.Provider provider) {
         clearContent();
         ListTag list = tag.getList("Items", CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {

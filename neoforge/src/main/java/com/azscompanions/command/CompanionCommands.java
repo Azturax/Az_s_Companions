@@ -58,6 +58,7 @@ public final class CompanionCommands {
                         .executes(ctx -> recruit(ctx.getSource(), CompanionRegistry.KON_ID.toString()))
                         .then(Commands.argument("id", StringArgumentType.string())
                                 .executes(ctx -> recruit(ctx.getSource(), StringArgumentType.getString(ctx, "id")))))
+                .then(CciSummonCommand.buildBranch())
                 .then(Commands.literal("home")
                         .executes(ctx -> {
                             ServerPlayer player = ctx.getSource().getPlayerOrException();

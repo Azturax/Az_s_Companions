@@ -2,6 +2,7 @@ package com.azscompanions.item;
 
 import com.azscompanions.entity.FabricCompanionDimensionTravelSupport;
 import com.azscompanions.entity.FabricCompanionEntity;
+import com.azscompanions.entity.FabricCompanionPlayerDataSupport;
 import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.FabricCompanionRegistry;
 import com.azscompanions.registry.FabricModItems;
@@ -92,9 +93,18 @@ public final class FabricCompanionCharmItem extends Item {
             }
         }
 
+        FabricCompanionEntity existingPrimary = FabricCompanionRecruitment.findAnyPrimary(player);
+        if (existingPrimary != null) {
+            FabricCharmData.bind(stack, existingPrimary.getUUID());
+            existingPrimary.sayHello();
+            player.displayClientMessage(Component.translatable("message.azscompanions.charm_summoned"), true);
+            FabricCompanionDimensionTravelSupport.rememberIdentity(player, existingPrimary);
+            return;
+        }
         FabricCompanionEntity created = FabricCompanionRecruitment.recruitEntity(player, FabricCompanionRegistry.KON_ID.toString());
         if (created != null) {
             FabricCharmData.bind(stack, created.getUUID());
+            FabricCompanionPlayerDataSupport.apply(created);
             created.sayHello();
             player.displayClientMessage(Component.translatable("message.azscompanions.charm_bound"), true);
             com.azscompanions.ai.FabricCompanionPersonaOnboarding.offerIfNeeded(player, created);

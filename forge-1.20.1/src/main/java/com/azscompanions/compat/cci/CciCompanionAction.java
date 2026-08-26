@@ -68,7 +68,11 @@ public enum CciCompanionAction {
     /** Session AI hints: chatListenMode / enableAiActions (runtime; not persisted to disk). */
     AI_CONFIG,
     /** Material gather goal: item= + count= + optional deposit=. */
-    TASK;
+    TASK,
+    /**
+     * Temporary CCI/stream summon (sub gift, bits). Auto-expires. Does not replace charm companions.
+     */
+    CCI_SUMMON;
 
     @Nullable
     public static CciCompanionAction fromSubject(String subject) {
@@ -119,12 +123,18 @@ public enum CciCompanionAction {
             case "unclaim_chunk", "companion_unclaim_chunk", "unclaimchunk" -> UNCLAIM_CHUNK;
             case "companion_ai_config", "ai_config", "set_ai_config", "companion_set_ai" -> AI_CONFIG;
             case "companion_task", "task", "gather_task", "collect_task" -> TASK;
+            case "companion_cci_summon", "cci_summon", "temp_summon", "companion_temp_summon",
+                 "stream_summon", "companion_stream_summon" -> CCI_SUMMON;
             default -> null;
         };
     }
 
     public boolean isSummon() {
         return this == SUMMON || this == SUMMON_PASSIVE || this == SUMMON_HOSTILE;
+    }
+
+    public boolean isCciTemporarySummon() {
+        return this == CCI_SUMMON;
     }
 
     /** Actions that do not require a nearby companion entity. */

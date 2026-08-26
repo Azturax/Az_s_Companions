@@ -2,6 +2,7 @@ package com.azscompanions.network.packet;
 
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -53,6 +54,7 @@ public record CompanionBehaviorPacket(
             companion.setFollowRadius(CompanionFollowDistances.clampFollowRadius(packet.followRadius()));
             companion.setPersonalSpace(CompanionFollowDistances.clampPersonalSpace(packet.personalSpace()));
             companion.setWanderRadius(CompanionFollowDistances.clampWanderRadius(packet.wanderRadius()));
+            CompanionPlayerDataSupport.save(companion);
         });
         context.setPacketHandled(true);
 

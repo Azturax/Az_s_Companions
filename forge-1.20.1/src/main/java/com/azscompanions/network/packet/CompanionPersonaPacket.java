@@ -2,6 +2,7 @@ package com.azscompanions.network.packet;
 
 import com.azscompanions.ai.CompanionPersona;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -74,6 +75,7 @@ public record CompanionPersonaPacket(
                             true);
             companion.setPersona(next);
             com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, companion);
+            CompanionPlayerDataSupport.save(companion);
             player.displayClientMessage(net.minecraft.network.chat.Component.literal(
                     companion.getChatDisplayName() + " — persona "
                             + (packet.skip() ? "skipped (defaults)" : "saved")), true);

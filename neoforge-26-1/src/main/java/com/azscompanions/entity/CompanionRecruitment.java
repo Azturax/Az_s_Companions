@@ -125,6 +125,43 @@ public final class CompanionRecruitment {
     }
 
     /**
+     * CCI / streamer temporary companion. Does not count toward maxCompanionsPerPlayer,
+     * is not charm-bound, and does not replace the owner's persistent Kon.
+     */
+    @Nullable
+    public static CompanionEntity spawnCciSummon(ServerPlayer player, String definitionId) {
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        Identifier id = Identifier.tryParse(definitionId);
+        if (id == null) {
+            id = CompanionRegistry.KON_ID;
+        }
+        CompanionDefinition definition = CompanionRegistry.getOrKon(id);
+        CompanionEntity companion = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+        if (companion == null) {
+            return null;
+        }
+        double angle = level.getRandom().nextDouble() * Math.PI * 2.0d;
+        companion.snapTo(
+                player.getX() + Math.cos(angle) * 2.0d,
+                player.getY(),
+                player.getZ() + Math.sin(angle) * 2.0d,
+                player.getYRot(), 0);
+        companion.setOwner(player);
+        companion.applyDefinition(definition);
+        companion.setFightSpawn(true);
+        companion.setMode(CompanionMode.FOLLOW);
+        companion.setHomePos(player.blockPosition());
+        companion.setNameTagVisible(true);
+        if (!level.addFreshEntity(companion)) {
+            return null;
+        }
+        return companion;
+    }
+
+    /**
      * Team-fight leader spawn (does not count toward maxCompanionsPerPlayer).
      * Shared by CCI {@code companion_spawn_leader}.
      */
@@ -222,8 +259,11 @@ public final class CompanionRecruitment {
         companion.setUUID(boundUuid);
         companion.setOwner(player);
         companion.snapTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
-        companion.setMode(CompanionMode.FOLLOW);
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            companion.setMode(CompanionMode.FOLLOW);
+        }
         level.addFreshEntity(companion);
+        CompanionPlayerDataSupport.apply(companion);
         return companion;
     }
 }

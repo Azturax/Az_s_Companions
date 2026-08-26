@@ -4,6 +4,7 @@ import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.CompanionDeathPersistenceSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionInventoryPersistence;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
@@ -12,9 +13,14 @@ public final class CompanionDeathEvents {
     private CompanionDeathEvents() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof CompanionEntity companion) {
+            if (companion.isFullyInvincible()) {
+                event.setCanceled(true);
+                companion.setHealth(companion.getMaxHealth());
+                return;
+            }
             CompanionDeathPersistenceSupport.persistOnDeath(companion);
         }
     }

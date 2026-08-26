@@ -2,6 +2,7 @@ package com.azscompanions.menu;
 
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionMode;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.network.packet.OpenCompanionCreatorPacket;
 import com.azscompanions.network.packet.OpenCompanionStatsPacket;
@@ -58,18 +59,22 @@ public final class CompanionCommandActions {
             }
             case FOLLOW -> {
                 companion.setMode(CompanionMode.FOLLOW);
+                CompanionPlayerDataSupport.save(companion);
                 toast(serverPlayer, companion, "message.azscompanions.mode_follow");
             }
             case STAY -> {
                 companion.setMode(CompanionMode.STAY);
+                CompanionPlayerDataSupport.save(companion);
                 toast(serverPlayer, companion, "message.azscompanions.mode_stay");
             }
             case SIT -> {
                 companion.setMode(CompanionMode.SIT);
+                CompanionPlayerDataSupport.save(companion);
                 toast(serverPlayer, companion, "message.azscompanions.mode_sit");
             }
             case WANDER -> {
                 companion.setMode(CompanionMode.WANDER);
+                CompanionPlayerDataSupport.save(companion);
                 toast(serverPlayer, companion, "message.azscompanions.mode_wander");
             }
             case REMOVE_CHILD -> {

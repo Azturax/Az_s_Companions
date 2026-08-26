@@ -3,8 +3,8 @@ package com.azscompanions.entity;
 import java.util.Set;
 
 /**
- * Environmental damage types companions ignore. Combat damage (mobs, players, arrows,
- * explosions from intentional fights, etc.) still applies — companions are not invincible.
+ * Environmental damage types all companions ignore (teleport/world hazards).
+ * Combat damage still applies unless {@link CompanionInvincibilitySupport} says otherwise.
  *
  * <p>Keys are {@code ResourceLocation#getPath()} values for vanilla {@code DamageTypes}.
  */
@@ -15,7 +15,19 @@ public final class CompanionHazardImmunity {
             "sweet_berry_bush",
             "drown",
             "in_wall",
-            "campfire"
+            "campfire",
+            "lava",
+            "in_fire",
+            "on_fire",
+            "hot_floor",
+            "freeze",
+            "cramming",
+            "fly_into_wall",
+            "falling_block",
+            "falling_anvil",
+            "falling_stalactite",
+            "stalagmite",
+            "out_of_world"
     );
 
     private CompanionHazardImmunity() {

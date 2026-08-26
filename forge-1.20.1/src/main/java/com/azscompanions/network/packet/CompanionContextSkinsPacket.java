@@ -2,6 +2,7 @@ package com.azscompanions.network.packet;
 
 import com.azscompanions.entity.CompanionContextSkinSupport;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionPlayerDataSupport;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -52,6 +53,7 @@ public record CompanionContextSkinsPacket(
                 return;
             }
             companion.setContextSkins(packet.sleepingSkin(), packet.bathingSkin(), packet.adventuringSkin());
+            CompanionPlayerDataSupport.save(companion);
         });
         context.setPacketHandled(true);
 

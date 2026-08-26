@@ -61,6 +61,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricModSounds.register();
         FabricModScreenHandlers.register();
         FabricNetworking.register();
+        com.azscompanions.event.FabricCompanionInvincibilityEvents.register();
         FabricTeamFightEvents.register();
         FabricCompanionAiChatEvents.register();
         com.azscompanions.event.FabricCompanionRecentActionEvents.register();
@@ -134,6 +135,8 @@ public final class AzsCompanionsFabric implements ModInitializer {
                     com.azscompanions.task.GatherItemCatalog.size(),
                     com.azscompanions.task.CraftRecipeCatalog.recipeCount());
         });
+        ServerLifecycleEvents.SERVER_STOPPING.register(server ->
+                com.azscompanions.entity.FabricCompanionPlayerDataSupport.saveAll(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             CompanionAiRuntime.get().clearServerContext();
             CompanionChunkLoading.clearAll();

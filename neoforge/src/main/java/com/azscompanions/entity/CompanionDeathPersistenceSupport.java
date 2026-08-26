@@ -90,6 +90,7 @@ public final class CompanionDeathPersistenceSupport {
             CharmData.storeCompanion(charm, data, companion.getUUID());
         }
         CompanionLogoutSupport.mergeDeathSnapshot(owner, companion.getUUID(), data);
+        CompanionPlayerDataSupport.save(companion);
     }
 
     @Nullable

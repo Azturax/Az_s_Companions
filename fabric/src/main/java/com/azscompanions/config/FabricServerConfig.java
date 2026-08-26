@@ -31,6 +31,8 @@ public final class FabricServerConfig {
      * Mirrors NeoForge {@code supportAmountPerCompanion}.
      */
     public static final int SUPPORT_AMOUNT_PER_COMPANION = 100;
+    /** Default timed-death window for /az summon and CCI companion_cci_summon (seconds). */
+    public static final int CCI_SUMMON_DURATION_SECONDS = 90;
     /** When true, companions defend the owner against living attackers. */
     public static final boolean ALLOW_COMBAT = true;
     /**

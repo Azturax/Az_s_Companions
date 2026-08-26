@@ -88,6 +88,7 @@ public final class FabricCompanionCommands {
                                     ctx.getSource().sendFailure(Component.translatable("message.azscompanions.limit_reached"));
                                     return 0;
                                 })))
+                .then(FabricCciSummonCommand.buildBranch())
                 .then(Commands.literal("rename")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(ctx -> {

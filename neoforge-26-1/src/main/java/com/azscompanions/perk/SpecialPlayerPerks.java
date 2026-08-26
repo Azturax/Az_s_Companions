@@ -244,13 +244,37 @@ public final class SpecialPlayerPerks {
             away = new Vec3(0.5d, 0.0d, 0.5d);
         }
         Vec3 offset = new Vec3(away.x, 0.0d, away.z).normalize().scale(offsetDist);
+        if (com.azscompanions.entity.CompanionSafeTeleportSupport.tooCloseToOwner(
+                offset.x, offset.z, com.azscompanions.entity.CompanionSafeTeleportSupport.MIN_OWNER_SEPARATION)) {
+            double[] behind = com.azscompanions.entity.CompanionSafeTeleportSupport.behindOwner(owner.getYRot(), offsetDist);
+            offset = new Vec3(behind[0], 0.0d, behind[1]);
+        }
         companion.teleportTo(
                 owner.getX() + offset.x,
                 owner.getY() + FLIGHT_HOVER_Y,
                 owner.getZ() + offset.z);
         companion.setDeltaMovement(Vec3.ZERO);
         companion.hurtMarked = true;
+        companion.fallDistance = 0.0f;
+        companion.invulnerableTime = Math.max(
+                companion.invulnerableTime,
+                com.azscompanions.entity.CompanionSafeTeleportSupport.POST_TELEPORT_INVULN_TICKS);
         companion.getLookControl().setLookAt(owner, 10.0f, companion.getMaxHeadXRot());
+    }
+
+    public static void safeTeleportBeside(Mob mob, net.minecraft.world.entity.Entity target, double distance) {
+        if (mob == null || target == null) {
+            return;
+        }
+        double dist = Math.max(com.azscompanions.entity.CompanionSafeTeleportSupport.MIN_OWNER_SEPARATION, distance);
+        double[] behind = com.azscompanions.entity.CompanionSafeTeleportSupport.behindOwner(target.getYRot(), dist);
+        mob.teleportTo(target.getX() + behind[0], target.getY(), target.getZ() + behind[1]);
+        mob.setDeltaMovement(Vec3.ZERO);
+        mob.hurtMarked = true;
+        mob.fallDistance = 0.0f;
+        mob.invulnerableTime = Math.max(
+                mob.invulnerableTime,
+                com.azscompanions.entity.CompanionSafeTeleportSupport.POST_TELEPORT_INVULN_TICKS);
     }
 
     private static void clearGlow(LivingEntity entity) {

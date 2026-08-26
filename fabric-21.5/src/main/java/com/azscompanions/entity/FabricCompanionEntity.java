@@ -154,6 +154,21 @@ public class FabricCompanionEntity extends PathfinderMob {
     private CompanionAttitude playfulEvilRestoreAttitude = CompanionAttitude.PASSIVE;
     private UUID leaderUuid;
     private boolean fightSpawn;
+    /** CCI/stream temporary summon — expires and is never the player's charm companion. */
+    private boolean cciSummoned;
+    private long cciExpireAtGameTime;
+    private float cciMaxHealth;
+    /** Guard so player-store apply does not recurse through {@link #readAdditionalSaveData}. */
+    private boolean applyingPlayerPersistentData;
+
+    void beginApplyingPlayerPersistentData() {
+        applyingPlayerPersistentData = true;
+    }
+
+    void endApplyingPlayerPersistentData() {
+        applyingPlayerPersistentData = false;
+    }
+
     /** Game tick when next ambient idle chat may fire (0 = schedule on first opportunity). */
     private int nextIdleChatTick;
     /** Continuous ticks the owner has been beyond callPlayerDistance. */
@@ -190,6 +205,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         // Allow pathing through water when following a swimming owner (default WATER malus is high).
         this.setPathfindingMalus(PathType.WATER, 0.0f);
         this.setPathfindingMalus(PathType.WATER_BORDER, 0.0f);
+        inventory.setPersistenceHook(() -> FabricCompanionPlayerDataSupport.save(this));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -316,6 +332,8 @@ public class FabricCompanionEntity extends PathfinderMob {
             if (tickCount % 20 == 0) {
                 ejectForbiddenCharm();
             }
+            tickCciSummonExpiry(serverLevel);
+            maintainInvincibility();
         }
     }
 
@@ -530,7 +548,9 @@ public class FabricCompanionEntity extends PathfinderMob {
                 a -> com.azscompanions.ai.CompanionChatEventSupport.allowReactiveAction(settings, a);
         boolean hasReactive = settings.reactiveChat()
                 && CompanionRecentActionMemory.hasReactive(owner.getUUID(), gameTime, allowReactive);
-        int speakCoolSec = hasReactive ? 25 : 45;
+        int speakCoolSec = hasReactive
+                ? CompanionAiChatSupport.reactiveSpeakCooldownSeconds()
+                : CompanionAiChatSupport.idleSpeakCooldownSeconds();
         // Avoid stacking on top of a recent /ask or ambient line (shorter for reactions).
         if (lastSpeakTick > 0 && CompanionAiChatSupport.spokeTooRecently(tickCount - lastSpeakTick, speakCoolSec)) {
             return;
@@ -580,28 +600,45 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (dist > settings.chatReactRange()) {
             return;
         }
-        CompanionRecentAction focus = hasReactive
-                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime, allowReactive).orElse(null)
-                : null;
-        boolean reactiveNow = focus != null;
+        boolean reactiveNow = hasReactive;
         if (!reactiveNow) {
             if (nextIdleChatTick <= 0) {
-                int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
-                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
-                nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
                 return;
             }
             if (tickCount < nextIdleChatTick) {
                 return;
             }
+            if (CompanionAiChatSupport.shouldSkipIdleRoll(random::nextInt)) {
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
+                return;
+            }
         }
-        int secs = (int) (CompanionAiChatSupport.nextIdleIntervalSeconds(
-                settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), random::nextInt) * idleMul);
-        nextIdleChatTick = tickCount + Math.max(40, secs * 20);
+        if (CompanionAiChatSupport.playerAmbientTooRecent(owner.getUUID(), gameTime, reactiveNow)) {
+            if (!reactiveNow) {
+                nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                        settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
+            }
+            return;
+        }
+        CompanionRecentAction focus = hasReactive
+                ? CompanionRecentActionMemory.consumeReactive(owner.getUUID(), gameTime, allowReactive).orElse(null)
+                : null;
+        reactiveNow = focus != null;
+        if (hasReactive && focus == null) {
+            return;
+        }
+        if (!reactiveNow && !settings.idleChat()) {
+            return;
+        }
+        nextIdleChatTick = tickCount + CompanionAiChatSupport.nextIdleDelayTicks(
+                settings.idleChatSecondsMin(), settings.idleChatSecondsMax(), idleMul, random::nextInt);
         var recent = CompanionRecentActionMemory.peek(owner.getUUID(), gameTime);
         String fallback = focus != null
                 ? CompanionAiChatSupport.fallbackReactiveLine(ownerName, focus)
-                : CompanionAiChatSupport.fallbackIdleLine(ownerName);
+                : CompanionAiChatSupport.fallbackIdleLine(ownerName, owner.getUUID());
         if (!llmOn) {
             speakLine(fallback);
             return;
@@ -753,6 +790,9 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
+        if (isFullyInvincible()) {
+            return true;
+        }
         if (CompanionHazardImmunity.ignores(source.typeHolder().unwrapKey()
                 .map(key -> key.location().getPath())
                 .orElse(""))) {
@@ -763,6 +803,10 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return false;
+        }
         if (source.getEntity() instanceof Player player && (isOwnedBy(player) || isTrusted(player))) {
             return false;
         }
@@ -770,6 +814,38 @@ public class FabricCompanionEntity extends PathfinderMob {
             return false;
         }
         return super.hurtServer(level, source, amount);
+    }
+
+    public boolean isFullyInvincible() {
+        return CompanionInvincibilitySupport.isFullyInvincible(
+                isKonNamed(),
+                isChildCompanion(),
+                getChatDisplayName(),
+                entityData.get(DATA_DEFINITION),
+                isCciSummoned());
+    }
+
+    @Override
+    public void setHealth(float health) {
+        if (isFullyInvincible()
+                && CompanionInvincibilitySupport.shouldRejectHealthDrop(true, getHealth(), health)) {
+            super.setHealth(getMaxHealth());
+            return;
+        }
+        super.setHealth(health);
+    }
+
+    private void maintainInvincibility() {
+        if (!isFullyInvincible()) {
+            return;
+        }
+        setInvulnerable(true);
+        if (getHealth() < getMaxHealth()) {
+            setHealth(getMaxHealth());
+        }
+        if (isOnFire()) {
+            clearFire();
+        }
     }
 
     @Override
@@ -1138,8 +1214,17 @@ public class FabricCompanionEntity extends PathfinderMob {
         if (text == null || text.isBlank()) {
             return;
         }
-        lastSpeakTick = tickCount;
+        text = CompanionAiChatSupport.shortenSpokenLine(text);
+        if (text.isBlank()) {
+            return;
+        }
         if (getOwner() instanceof ServerPlayer owner) {
+            if (CompanionAiChatSupport.isSameAsLastLine(owner.getUUID(), text)) {
+                return;
+            }
+            lastSpeakTick = tickCount;
+            long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
+            CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
             owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
         }
     }
@@ -1224,6 +1309,29 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     public void setFightSpawn(boolean value) {
         this.fightSpawn = value;
+    }
+
+    public boolean isCciSummoned() {
+        return cciSummoned;
+    }
+
+    public void markCciSummoned(long expireAtGameTime) {
+        this.cciSummoned = true;
+        this.fightSpawn = true;
+        this.cciExpireAtGameTime = expireAtGameTime;
+        setInvulnerable(false);
+    }
+
+    public void setCciMaxHealth(float health) {
+        this.cciMaxHealth = health;
+    }
+
+    private void tickCciSummonExpiry(ServerLevel serverLevel) {
+        if (!CompanionCciSummonSupport.shouldExpire(cciSummoned, cciExpireAtGameTime, serverLevel.getGameTime())) {
+            return;
+        }
+        setInvulnerable(false);
+        hurt(damageSources().genericKill(), Float.MAX_VALUE);
     }
 
     public UUID getLeaderUuid() {
@@ -1354,10 +1462,44 @@ public class FabricCompanionEntity extends PathfinderMob {
 
     @Override
     public void remove(Entity.RemovalReason reason) {
+        if (isFullyInvincible() && reason == Entity.RemovalReason.KILLED) {
+            setHealth(getMaxHealth());
+            return;
+        }
         if (!level().isClientSide) {
+            FabricCompanionPlayerDataSupport.save(this);
             FabricCompanionChunkTickets.release(this);
         }
         super.remove(reason);
+    }
+
+    @Override
+    protected void onBelowWorld() {
+        Player owner = getOwner();
+        if (owner != null) {
+            safeTeleportNearOwner(owner);
+            setHealth(getMaxHealth());
+            return;
+        }
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return;
+        }
+        super.onBelowWorld();
+    }
+
+    @Override
+    public boolean fireImmune() {
+        return isFullyInvincible() || super.fireImmune();
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        if (isFullyInvincible()) {
+            setHealth(getMaxHealth());
+            return;
+        }
+        super.die(source);
     }
 
     /** Allow following the owner through vanilla and modded dimensions. */
@@ -1920,6 +2062,11 @@ public class FabricCompanionEntity extends PathfinderMob {
             NbtUuids.put(tag, "LeaderUuid", leaderUuid);
         }
         tag.putBoolean("FightSpawn", fightSpawn);
+        tag.putBoolean(CompanionCciSummonSupport.NBT_SUMMONED, cciSummoned);
+        tag.putLong(CompanionCciSummonSupport.NBT_EXPIRE_AT, cciExpireAtGameTime);
+        if (cciMaxHealth > 0.0f) {
+            tag.putFloat(CompanionCciSummonSupport.NBT_MAX_HEALTH, cciMaxHealth);
+        }
         tag.putString("Definition", entityData.get(DATA_DEFINITION));
         tag.putString("Mode", entityData.get(DATA_MODE));
         tag.putString("SkinPath", getSkinPath());
@@ -1984,6 +2131,15 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
         leaderUuid = NbtUuids.getOrNull(tag, "LeaderUuid");
         fightSpawn = tag.getBooleanOr("FightSpawn", false);
+        cciSummoned = tag.getBooleanOr(CompanionCciSummonSupport.NBT_SUMMONED, false);
+        cciExpireAtGameTime = tag.getLongOr(CompanionCciSummonSupport.NBT_EXPIRE_AT, 0L);
+        cciMaxHealth = tag.getFloatOr(CompanionCciSummonSupport.NBT_MAX_HEALTH, 0.0f);
+        if (cciSummoned && cciMaxHealth > 0.0f && maxHealth != null) {
+            maxHealth.setBaseValue(cciMaxHealth);
+            if (getHealth() > cciMaxHealth) {
+                setHealth(cciMaxHealth);
+            }
+        }
         if (tag.contains("Definition")) {
             entityData.set(DATA_DEFINITION, tag.getStringOr("Definition", ""));
         }
@@ -2113,5 +2269,8 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
         ejectIncompatibleArmor();
         ejectForbiddenCharm();
+        if (!level().isClientSide && getOwnerUuid() != null && !applyingPlayerPersistentData) {
+            FabricCompanionPlayerDataSupport.apply(this);
+        }
     }
 }

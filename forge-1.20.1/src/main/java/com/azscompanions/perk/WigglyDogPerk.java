@@ -67,7 +67,7 @@ public final class WigglyDogPerk {
                 dog.setOrderedToSit(!dog.isOrderedToSit());
             }
             if (dog.distanceTo(player) > 24.0d) {
-                dog.teleportTo(player.getX() + 0.6d, player.getY(), player.getZ() + 0.6d);
+                SpecialPlayerPerks.safeTeleportBeside(dog, player, 2.5d);
                 dog.setDeltaMovement(Vec3.ZERO);
                 dog.setOrderedToSit(false);
             }

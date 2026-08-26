@@ -81,6 +81,8 @@ Pins differ by Minecraft line — **do not** mix Modrinth version ids across MC 
 
 **Fabric fallback:** `/azscci <subject> [message]` (CommandOutcome) when IMC is awkward.
 
+**Ops / testing (permission 2):** `/az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]` — same temporary spawn as `companion_cci_summon`. Full syntax is in the README Commands section.
+
 **Dedicated server:** CCI IMC is normally client-driven; the bridge packet applies on the server as the **streamer player who sent the packet**. That player owns summoned leaders/children. Another player’s “Kon” is never selected.
 
 ---
@@ -141,13 +143,14 @@ Unless noted, needs an owned companion within **~96 blocks**.
 | `companion_sit` | `sit` | ignored | Mode SIT | No companion |
 | `companion_stay` | `stay` | ignored | Mode STAY (no teleport) | No companion |
 
-### Attitude / teams / summon / gear / modify (11)
+### Attitude / teams / summon / gear / modify (12)
 
 | Subject | Aliases | Message examples | Effect |
 |---------|---------|------------------|--------|
 | `companion_set_attitude` | `set_attitude`, `attitude` | `hostile` / `attitude=passive` | Persist PASSIVE/HOSTILE |
 | `companion_set_team` | `set_team`, `team` | `red` / `$username` / `team=blue` | teamId (nametag); rivals fight |
-| `companion_summon` | `summon` | `form=zombie;attitude=hostile;team=red;skin=Notch` | Recruit owned companion |
+| `companion_summon` | `summon` | `form=zombie;attitude=hostile;team=red;skin=Notch` | Recruit **persistent** owned companion (charm path) |
+| `companion_cci_summon` | `cci_summon`, `temp_summon`, `companion_temp_summon`, `stream_summon`, `companion_stream_summon` | `type=kon;name=$username;duration=90;health=40;armor=diamond;weapon=netherite_sword;tool=diamond_pickaxe;shield=shield` | **Temporary extra** companion. Auto-dies after `duration` (default 90s). Does **not** replace or expire charm Kon/Bits/Wiggly/Dox. Nametag = username; player-form skin from Mojang if possible |
 | `companion_summon_passive` | `summon_passive` | `form=chicken;team=blue` | Summon PASSIVE |
 | `companion_summon_hostile` | `summon_hostile` | `form=skeleton;team=red` | Summon HOSTILE |
 | `companion_set_mainhand` | `set_mainhand`, `mainhand` | `minecraft:diamond_sword` / `clear` | Main hand |
@@ -162,7 +165,25 @@ Unless noted, needs an owned companion within **~96 blocks**.
 **Forms:** `player`, `chicken`, `wolf`, `cat`, `cow`, `pig`, `sheep`, `fox`, `rabbit`, `bee`, `zombie`, `skeleton`, `spider`, `enderman`, `husk`, `stray`, …  
 Mob **form variants** (Customization `<`/`>`): wolf coats, cat breeds, fox `red`/`snow`, rabbit types, sheep wool — NBT `CompanionFormVariant`.
 
-**Failures:** companion limit; invalid item id; no companion nearby for modify.
+**Failures:** companion limit (persistent `companion_summon` only); invalid item id; no companion nearby for modify.
+
+#### Temporary CCI summon (`companion_cci_summon`)
+
+Sub-gift / bits extras. **Does not** go through unique-per-player spawn guards, **does not** steal the charm companion, **does not** persist on logout. Charm companions never receive the expiry flag.
+
+In-game (permission 2): `/az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]`
+
+```
+# Sub gift
+/az summon kon Steve 90 20 - - - - Alice
+
+# Bits
+/az summon bits Steve 120 40 diamond netherite_sword diamond_pickaxe shield CheerName
+```
+
+IMC keys: `type`/`companion`/`id`, `duration`/`ttl`/`seconds` (`0` = no expiry, max 3600), `health`/`hp`, `armor`/`armour` (material or item id), `weapon`/`mainhand`, `tool`/`pickaxe`, `shield`/`offhand`, `name`/`user`/`username`/`ign` (nametag). Skip tokens: `-`, `none`, `default`, `skip`, `*`.
+
+Skin lookup runs only for player-form (`kon`/`bits`/`dox`/`player`). Wolf/`wiggly`/mob forms keep their model. Failed Mojang lookup still keeps the nametag.
 
 ### Persona (1) — also via summon / modify
 
@@ -229,7 +250,7 @@ When AI is **disabled**, ask/ai_chat toast an error; greet/wave/say fall back to
 
 **Store / call:** Menu **Remove child** or CCI `dismiss_child` parks children on the parent (`StoredChildren`). Charm/empty-hand click on parent calls them FIFO. Menu badge shows **stored/max**.
 
-**Total first-class subjects:** **37** action enum values (chat/modes + attitude/summon/gear/persona + AI + play + FTB claim + teamfight/spawns + dismiss_child).
+**Total first-class subjects:** **39** action enum values (chat/modes + attitude/summon/gear/persona + AI + play + FTB claim + teamfight/spawns + dismiss_child + `companion_cci_summon`).
 
 ---
 

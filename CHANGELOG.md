@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.10
+
+Kon/Bits invincibility (including Draconic Evolution), duplicate-spawn guards, safe teleports, per-player persistence, quieter chat, and CCI `/az summon`.
+
+### Fixed
+- **Kon / Bits invincibility** — charm Kon and Bits never die from combat or world damage, including unknown/modded types (Draconic Evolution chaos/wyvern, armor-pierce). CCI timed summons stay mortal so they can expire. Charm dismiss, logout park, and admin discard still work.
+- **Duplicate spawns** — login grace, UUID reuse, and cap culling so Wiggly and owned companions do not double-spawn while chunks are still loading.
+- **Safe teleport** — follow/dimension snaps land beside the owner (never inside their hitbox), with brief post-teleport i-frames.
+- **Per-player settings + inventory** — companion UI settings and inventories persist across dismiss/recreate via world SavedData keyed by player UUID + companion identity.
+- **Reduced chatter** — idle/reactive/scripted lines use longer cooldowns and per-player ambient gates so companions talk less often.
+
+### Added
+- **`/az summon`** — CCI/streamer temporary companion (permission 2) on all loaders including 26.x. Spawns an extra follower with a timed death window; does not replace charm Kon/Bits/Wiggly/Dox. IMC `companion_cci_summon` on 1.21.1 / 1.21.5 / 1.20.1.
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.10+<mc>.jar` on tag `v1.0.10` (**8** unified jars).
+
+## Unreleased
+
 ## 1.0.9
 
 Inventory/Bits never drop by default, Kon/PASSIVE combat parity, and humanoid bow combat.

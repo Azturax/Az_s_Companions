@@ -85,6 +85,7 @@ public final class FabricCompanionDeathPersistenceSupport {
             FabricCharmData.storeCompanion(charm, data, companion.getUUID());
         }
         FabricCompanionLogoutSupport.mergeDeathSnapshot(owner, companion.getUUID(), data);
+        FabricCompanionPlayerDataSupport.save(companion);
     }
 
     @Nullable

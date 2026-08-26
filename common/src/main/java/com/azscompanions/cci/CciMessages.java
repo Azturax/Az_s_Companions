@@ -11,6 +11,7 @@ public final class CciMessages {
     public static final String TITLE_NO_COMPANION = "toast.azscompanions.cci.no_companion";
     public static final String TITLE_AI = "toast.azscompanions.cci.ai";
     public static final String TITLE_SUMMON_FAILED = "toast.azscompanions.cci.summon_failed";
+    public static final String TITLE_CCI_SUMMON = "toast.azscompanions.cci.cci_summon";
     public static final String TITLE_FTB = "toast.azscompanions.cci.ftb_claim";
     public static final String TITLE_TEAMFIGHT = "toast.azscompanions.cci.teamfight";
     public static final String TITLE_SCOREBOARD = "toast.azscompanions.cci.scoreboard";
@@ -36,6 +37,8 @@ public final class CciMessages {
     public static final String SUMMON_OK = "message.azscompanions.cci.summon_ok";
     public static final String SUMMON_OK_TEAM = "message.azscompanions.cci.summon_ok_team";
     public static final String SUMMON_FAILED = "message.azscompanions.cci.summon_failed";
+    public static final String CCI_SUMMON_OK = "message.azscompanions.cci.cci_summon_ok";
+    public static final String CCI_SUMMON_FAILED = "message.azscompanions.cci.cci_summon_failed";
     public static final String PERSONA_SET_SUFFIX = "message.azscompanions.cci.persona_set_suffix";
     public static final String MODIFY_OK = "message.azscompanions.cci.modify_ok";
     public static final String MODIFY_OK_PERSONA = "message.azscompanions.cci.modify_ok_persona";

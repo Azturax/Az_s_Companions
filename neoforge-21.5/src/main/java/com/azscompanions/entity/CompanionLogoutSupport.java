@@ -40,6 +40,16 @@ public final class CompanionLogoutSupport {
             return;
         }
         UUID owner = player.getUUID();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(OwnableUuids.get(companion))
+                        && !CompanionLogoutPersistence.shouldParkOnLogout(companion.isCciSummoned())) {
+                    companion.discard();
+                }
+            }
+        }
         List<CompanionEntity> roots = new ArrayList<>();
         for (ServerLevel level : server.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {

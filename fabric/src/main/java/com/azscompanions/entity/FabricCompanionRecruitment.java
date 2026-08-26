@@ -74,6 +74,71 @@ public final class FabricCompanionRecruitment {
         return null;
     }
 
+    public static FabricCompanionEntity findAnyPrimary(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return null;
+        }
+        UUID owner = player.getUUID();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof FabricCompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(companion.getOwnerUuid())
+                        && !companion.isFightSpawn()) {
+                    return companion;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void cullExtraPrimaries(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            return;
+        }
+        UUID owner = player.getUUID();
+        java.util.List<FabricCompanionEntity> primaries = new java.util.ArrayList<>();
+        java.util.Map<UUID, FabricCompanionEntity> byId = new java.util.HashMap<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (!(entity instanceof FabricCompanionEntity companion)
+                        || !companion.isAlive()
+                        || !owner.equals(companion.getOwnerUuid())) {
+                    continue;
+                }
+                FabricCompanionEntity seen = byId.putIfAbsent(companion.getUUID(), companion);
+                if (seen != null && seen != companion) {
+                    companion.discard();
+                    continue;
+                }
+                if (!companion.isFightSpawn()) {
+                    primaries.add(companion);
+                }
+            }
+        }
+        int max = FabricServerConfig.MAX_COMPANIONS_PER_PLAYER;
+        if (primaries.size() <= max) {
+            return;
+        }
+        UUID bound = null;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            var stack = player.getInventory().getItem(i);
+            if (com.azscompanions.item.FabricCompanionCharmItem.isCharm(stack)) {
+                bound = com.azscompanions.item.FabricCharmData.getBoundUuid(stack);
+                break;
+            }
+        }
+        FabricCompanionEntity keep = CompanionSpawnGuardSupport.pickPrimaryToKeep(
+                primaries, bound, FabricCompanionEntity::getUUID, c -> c.distanceToSqr(player));
+        for (FabricCompanionEntity extra : primaries) {
+            if (extra != keep) {
+                extra.discard();
+            }
+        }
+    }
+
     public static FabricCompanionEntity resolveLeader(ServerPlayer player, FabricCompanionEntity candidate) {
         if (candidate == null || !candidate.isAlive()) {
             return null;
@@ -118,6 +183,42 @@ public final class FabricCompanionRecruitment {
         companion.setHomePos(player.blockPosition());
         companion.setMaxChildren(FabricServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER);
         level.addFreshEntity(companion);
+        return companion;
+    }
+
+    /**
+     * CCI / streamer temporary companion. Does not count toward maxCompanionsPerPlayer,
+     * is not charm-bound, and does not replace the owner's persistent Kon.
+     */
+    public static FabricCompanionEntity spawnCciSummon(ServerPlayer player, String definitionId) {
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        ServerLevel level = player.serverLevel();
+        ResourceLocation id = ResourceLocation.tryParse(definitionId);
+        if (id == null) {
+            id = FabricCompanionRegistry.KON_ID;
+        }
+        FabricCompanionDefinition definition = FabricCompanionRegistry.getOrKon(id);
+        FabricCompanionEntity companion = FabricModEntities.COMPANION.create(level);
+        if (companion == null) {
+            return null;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2.0d;
+        companion.moveTo(
+                player.getX() + Math.cos(angle) * 2.0d,
+                player.getY(),
+                player.getZ() + Math.sin(angle) * 2.0d,
+                player.getYRot(), 0);
+        companion.setOwner(player);
+        companion.applyDefinition(definition);
+        companion.setFightSpawn(true);
+        companion.setMode(FabricCompanionMode.FOLLOW);
+        companion.setHomePos(player.blockPosition());
+        companion.setNameTagVisible(true);
+        if (!level.addFreshEntity(companion)) {
+            return null;
+        }
         return companion;
     }
 
@@ -199,6 +300,10 @@ public final class FabricCompanionRecruitment {
     }
 
     public static FabricCompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {
+        FabricCompanionEntity existing = findOwned(player, boundUuid);
+        if (existing != null && existing.isAlive()) {
+            return existing;
+        }
         ServerLevel level = player.serverLevel();
         FabricCompanionEntity companion = FabricModEntities.COMPANION.create(level);
         if (companion == null) {
@@ -207,9 +312,16 @@ public final class FabricCompanionRecruitment {
         companion.load(stored);
         companion.setUUID(boundUuid);
         companion.setOwner(player);
-        companion.moveTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
-        companion.setMode(FabricCompanionMode.FOLLOW);
-        level.addFreshEntity(companion);
+        companion.moveTo(player.getX() + 2.5d, player.getY(), player.getZ() + 0.5d, player.getYRot(), 0);
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            companion.setMode(FabricCompanionMode.FOLLOW);
+        }
+        if (!level.addFreshEntity(companion)) {
+            FabricCompanionEntity again = findOwned(player, boundUuid);
+            return again != null && again.isAlive() ? again : null;
+        }
+        companion.safeTeleportNearOwner(player);
+        FabricCompanionPlayerDataSupport.apply(companion);
         return companion;
     }
 
@@ -238,8 +350,11 @@ public final class FabricCompanionRecruitment {
         child.moveTo(parent.getX() + Math.cos(angle) * dist, parent.getY(),
                 parent.getZ() + Math.sin(angle) * dist, parent.getYRot(), 0);
         child.setHomePos(parent.blockPosition());
-        child.setMode(FabricCompanionMode.FOLLOW);
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            child.setMode(FabricCompanionMode.FOLLOW);
+        }
         level.addFreshEntity(child);
+        FabricCompanionPlayerDataSupport.apply(child);
         return child;
     }
 }

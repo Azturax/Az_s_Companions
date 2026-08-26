@@ -64,6 +64,21 @@ public final class CciCompanionActions {
         CciCompanionParams params = CciCompanionParams.parse(message);
         String safe = message == null ? "" : message.trim();
 
+        if (action.isCciTemporarySummon()) {
+            CompanionEntity spawned = com.azscompanions.command.CciSummonCommand.spawnFromCci(player, params);
+            if (spawned == null) {
+                toast(player, CciMsg.title(CciMessages.TITLE_CCI_SUMMON), CciMsg.t(CciMessages.CCI_SUMMON_FAILED));
+            } else {
+                int seconds = params.summonDurationSecondsOr(
+                        com.azscompanions.config.ServerConfig.CCI_SUMMON_DURATION_SECONDS.get());
+                String window = seconds <= 0 ? "no expiry" : seconds + "s";
+                toast(player, CciMsg.title(CciMessages.TITLE_CCI_SUMMON),
+                        CciMsg.t(CciMessages.CCI_SUMMON_OK, spawned.getChatDisplayName(),
+                                player.getGameProfile().getName(), window));
+            }
+            return;
+        }
+
         if (action.isSummon()) {
             CompanionAttitude attitude = switch (action) {
                 case SUMMON_HOSTILE -> CompanionAttitude.HOSTILE;

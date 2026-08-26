@@ -34,6 +34,28 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
         super(TOTAL_SIZE);
     }
 
+    private Runnable persistenceHook;
+    private int suppressPersistence;
+
+    public void setPersistenceHook(Runnable hook) {
+        this.persistenceHook = hook;
+    }
+
+    public void beginPersistentLoad() {
+        suppressPersistence++;
+    }
+
+    public void endPersistentLoad() {
+        suppressPersistence = Math.max(0, suppressPersistence - 1);
+    }
+
+    @Override
+    protected void onContentsChanged(int slot) {
+        if (suppressPersistence == 0 && persistenceHook != null) {
+            persistenceHook.run();
+        }
+    }
+
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         return !CompanionCharmItem.isCharm(stack);
@@ -153,14 +175,19 @@ public final class CompanionInventory extends ItemStackHandler implements Contai
     }
 
     public void load(CompoundTag tag, HolderLookup.Provider provider) {
-        clearContent();
-        ListTag list = tag.getListOrEmpty("Items");
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag slotTag = list.getCompoundOrEmpty(i);
-            int slot = slotTag.getIntOr("Slot", 0);
-            if (slot >= 0 && slot < getSlots()) {
-                setStackInSlot(slot, ItemStack.parse(provider, slotTag).orElse(ItemStack.EMPTY));
+        beginPersistentLoad();
+        try {
+            clearContent();
+            ListTag list = tag.getListOrEmpty("Items");
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag slotTag = list.getCompoundOrEmpty(i);
+                int slot = slotTag.getIntOr("Slot", 0);
+                if (slot >= 0 && slot < getSlots()) {
+                    setStackInSlot(slot, ItemStack.parse(provider, slotTag).orElse(ItemStack.EMPTY));
+                }
             }
+        } finally {
+            endPersistentLoad();
         }
     }
 

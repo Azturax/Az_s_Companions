@@ -13,5 +13,7 @@ final class CompanionLogoutPersistenceTest {
         assertEquals("Data", CompanionLogoutPersistence.ENTRY_DATA);
         assertEquals("LogoutParked", CompanionLogoutPersistence.CHARM_LOGOUT_PARKED);
         assertFalse(CompanionLogoutPersistence.PLAYER_LIST_TAG.isBlank());
+        assertFalse(CompanionLogoutPersistence.shouldParkOnLogout(true));
+        assertEquals(true, CompanionLogoutPersistence.shouldParkOnLogout(false));
     }
 }

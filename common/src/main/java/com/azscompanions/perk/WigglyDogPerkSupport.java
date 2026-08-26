@@ -25,8 +25,17 @@ public final class WigglyDogPerkSupport {
     /** Global fallback when no owner UUID is known: dog stays dismissed. */
     public static final boolean DEFAULT_VISIBLE = false;
 
-    /** Hard cap: one toggle Wiggly per eligible owner (server-wide). */
+    /**
+     * Hard cap: one toggle Wiggly per eligible owner (server-wide).
+     */
     public static final int MAX_OWNED_DOGS = 1;
+
+    /**
+     * Player {@code tickCount} window after join: do not spawn a replacement dog while
+     * the original may still be loading. Keep in lockstep with
+     * {@code CompanionSpawnGuardSupport#LOGIN_GRACE_TICKS}.
+     */
+    public static final int LOGIN_GRACE_TICKS = 80;
 
     /**
      * When present on the player (scoreboard tag / persistent flag), the toggle dog is shown.
@@ -72,6 +81,43 @@ public final class WigglyDogPerkSupport {
             return false;
         }
         return AzsCompanionsConstants.TOGGLE_WIGGLY_DOG_NAME.equalsIgnoreCase(name.trim());
+    }
+
+    /**
+     * True when this wolf should count toward the owner's single Wiggly slot:
+     * tagged toggle dog, or nametag {@code Wiggly} owned by the player.
+     */
+    public static boolean looksLikeOwnedWiggly(
+            boolean taggedToggle,
+            boolean taggedSidekick,
+            String customName,
+            UUID ownerUuid,
+            UUID wolfOwnerUuid) {
+        if (ownerUuid == null || !ownerUuid.equals(wolfOwnerUuid)) {
+            return false;
+        }
+        if (taggedToggle || taggedSidekick) {
+            return true;
+        }
+        return isToggleDogName(customName);
+    }
+
+    /**
+     * Lower is better. Prefer the sidekick while a companion is summoned, else the toggle dog,
+     * then closest.
+     */
+    public static double keepScore(
+            boolean preferSidekick,
+            boolean isSidekick,
+            boolean isToggle,
+            double distSq) {
+        double type = 0.0d;
+        if (preferSidekick && isSidekick) {
+            type = -1.0e15d;
+        } else if (!preferSidekick && isToggle) {
+            type = -1.0e15d;
+        }
+        return type + distSq;
     }
 
     /**

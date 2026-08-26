@@ -26,7 +26,12 @@
     "idle": [
       "The path ahead looks peaceful.",
       "Take your time. I'll watch our surroundings.",
-      "If you need materials, just say so."
+      "If you need materials, just say so.",
+      "The wind shifted. Smells like rain.",
+      "I keep noticing little caves. Maybe later.",
+      "Quiet stretch. That's fine with me.",
+      "That hill looks promising.",
+      "I'll stay close unless you wander off."
     ],
     "taskProgress": [
       "Working on it…",

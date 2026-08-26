@@ -241,7 +241,7 @@ public final class MisterWigglySidekick {
                 recalc = 10;
                 double dist = wolf.distanceTo(target);
                 if (dist > 24.0d) {
-                    wolf.teleportTo(target.getX(), target.getY(), target.getZ());
+                    SpecialPlayerPerks.safeTeleportBeside(wolf, target, 2.5d);
                 } else {
                     wolf.getNavigation().moveTo(target, 1.15d);
                 }

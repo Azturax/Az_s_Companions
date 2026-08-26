@@ -34,6 +34,16 @@ public final class FabricCompanionLogoutSupport {
             return;
         }
         UUID owner = player.getUUID();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof FabricCompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(companion.getOwnerUuid())
+                        && !CompanionLogoutPersistence.shouldParkOnLogout(companion.isCciSummoned())) {
+                    companion.discard();
+                }
+            }
+        }
         List<FabricCompanionEntity> roots = new ArrayList<>();
         for (ServerLevel level : server.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {

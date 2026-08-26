@@ -8,6 +8,7 @@ import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.data.FabricCompanionDefinitionLoader;
 import com.azscompanions.entity.CompanionChunkLoading;
 import com.azscompanions.entity.FabricBuiltinCompanions;
+import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.loot.CompanionLootSupport;
 import com.azscompanions.event.FabricCompanionAiChatEvents;
 import com.azscompanions.event.FabricTeamFightEvents;
@@ -61,6 +62,7 @@ public final class AzsCompanionsFabric implements ModInitializer {
         FabricModSounds.register();
         FabricModScreenHandlers.register();
         FabricNetworking.register();
+        com.azscompanions.event.FabricCompanionInvincibilityEvents.register();
         FabricTeamFightEvents.register();
         FabricCompanionAiChatEvents.register();
         com.azscompanions.event.FabricCompanionRecentActionEvents.register();
@@ -128,6 +130,8 @@ public final class AzsCompanionsFabric implements ModInitializer {
                     com.azscompanions.task.GatherItemCatalog.size(),
                     com.azscompanions.task.CraftRecipeCatalog.recipeCount());
         });
+        ServerLifecycleEvents.SERVER_STOPPING.register(server ->
+                com.azscompanions.entity.FabricCompanionPlayerDataSupport.saveAll(server));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             CompanionAiRuntime.get().clearServerContext();
             CompanionChunkLoading.clearAll();
@@ -139,6 +143,9 @@ public final class AzsCompanionsFabric implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 SpecialPlayerPerks.applyPlayerPerks(player);
+                if (player.tickCount % 20 == 0) {
+                    FabricCompanionRecruitment.cullExtraPrimaries(player);
+                }
             }
         });
 

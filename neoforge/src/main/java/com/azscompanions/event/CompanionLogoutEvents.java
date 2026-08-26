@@ -1,6 +1,7 @@
 package com.azscompanions.event;
 
 import com.azscompanions.entity.CompanionLogoutSupport;
+import com.azscompanions.perk.WigglyDogPerk;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -16,6 +17,7 @@ public final class CompanionLogoutEvents {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             CompanionLogoutSupport.parkOwnedCompanions(player);
+            WigglyDogPerk.parkFor(player);
         }
     }
 

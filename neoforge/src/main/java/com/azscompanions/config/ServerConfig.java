@@ -17,6 +17,7 @@ public final class ServerConfig {
     public static final ModConfigSpec.IntValue MAX_CHILD_COMPANIONS_PER_LEADER;
     public static final ModConfigSpec.BooleanValue TEAMFIGHT_ENABLED_BY_DEFAULT;
     public static final ModConfigSpec.IntValue SUPPORT_AMOUNT_PER_COMPANION;
+    public static final ModConfigSpec.IntValue CCI_SUMMON_DURATION_SECONDS;
     public static final ModConfigSpec.BooleanValue ALLOW_COMBAT;
     public static final ModConfigSpec.BooleanValue ATTACK_NEUTRALS_ONLY_IF_HIT;
     /** Default true — companions/Bits never drop inventory on death. */
@@ -58,6 +59,9 @@ public final class ServerConfig {
         SUPPORT_AMOUNT_PER_COMPANION = builder
                 .comment("CCI interaction amount per child (amount= ÷ this = spawn count). Example: amount=500 with 100 → 5 children. Not a max cap.")
                 .defineInRange("supportAmountPerCompanion", 100, 1, 1_000_000);
+        CCI_SUMMON_DURATION_SECONDS = builder
+                .comment("Default timed-death window for /az summon and CCI companion_cci_summon (seconds). 0 disables expiry. Charm companions are never affected.")
+                .defineInRange("cciSummonDurationSeconds", 90, 0, 3600);
         builder.pop();
 
         builder.push("movement");
