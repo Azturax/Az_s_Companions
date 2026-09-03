@@ -18,7 +18,7 @@ public final class CompanionInventoryScreen extends AbstractContainerScreen<Comp
             AzsCompanionsConstants.MOD_ID, "textures/gui/companion_inventory.png");
 
     public CompanionInventoryScreen(CompanionInventoryMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
+        super(menu, inv, Component.translatable("screen.azscompanions.inventory.adventure"));
         this.imageWidth = CompanionInventoryMenu.IMAGE_WIDTH;
         this.imageHeight = CompanionInventoryMenu.IMAGE_HEIGHT;
         this.titleLabelX = CompanionInventoryMenu.STORAGE_X;

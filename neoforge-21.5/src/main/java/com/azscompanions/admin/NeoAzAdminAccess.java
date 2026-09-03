@@ -16,6 +16,18 @@ public final class NeoAzAdminAccess {
         return ServerConfig.ENABLE_AZ_ADMIN_COMMAND.get();
     }
 
+    public static boolean mayEditServerAi(ServerPlayer player) {
+        if (player == null) {
+            return false;
+        }
+        MinecraftServer server = player.getServer();
+        if (server != null && !server.isDedicatedServer()
+                && server.isSingleplayerOwner(player.getGameProfile())) {
+            return true;
+        }
+        return mayUse(player);
+    }
+
     public static boolean mayUse(ServerPlayer player) {
         if (player == null) {
             return false;

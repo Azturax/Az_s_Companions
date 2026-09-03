@@ -58,7 +58,7 @@ public final class CompanionMenuScreen extends Screen {
                 minecraft.setScreen(new CompanionBehaviorScreen(companion, this));
             }
         }).bounds(bx, by + 56, 160, 22).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b -> {
             PacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_INVENTORY"));
         }).bounds(bx, by + 84, 160, 22).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.stats"), b -> {
@@ -86,6 +86,13 @@ public final class CompanionMenuScreen extends Screen {
         addRenderableWidget(new IconButton(
                 panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
                 b -> Util.getPlatform().openUri(DONATE_URL)));
+        addRenderableWidget(new GearButton(
+                panelX + panelW - 52, panelY + 8, 20, 20,
+                b -> {
+                    if (minecraft != null) {
+                        minecraft.setScreen(new CompanionGeneralSettingsScreen(companion, this));
+                    }
+                }));
     }
 
     @Override
@@ -122,6 +129,26 @@ public final class CompanionMenuScreen extends Screen {
             int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
             graphics.blit(icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);
+        }
+    }
+
+    /** Small settings cog — drawn, no extra texture required. */
+    private static final class GearButton extends Button {
+        GearButton(int x, int y, int width, int height, OnPress onPress) {
+            super(x, y, width, height, Component.empty(), onPress, DEFAULT_NARRATION);
+            setTooltip(Tooltip.create(Component.translatable("screen.azscompanions.general_settings")));
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
+            graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
+            int cx = getX() + width / 2;
+            int cy = getY() + height / 2;
+            graphics.fill(cx - 5, cy - 1, cx + 5, cy + 2, 0xFFC0C0C0);
+            graphics.fill(cx - 1, cy - 5, cx + 2, cy + 5, 0xFFC0C0C0);
+            graphics.fill(cx - 3, cy - 3, cx + 4, cy + 4, 0xFFA8A8A8);
+            graphics.fill(cx - 1, cy - 1, cx + 2, cy + 2, 0xFF404040);
         }
     }
 

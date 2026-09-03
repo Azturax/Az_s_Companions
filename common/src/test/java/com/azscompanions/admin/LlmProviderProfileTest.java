@@ -75,8 +75,8 @@ class LlmProviderProfileTest {
         assertEquals(LlmProviderMode.OPENAI_COMPATIBLE, merged.provider());
         assertTrue(merged.baseUrl().contains("groq"));
         assertFalse(merged.enableAiActions());
-        assertFalse(merged.nameListen());
-        assertEquals(com.azscompanions.ai.ChatListenMode.OFF, merged.chatListenMode());
+        assertTrue(merged.nameListen());
+        assertEquals(com.azscompanions.ai.ChatListenMode.GLOBAL, merged.chatListenMode());
         assertNull(snap.validate());
 
         snap.setBaseUrl("not-a-url");

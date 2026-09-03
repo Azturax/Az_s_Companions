@@ -31,12 +31,6 @@ public final class MisterWigglySidekick {
     public static final String TAG_SIDEKICK = "azscompanions_wiggly_sidekick";
     public static final String TAG_FOLLOW = "azscompanions_follow_companion";
 
-    /**
-     * At companion default scale ({@link CompanionEntity#DEFAULT_BODY_SCALE} = 0.7),
-     * dog uses vanilla wolf scale 1.0: {@code dogScale = companionScale * factor}.
-     */
-    public static final float DOG_SCALE_FACTOR = 1.0f / CompanionEntity.DEFAULT_BODY_SCALE;
-
     private MisterWigglySidekick() {
     }
 
@@ -44,7 +38,16 @@ public final class MisterWigglySidekick {
         return ownerUuid != null && AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(ownerUuid);
     }
 
-    /** True when this owner currently has at least one living summoned companion. */
+    static boolean qualifies(CompanionEntity companion) {
+        return companion != null && WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                companion.getOwnerUuid(),
+                companion.isCciSummoned(),
+                companion.isChildCompanion(),
+                companion.getDefinition().id().toString(),
+                companion.getForm().serializedName());
+    }
+
+    /** True when a charm-owned Wiggly companion is out (sidekick should own the dog slot). */
     public static boolean hasSummonedCompanion(ServerPlayer player) {
         if (player == null || !(player.level() instanceof ServerLevel level)) {
             return false;
@@ -58,7 +61,8 @@ public final class MisterWigglySidekick {
             for (var entity : dim.getAllEntities()) {
                 if (entity instanceof CompanionEntity companion
                         && companion.isAlive()
-                        && owner.equals(companion.getOwnerUuid())) {
+                        && owner.equals(companion.getOwnerUuid())
+                        && qualifies(companion)) {
                     return true;
                 }
             }
@@ -66,47 +70,46 @@ public final class MisterWigglySidekick {
         return false;
     }
 
-    /** Ensure exactly one sidekick dog exists for this companion while summoned. */
+    /** Ensure exactly one sidekick dog exists for a charm Wiggly companion. */
     public static void ensureFor(CompanionEntity companion) {
         if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
-        UUID owner = companion.getOwnerUuid();
-        if (!isWigglyOwner(owner)) {
+        if (!qualifies(companion)) {
+            despawnFor(companion);
             return;
         }
+        UUID owner = companion.getOwnerUuid();
         Wolf existing = findOrCullSidekick(level, companion);
         if (existing != null && existing.isAlive()) {
             existing.setOrderedToSit(false);
-            syncScale(existing, companion);
+            syncScale(existing);
             return;
         }
         spawnSidekick(level, companion, owner);
     }
 
-    /** Keep dog {@link Attributes#SCALE} proportional to the companion size slider. */
+    /** Keep dog {@link Attributes#SCALE} at {@link WigglyDogPerkSupport#DOG_SCALE}. */
     public static void syncScaleFromCompanion(CompanionEntity companion) {
         if (companion.level().isClientSide() || !(companion.level() instanceof ServerLevel level)) {
             return;
         }
-        if (!isWigglyOwner(companion.getOwnerUuid())) {
+        if (!qualifies(companion)) {
             return;
         }
         Wolf dog = findOrCullSidekick(level, companion);
         if (dog != null && dog.isAlive()) {
-            syncScale(dog, companion);
+            syncScale(dog);
         }
     }
 
-    private static void syncScale(Wolf dog, CompanionEntity companion) {
-        float dogScale = companion.getBodyScale() * DOG_SCALE_FACTOR;
-        dogScale = Math.max(CompanionEntity.MIN_BODY_SCALE, Math.min(CompanionEntity.MAX_BODY_SCALE, dogScale));
+    private static void syncScale(Wolf dog) {
         var attr = dog.getAttribute(Attributes.SCALE);
         if (attr == null) {
             return;
         }
-        if (Math.abs(attr.getBaseValue() - dogScale) > 0.001d) {
-            attr.setBaseValue(dogScale);
+        if (WigglyDogPerkSupport.scaleNeedsUpdate(attr.getBaseValue())) {
+            attr.setBaseValue(WigglyDogPerkSupport.DOG_SCALE);
             dog.refreshDimensions();
         }
     }
@@ -144,11 +147,7 @@ public final class MisterWigglySidekick {
         for (ServerLevel dim : server.getAllLevels()) {
             for (var entity : dim.getAllEntities()) {
                 if (entity instanceof Wolf wolf && wolf.isAlive() && isSidekick(wolf)) {
-                    CompoundTag data = wolf.getPersistentData();
-                    if (data.read(TAG_FOLLOW, UUIDUtil.CODEC).isPresent()
-                            && follow.equals(data.read(TAG_FOLLOW, UUIDUtil.CODEC).orElse(null))) {
-                        owned.add(wolf);
-                    }
+                    owned.add(wolf);
                 }
             }
         }
@@ -156,8 +155,11 @@ public final class MisterWigglySidekick {
             return null;
         }
         Wolf keep = WigglyDogPerkSupport.pickOneToKeep(owned, wolf -> {
+            CompoundTag data = wolf.getPersistentData();
+            UUID followTarget = data.read(TAG_FOLLOW, UUIDUtil.CODEC).orElse(null);
+            double followBonus = follow.equals(followTarget) ? -1.0e15d : 0.0d;
             double dimPenalty = wolf.level() == level ? 0.0d : 1.0e12d;
-            return dimPenalty + wolf.distanceToSqr(companion);
+            return followBonus + dimPenalty + wolf.distanceToSqr(companion);
         });
         for (Wolf wolf : owned) {
             if (wolf != keep) {
@@ -191,7 +193,7 @@ public final class MisterWigglySidekick {
         wolf.getPersistentData().putBoolean(TAG_SIDEKICK, true);
         wolf.getPersistentData().store(TAG_FOLLOW, UUIDUtil.CODEC, companion.getUUID());
         wolf.goalSelector.addGoal(2, new FollowCompanionEntityGoal(wolf, companion.getUUID()));
-        syncScale(wolf, companion);
+        syncScale(wolf);
         level.addFreshEntity(wolf);
     }
 

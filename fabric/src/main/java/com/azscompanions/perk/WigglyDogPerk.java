@@ -50,6 +50,7 @@ public final class WigglyDogPerk {
         }
         dog.setOwnerUUID(player.getUUID());
         dog.setInvulnerable(true);
+        applyDogScale(dog);
         clearGlow(dog);
         if (SpecialPlayerPerks.isOwnerActivelyFlying(player)) {
             dog.setOrderedToSit(false);
@@ -182,9 +183,21 @@ public final class WigglyDogPerk {
         nbt.putByte("CollarColor", (byte) DyeColor.PINK.getId());
         wolf.load(nbt);
         wolf.addTag(WigglyDogPerkSupport.ENTITY_TAG);
+        applyDogScale(wolf);
         clearGlow(wolf);
         level.addFreshEntity(wolf);
         return wolf;
+    }
+
+    private static void applyDogScale(Wolf wolf) {
+        var attr = wolf.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+        if (attr == null) {
+            return;
+        }
+        if (WigglyDogPerkSupport.scaleNeedsUpdate(attr.getBaseValue())) {
+            attr.setBaseValue(WigglyDogPerkSupport.DOG_SCALE);
+            wolf.refreshDimensions();
+        }
     }
 
     private static void clearGlow(Wolf wolf) {

@@ -39,6 +39,10 @@ public final class CciMessages {
     public static final String SUMMON_FAILED = "message.azscompanions.cci.summon_failed";
     public static final String CCI_SUMMON_OK = "message.azscompanions.cci.cci_summon_ok";
     public static final String CCI_SUMMON_FAILED = "message.azscompanions.cci.cci_summon_failed";
+    public static final String CCI_KILL_ALL = "message.azscompanions.cci.kill_all";
+    public static final String CCI_KILL_ONE = "message.azscompanions.cci.kill_one";
+    public static final String CCI_KILL_NONE = "message.azscompanions.cci.kill_none";
+    public static final String CCI_KILL_NONE_NAMED = "message.azscompanions.cci.kill_none_named";
     public static final String PERSONA_SET_SUFFIX = "message.azscompanions.cci.persona_set_suffix";
     public static final String MODIFY_OK = "message.azscompanions.cci.modify_ok";
     public static final String MODIFY_OK_PERSONA = "message.azscompanions.cci.modify_ok_persona";

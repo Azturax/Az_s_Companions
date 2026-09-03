@@ -1,6 +1,8 @@
 package com.azscompanions.entity;
 
 import com.azscompanions.config.ServerConfig;
+import com.azscompanions.item.CharmData;
+import com.azscompanions.item.CompanionCharmItem;
 import com.azscompanions.registry.ModEntities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -9,12 +11,17 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class CompanionRecruitment {
@@ -80,6 +87,85 @@ public final class CompanionRecruitment {
         return null;
     }
 
+    /** First living primary companion for this owner (not a Bit / fight spawn). */
+    @Nullable
+    public static CompanionEntity findAnyPrimary(ServerPlayer player) {
+        MinecraftServer server = player.level().getServer();
+        if (server == null) {
+            return null;
+        }
+        UUID owner = player.getUUID();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && owner.equals(companion.getOwnerUuid())
+                        && !companion.isFightSpawn()) {
+                    return companion;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Discard extra primary companions over {@link ServerConfig#MAX_COMPANIONS_PER_PLAYER}.
+     * Also collapses same-UUID copies. Does not touch Bits / fight spawns except UUID dupes.
+     */
+    public static void cullExtraPrimaries(ServerPlayer player) {
+        MinecraftServer server = player.level().getServer();
+        if (server == null) {
+            return;
+        }
+        UUID owner = player.getUUID();
+        List<CompanionEntity> primaries = new ArrayList<>();
+        Map<UUID, CompanionEntity> byId = new HashMap<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (!(entity instanceof CompanionEntity companion)
+                        || !companion.isAlive()
+                        || !owner.equals(companion.getOwnerUuid())) {
+                    continue;
+                }
+                CompanionEntity seen = byId.putIfAbsent(companion.getUUID(), companion);
+                if (seen != null && seen != companion) {
+                    companion.discard();
+                    continue;
+                }
+                if (!companion.isFightSpawn()) {
+                    primaries.add(companion);
+                }
+            }
+        }
+        int max = ServerConfig.MAX_COMPANIONS_PER_PLAYER.get();
+        if (primaries.size() <= max) {
+            return;
+        }
+        UUID bound = null;
+        ItemStack charm = findCharm(player);
+        if (charm != null) {
+            bound = CharmData.getBoundUuid(charm);
+        }
+        CompanionEntity keep = CompanionSpawnGuardSupport.pickPrimaryToKeep(
+                primaries, bound, CompanionEntity::getUUID, c -> c.distanceToSqr(player));
+        for (CompanionEntity extra : primaries) {
+            if (extra != keep) {
+                extra.discard();
+            }
+        }
+    }
+
+    @Nullable
+    private static ItemStack findCharm(ServerPlayer player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (CompanionCharmItem.isCharm(stack)) {
+                return stack;
+            }
+        }
+        return null;
+    }
+
     @Nullable
     public static CompanionEntity resolveLeader(ServerPlayer player, CompanionEntity candidate) {
         if (candidate == null || !candidate.isAlive()) {
@@ -120,7 +206,10 @@ public final class CompanionRecruitment {
         companion.applyDefinition(definition);
         companion.applyOwnerAppearanceDefaults(player);
         companion.setHomePos(player.blockPosition());
-        level.addFreshEntity(companion);
+        companion.setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
+        if (!level.addFreshEntity(companion)) {
+            return null;
+        }
         return companion;
     }
 
@@ -189,6 +278,7 @@ public final class CompanionRecruitment {
         companion.setAttitude(CompanionAttitude.HOSTILE);
         companion.setMode(CompanionMode.FOLLOW);
         companion.setHomePos(player.blockPosition());
+        companion.setMaxChildren(ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get());
         level.addFreshEntity(companion);
         return companion;
     }
@@ -208,8 +298,8 @@ public final class CompanionRecruitment {
         if (root == null) {
             return null;
         }
-        int maxChildren = ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get();
-        if (countChildrenOf(player, root.getUUID()) >= maxChildren) {
+        int maxChildren = root.getMaxChildren();
+        if (countChildrenOf(player, root.getUUID()) + root.getStoredChildCount() >= maxChildren) {
             return null;
         }
         ServerLevel level = (ServerLevel) player.level();
@@ -247,6 +337,10 @@ public final class CompanionRecruitment {
 
     @Nullable
     public static CompanionEntity spawnFromStored(ServerPlayer player, CompoundTag stored, UUID boundUuid) {
+        CompanionEntity existing = findOwned(player, boundUuid);
+        if (existing != null && existing.isAlive()) {
+            return existing;
+        }
         ServerLevel level = (ServerLevel) player.level();
         CompanionEntity companion = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
         if (companion == null) {
@@ -258,12 +352,58 @@ public final class CompanionRecruitment {
         }
         companion.setUUID(boundUuid);
         companion.setOwner(player);
-        companion.snapTo(player.getX() + 1, player.getY(), player.getZ() + 1, player.getYRot(), 0);
+        companion.snapTo(player.getX() + 2.5d, player.getY(), player.getZ() + 0.5d, player.getYRot(), 0);
         if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
             companion.setMode(CompanionMode.FOLLOW);
         }
-        level.addFreshEntity(companion);
+        if (!level.addFreshEntity(companion)) {
+            CompanionEntity again = findOwned(player, boundUuid);
+            return again != null && again.isAlive() ? again : null;
+        }
+        companion.safeTeleportNear(player.blockPosition());
         CompanionPlayerDataSupport.apply(companion);
         return companion;
+    }
+
+    /** Restore a Bit snapshot near its parent leader (FIFO call from StoredChildren). */
+    @Nullable
+    public static CompanionEntity spawnStoredChild(
+            ServerPlayer player, CompanionEntity parent, CompoundTag stored, UUID childUuid) {
+        if (parent == null || !parent.isAlive() || stored == null) {
+            return null;
+        }
+        if (!com.azscompanions.compat.ftb.FtbCompat.maySpawn(player)) {
+            return null;
+        }
+        CompanionEntity existingChild = findOwned(player, childUuid);
+        if (existingChild != null && existingChild.isAlive()) {
+            return existingChild;
+        }
+        ServerLevel level = parent.level() instanceof ServerLevel leaderLevel
+                ? leaderLevel
+                : (ServerLevel) player.level();
+        CompanionEntity child = ModEntities.COMPANION.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+        if (child == null) {
+            return null;
+        }
+        try (ProblemReporter.ScopedCollector problems = new ProblemReporter.ScopedCollector(child.problemPath(), com.azscompanions.AzsCompanions.LOGGER)) {
+            ValueInput input = TagValueInput.create(problems, level.registryAccess(), stored);
+            child.load(input);
+        }
+        child.setUUID(childUuid);
+        child.setOwner(player);
+        child.setLeaderUuid(parent.getUUID());
+        child.setFightSpawn(true);
+        double angle = level.getRandom().nextDouble() * Math.PI * 2.0d;
+        double dist = 1.2d + level.getRandom().nextDouble() * 1.5d;
+        child.snapTo(parent.getX() + Math.cos(angle) * dist, parent.getY(),
+                parent.getZ() + Math.sin(angle) * dist, parent.getYRot(), 0);
+        child.setHomePos(parent.blockPosition());
+        if (!CompanionPlayerPersistence.snapshotHasMode(stored.contains("Mode"))) {
+            child.setMode(CompanionMode.FOLLOW);
+        }
+        level.addFreshEntity(child);
+        CompanionPlayerDataSupport.apply(child);
+        return child;
     }
 }

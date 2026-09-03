@@ -1,5 +1,6 @@
 package com.azscompanions.admin;
 
+import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.LlmProviderMode;
 import com.google.gson.JsonObject;
@@ -8,7 +9,8 @@ import com.google.gson.JsonParser;
 /**
  * Editable subset of companion AI settings for the in-game admin panel.
  * Save writes server config and applies to {@link com.azscompanions.ai.CompanionAiRuntime}.
- * Ask-only: no chatListen / nameListen / enableAiActions (use {@code /ask}).
+ * Player-facing AI panel (perm 0) plus admin LLM keys. Chat listen / global talk
+ * are editable; {@code enableAiActions} stays off (text dialogue).
  *
  * <p>API key security: S2C wire JSON never includes the plaintext key — only
  * {@code apiKeyStatus} ({@code config}/{@code env}/{@code none}). C2S may include
@@ -47,6 +49,8 @@ public final class AdminAiConfigSnapshot {
     private boolean reactiveChat = true;
     private boolean itemFindChat = true;
     private boolean enableChatMessages = true;
+    private boolean globalTalk = true;
+    private String chatListenMode = ChatListenMode.GLOBAL.configName();
     private String mcpUrl = "http://127.0.0.1:3001/mcp";
 
     public static AdminAiConfigSnapshot fromSettings(CompanionAiSettings s) {
@@ -68,6 +72,10 @@ public final class AdminAiConfigSnapshot {
         snap.reactiveChat = s.reactiveChat();
         snap.itemFindChat = s.itemFindChat();
         snap.enableChatMessages = s.enableChatMessages();
+        snap.globalTalk = s.globalTalk();
+        snap.chatListenMode = s.chatListenMode() == null
+                ? ChatListenMode.GLOBAL.configName()
+                : s.chatListenMode().configName();
         snap.mcpUrl = s.mcpUrl();
         snap.profileId = LlmProviderProfile.detect(snap).name().toLowerCase();
         return snap;
@@ -89,11 +97,30 @@ public final class AdminAiConfigSnapshot {
         out.setReactiveChat(reactiveChat);
         out.setItemFindChat(itemFindChat);
         out.setEnableChatMessages(enableChatMessages);
+        out.setGlobalTalk(globalTalk);
+        out.setChatListenMode(ChatListenMode.fromConfig(chatListenMode));
+        if (out.chatListenMode().listens()) {
+            out.setNameListen(true);
+        }
         out.setMcpUrl(trimOr(mcpUrl, "http://127.0.0.1:3001/mcp"));
-        // Retired: always force ask-only defaults
-        out.setChatListenMode(com.azscompanions.ai.ChatListenMode.OFF);
-        out.setNameListen(false);
         out.setEnableAiActions(false);
+        return out;
+    }
+
+    /**
+     * Player perm-0 save: chat behavior only. Does not touch provider, URLs, or API keys.
+     */
+    public CompanionAiSettings mergePlayerFacingInto(CompanionAiSettings base) {
+        CompanionAiSettings out = base == null ? new CompanionAiSettings() : base.copy();
+        out.setIdleChat(idleChat);
+        out.setReactiveChat(reactiveChat);
+        out.setItemFindChat(itemFindChat);
+        out.setEnableChatMessages(enableChatMessages);
+        out.setGlobalTalk(globalTalk);
+        out.setChatListenMode(ChatListenMode.fromConfig(chatListenMode));
+        if (out.chatListenMode().listens()) {
+            out.setNameListen(true);
+        }
         return out;
     }
 
@@ -287,6 +314,33 @@ public final class AdminAiConfigSnapshot {
         return this;
     }
 
+    public boolean globalTalk() {
+        return globalTalk;
+    }
+
+    public AdminAiConfigSnapshot setGlobalTalk(boolean globalTalk) {
+        this.globalTalk = globalTalk;
+        return this;
+    }
+
+    public String chatListenMode() {
+        return chatListenMode;
+    }
+
+    public ChatListenMode chatListen() {
+        return ChatListenMode.fromConfig(chatListenMode);
+    }
+
+    public AdminAiConfigSnapshot setChatListenMode(String chatListenMode) {
+        this.chatListenMode = ChatListenMode.fromConfig(chatListenMode).configName();
+        return this;
+    }
+
+    public AdminAiConfigSnapshot setChatListenMode(ChatListenMode mode) {
+        this.chatListenMode = (mode == null ? ChatListenMode.GLOBAL : mode).configName();
+        return this;
+    }
+
     public String mcpUrl() {
         return mcpUrl;
     }
@@ -314,6 +368,8 @@ public final class AdminAiConfigSnapshot {
         o.addProperty("reactiveChat", reactiveChat);
         o.addProperty("itemFindChat", itemFindChat);
         o.addProperty("enableChatMessages", enableChatMessages);
+        o.addProperty("globalTalk", globalTalk);
+        o.addProperty("chatListenMode", chatListenMode);
         o.addProperty("mcpUrl", mcpUrl);
         return o.toString();
     }
@@ -363,6 +419,12 @@ public final class AdminAiConfigSnapshot {
             }
             if (o.has("enableChatMessages")) {
                 snap.setEnableChatMessages(o.get("enableChatMessages").getAsBoolean());
+            }
+            if (o.has("globalTalk")) {
+                snap.setGlobalTalk(o.get("globalTalk").getAsBoolean());
+            }
+            if (o.has("chatListenMode")) {
+                snap.setChatListenMode(o.get("chatListenMode").getAsString());
             }
             if (o.has("mcpUrl")) {
                 snap.setMcpUrl(o.get("mcpUrl").getAsString());

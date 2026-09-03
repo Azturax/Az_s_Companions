@@ -1,5 +1,6 @@
 package com.azscompanions.entity;
 
+import com.azscompanions.AzsCompanions;
 import com.azscompanions.ai.ChildAutonomyMode;
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiAsk;
@@ -35,6 +36,7 @@ import com.azscompanions.registry.ModItems;
 import com.azscompanions.task.TaskQueue;
 import com.azscompanions.util.CompanionArmorRules;
 import com.azscompanions.util.CompanionPotionHelper;
+import com.azscompanions.util.NbtUuids;
 import com.azscompanions.util.ProtectionHelper;
 import com.azscompanions.voice.DialogueCategory;
 import com.azscompanions.voice.VoiceService;
@@ -43,12 +45,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
@@ -85,7 +90,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.server.level.ServerPlayer;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -154,8 +162,16 @@ public class CompanionEntity extends PathfinderMob {
     /** Synced so client UI ownership checks work without looking at NBT. */
     private static final EntityDataAccessor<String> DATA_OWNER =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
+    /** Callable Bits parked on this parent (FIFO store → call). Synced for menu icon. */
+    private static final EntityDataAccessor<Integer> DATA_STORED_CHILD_COUNT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
+    /** Per-companion Bit cap (default 3; CCI maxChildren= override). */
+    private static final EntityDataAccessor<Integer> DATA_MAX_CHILDREN =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.INT);
 
     private final CompanionInventory inventory = new CompanionInventory();
+    /** FIFO snapshots of Bits removed from the world (menu Remove / charm parent store). */
+    private final ListTag storedChildren = new ListTag();
     private final TaskQueue taskQueue = new TaskQueue(this);
     private final OwnerActivityTracker ownerActivity = new OwnerActivityTracker();
     private final Set<UUID> trustedPlayers = new HashSet<>();
@@ -290,6 +306,8 @@ public class CompanionEntity extends PathfinderMob {
         builder.define(DATA_PERSONAL_SPACE, CompanionFollowDistances.DEFAULT_PERSONAL_SPACE);
         builder.define(DATA_WANDER_RADIUS, CompanionFollowDistances.DEFAULT_WANDER_RADIUS);
         builder.define(DATA_OWNER, "");
+        builder.define(DATA_STORED_CHILD_COUNT, 0);
+        builder.define(DATA_MAX_CHILDREN, CompanionChildLimits.MAX_PER_LEADER);
     }
 
     @Override
@@ -1030,6 +1048,20 @@ public class CompanionEntity extends PathfinderMob {
         }
 
         ItemStack held = player.getItemInHand(hand);
+        // Charm or empty hand on parent: call next stored Bit (callable count decreases).
+        if (!isChildCompanion() && getStoredChildCount() > 0
+                && (held.isEmpty() || CompanionCharmItem.isCharm(held))) {
+            CompanionEntity called = callNextStoredChild(serverPlayer);
+            if (called != null) {
+                player.sendOverlayMessage(Component.translatable(
+                        "message.azscompanions.child_called", called.getChatDisplayName()));
+                return InteractionResult.CONSUME;
+            }
+            if (getStoredChildCount() > 0) {
+                player.sendOverlayMessage(Component.translatable("message.azscompanions.child_limit_reached"));
+                return InteractionResult.CONSUME;
+            }
+        }
         if (!held.isEmpty()) {
             if (CompanionCharmItem.isCharm(held)) {
                 // Do not put the charm into companion hands.
@@ -1563,32 +1595,160 @@ public class CompanionEntity extends PathfinderMob {
         }
     }
 
-    public void despawnChildCompanions() {
+    public int getStoredChildCount() {
+        return entityData.get(DATA_STORED_CHILD_COUNT);
+    }
+
+    /** Effective Bit cap for this parent (living + stored). */
+    public int getMaxChildren() {
+        return CompanionChildLimits.clampMaxChildren(entityData.get(DATA_MAX_CHILDREN));
+    }
+
+    public void setMaxChildren(int max) {
+        entityData.set(DATA_MAX_CHILDREN, CompanionChildLimits.clampMaxChildren(max));
+    }
+
+    /** Living world Bits + stored callable snapshots under this parent. */
+    public int getOccupiedChildSlots(ServerPlayer player) {
+        int living = player == null ? 0 : CompanionRecruitment.countChildrenOf(player, getUUID());
+        return living + getStoredChildCount();
+    }
+
+    private void syncStoredChildCount() {
+        entityData.set(DATA_STORED_CHILD_COUNT, storedChildren.size());
+    }
+
+    private CompoundTag snapshotEntity(CompanionEntity entity) {
+        try (ProblemReporter.ScopedCollector reporter =
+                     new ProblemReporter.ScopedCollector(entity.problemPath(), AzsCompanions.LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, entity.registryAccess());
+            entity.saveWithoutId(output);
+            return output.buildResult();
+        }
+    }
+
+    /** Living Bits under this parent, oldest first (approx. creation order). */
+    public List<CompanionEntity> listLivingChildren() {
+        List<CompanionEntity> out = new ArrayList<>();
         if (level().isClientSide() || !(level() instanceof ServerLevel serverLevel)) {
-            return;
+            return out;
         }
         UUID self = getUUID();
+        UUID owner = getOwnerUuid();
         for (CompanionEntity child : serverLevel.getEntitiesOfClass(
                 CompanionEntity.class, getBoundingBox().inflate(256.0d),
                 c -> c.isAlive() && self.equals(c.getLeaderUuid()))) {
-            child.discard();
+            out.add(child);
         }
         if (serverLevel.getServer() != null) {
-            UUID owner = getOwnerUuid();
-            for (ServerLevel level : serverLevel.getServer().getAllLevels()) {
-                if (level == serverLevel) {
+            for (ServerLevel other : serverLevel.getServer().getAllLevels()) {
+                if (other == serverLevel) {
                     continue;
                 }
-                for (Entity entity : level.getAllEntities()) {
+                for (Entity entity : other.getAllEntities()) {
                     if (entity instanceof CompanionEntity child
                             && child.isAlive()
                             && self.equals(child.getLeaderUuid())
                             && (owner == null || owner.equals(child.getOwnerUuid()))) {
-                        child.discard();
+                        out.add(child);
                     }
                 }
             }
         }
+        out.sort(Comparator.comparingInt((CompanionEntity c) -> c.tickCount).reversed());
+        return out;
+    }
+
+    /**
+     * Park a world Bit on this parent (inventory kept in snapshot). Increases stored count.
+     * @return true if stored
+     */
+    public boolean storeChild(CompanionEntity child) {
+        if (level().isClientSide() || child == null || !child.isAlive() || isChildCompanion()) {
+            return false;
+        }
+        if (!getUUID().equals(child.getLeaderUuid())) {
+            return false;
+        }
+        CompoundTag entry = new CompoundTag();
+        NbtUuids.put(entry, CompanionStoredChildren.ENTRY_UUID, child.getUUID());
+        entry.put(CompanionStoredChildren.ENTRY_DATA, snapshotEntity(child));
+        storedChildren.add(entry);
+        syncStoredChildCount();
+        child.discard();
+        return true;
+    }
+
+    public boolean storeDyingChildSnapshot(CompanionEntity child) {
+        if (level().isClientSide() || child == null || isChildCompanion()) {
+            return false;
+        }
+        if (!getUUID().equals(child.getLeaderUuid())) {
+            return false;
+        }
+        CompoundTag entry = new CompoundTag();
+        NbtUuids.put(entry, CompanionStoredChildren.ENTRY_UUID, child.getUUID());
+        entry.put(CompanionStoredChildren.ENTRY_DATA, snapshotEntity(child));
+        storedChildren.add(entry);
+        syncStoredChildCount();
+        return true;
+    }
+
+    /** Store the oldest living Bit. Menu "Remove child". */
+    public boolean storeNextLivingChild() {
+        List<CompanionEntity> living = listLivingChildren();
+        if (living.isEmpty()) {
+            return false;
+        }
+        return storeChild(living.getFirst());
+    }
+
+    /** Store every living Bit (used when charm-storing the parent). */
+    public int storeAllLivingChildren() {
+        int stored = 0;
+        for (CompanionEntity child : listLivingChildren()) {
+            if (storeChild(child)) {
+                stored++;
+            }
+        }
+        return stored;
+    }
+
+    /**
+     * Spawn the oldest stored Bit near this parent. Decreases stored count.
+     * Respects child caps. Returns null if empty or at limit.
+     */
+    @Nullable
+    public CompanionEntity callNextStoredChild(ServerPlayer player) {
+        if (level().isClientSide() || storedChildren.isEmpty() || isChildCompanion()) {
+            return null;
+        }
+        if (!(level() instanceof ServerLevel)) {
+            return null;
+        }
+        if (CompanionRecruitment.countChildrenOf(player, getUUID()) >= getMaxChildren()) {
+            return null;
+        }
+        CompoundTag entry = storedChildren.getCompoundOrEmpty(0);
+        storedChildren.remove(0);
+        syncStoredChildCount();
+        UUID childUuid = NbtUuids.has(entry, CompanionStoredChildren.ENTRY_UUID)
+                ? NbtUuids.get(entry, CompanionStoredChildren.ENTRY_UUID)
+                : UUID.randomUUID();
+        CompoundTag data = entry.contains(CompanionStoredChildren.ENTRY_DATA)
+                ? entry.getCompoundOrEmpty(CompanionStoredChildren.ENTRY_DATA)
+                : entry;
+        CompanionEntity child = CompanionRecruitment.spawnStoredChild(player, this, data.copy(), childUuid);
+        if (child == null) {
+            storedChildren.add(0, entry);
+            syncStoredChildCount();
+        }
+        return child;
+    }
+
+    /** Prefer {@link #storeAllLivingChildren()} so Bits can be called back. */
+    public void despawnChildCompanions() {
+        storeAllLivingChildren();
     }
 
     @Nullable
@@ -2279,6 +2439,10 @@ public class CompanionEntity extends PathfinderMob {
         if (!offeredFlower.isEmpty()) {
             output.store("OfferedFlower", ItemStack.CODEC, offeredFlower);
         }
+        CompoundTag storedBag = new CompoundTag();
+        storedBag.put(CompanionStoredChildren.NBT_LIST, storedChildren.copy());
+        output.store("StoredChildrenBag", CompoundTag.CODEC, storedBag);
+        output.putInt("MaxChildren", getMaxChildren());
     }
 
     @Override
@@ -2385,6 +2549,15 @@ public class CompanionEntity extends PathfinderMob {
             }
         }
         offeredFlower = input.read("OfferedFlower", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        storedChildren.clear();
+        input.read("StoredChildrenBag", CompoundTag.CODEC).ifPresent(bag -> {
+            ListTag list = bag.getListOrEmpty(CompanionStoredChildren.NBT_LIST);
+            for (int i = 0; i < list.size(); i++) {
+                storedChildren.add(list.getCompoundOrEmpty(i).copy());
+            }
+        });
+        syncStoredChildCount();
+        setMaxChildren(input.getIntOr("MaxChildren", ServerConfig.MAX_CHILD_COMPANIONS_PER_LEADER.get()));
         if (!level().isClientSide() && getOwnerUuid() != null && !applyingPlayerPersistentData) {
             CompanionPlayerDataSupport.apply(this);
         }

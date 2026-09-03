@@ -45,6 +45,7 @@ final class CompanionPlayerPersistenceTest {
     void payloadIncludesModeAndInventory() {
         boolean mode = false;
         boolean inventory = false;
+        boolean globalTalk = false;
         for (String key : CompanionPlayerPersistence.PAYLOAD_NBT_KEYS) {
             if ("Mode".equals(key)) {
                 mode = true;
@@ -52,9 +53,13 @@ final class CompanionPlayerPersistenceTest {
             if ("Inventory".equals(key)) {
                 inventory = true;
             }
+            if ("GlobalTalk".equals(key)) {
+                globalTalk = true;
+            }
         }
         assertTrue(mode);
         assertTrue(inventory);
+        assertTrue(globalTalk);
     }
 
     @Test

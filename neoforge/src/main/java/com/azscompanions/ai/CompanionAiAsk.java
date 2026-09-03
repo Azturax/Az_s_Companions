@@ -39,7 +39,7 @@ public final class CompanionAiAsk {
         if (!runtime.isEnabled()) {
             if (reportErrors) {
                 player.displayClientMessage(Component.literal(
-                        "Companion AI isn't configured here. Set a provider in /az admin → AI Config (or config/azscompanions-ai.toml) — local LM Studio/Ollama or a remote API. On dedicated servers, AI runs on the host only."), false);
+                        "Companion AI isn't configured here. Set a provider in /az ai (or /az admin → AI Config, or config/azscompanions-ai.toml) — local LM Studio/Ollama or a remote API. On dedicated servers, AI runs on the host only."), false);
             }
             return 0;
         }
@@ -169,7 +169,9 @@ public final class CompanionAiAsk {
                     } else {
                         owner.displayClientMessage(Component.literal(line), false);
                     }
-                    notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    if (!companion.isGlobalTalkEnabled()) {
+                        notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    }
                 } else if (fallbackLine != null && !fallbackLine.isBlank()) {
                     companion.speakLine(fallbackLine);
                 }

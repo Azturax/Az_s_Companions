@@ -156,6 +156,11 @@ public final class FabricCompanionCommands {
                                 .executes(ctx -> askGreedy(ctx.getSource().getPlayerOrException(),
                                         StringArgumentType.getString(ctx, "message")))))
                 .then(Commands.literal("ai")
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            com.azscompanions.admin.FabricAzAdminActions.openAiConfig(player);
+                            return 1;
+                        })
                         .then(Commands.literal("status")
                                 .executes(ctx -> {
                                     ctx.getSource().sendSuccess(() -> Component.literal(FabricCompanionAiAsk.status()), false);
@@ -164,7 +169,7 @@ public final class FabricCompanionCommands {
                         .then(Commands.literal("config")
                                 .executes(ctx -> {
                                     ServerPlayer player = ctx.getSource().getPlayerOrException();
-                                    com.azscompanions.admin.FabricAzAdminActions.openPanel(player);
+                                    com.azscompanions.admin.FabricAzAdminActions.openAiConfig(player);
                                     return 1;
                                 })))
                 .then(Commands.literal("stats")

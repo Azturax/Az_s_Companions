@@ -7,6 +7,7 @@ import com.azscompanions.config.FabricServerConfig;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.FabricCompanionMode;
+import com.azscompanions.entity.FabricCompanionPlayerDataSupport;
 import com.azscompanions.network.FabricNetworking;
 import com.azscompanions.teamfight.TeamFightSession;
 import net.minecraft.network.chat.Component;
@@ -32,39 +33,72 @@ public final class FabricAzAdminActions {
             player.displayClientMessage(Component.literal(FabricAzAdminAccess.denyMessage(player)), false);
             return;
         }
+        sendOpen(player, false, true);
+    }
+
+    public static void openAiConfig(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        sendOpen(player, true, FabricAzAdminAccess.mayEditServerAi(player));
+    }
+
+    private static void sendOpen(ServerPlayer player, boolean playerFacing, boolean canEditServerAi) {
         AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(FabricServerConfig.aiSettings());
         String status = CompanionAiRuntime.get().statusLine();
         boolean chunkLoading = FabricServerConfig.COMPANION_CHUNK_LOADING;
         TeamFightSession session = TeamFightSession.of(player.getUUID());
-        boolean teamfight = session.isEnabled();
-        String companionSummary = summarizeCompanions(player);
-        FabricNetworking.openAdminPanel(player, snap, status, chunkLoading, teamfight, companionSummary);
+        FabricNetworking.openAdminPanel(player, snap, status, chunkLoading, session.isEnabled(),
+                summarizeCompanions(player), playerFacing, canEditServerAi);
     }
 
     public static boolean saveAiConfig(ServerPlayer player, AdminAiConfigSnapshot snap) {
-        if (!FabricAzAdminAccess.mayUse(player)) {
-            player.displayClientMessage(Component.literal(FabricAzAdminAccess.denyMessage(player)), false);
-            return false;
-        }
         if (snap == null) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID), false);
             return false;
         }
-        String err = snap.validate();
+        boolean secrets = FabricAzAdminAccess.mayEditServerAi(player);
+        String err = secrets ? snap.validate() : null;
         if (err != null) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID + " (" + err + ")"), false);
             return false;
         }
         try {
-            CompanionAiSettings merged = snap.mergeInto(FabricServerConfig.aiSettings());
-            CompanionAiConfigIO.save(FabricServerConfig.aiConfigPath(), merged);
-            FabricServerConfig.replaceAiSettings(merged);
+            CompanionAiSettings merged;
+            if (secrets) {
+                merged = snap.mergeInto(FabricServerConfig.aiSettings());
+                CompanionAiConfigIO.save(FabricServerConfig.aiConfigPath(), merged);
+                FabricServerConfig.replaceAiSettings(merged);
+            } else {
+                merged = snap.mergePlayerFacingInto(FabricServerConfig.aiSettings());
+            }
             CompanionAiRuntime.get().applySettings(merged);
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVED_APPLIED), false);
+            applyChatPrefsToOwned(player, snap);
+            player.displayClientMessage(Component.literal(
+                    secrets ? AzAdminMessages.AI_SAVED_APPLIED : AzAdminMessages.AI_PLAYER_SAVED), false);
             return true;
         } catch (Exception e) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED), false);
             return false;
+        }
+    }
+
+    private static void applyChatPrefsToOwned(ServerPlayer player, AdminAiConfigSnapshot snap) {
+        if (player.getServer() == null) {
+            return;
+        }
+        var listen = snap.chatListen();
+        boolean talk = snap.globalTalk();
+        boolean idle = snap.idleChat();
+        for (ServerLevel level : player.getServer().getAllLevels()) {
+            for (Entity e : level.getAllEntities()) {
+                if (e instanceof FabricCompanionEntity c && c.isOwnedBy(player) && !c.isFightSpawn()) {
+                    c.setChatListenMode(listen);
+                    c.setGlobalTalkEnabled(talk);
+                    c.setIdleChatEnabled(idle);
+                    FabricCompanionPlayerDataSupport.save(c);
+                }
+            }
         }
     }
 

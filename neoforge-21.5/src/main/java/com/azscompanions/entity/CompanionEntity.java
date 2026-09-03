@@ -163,6 +163,14 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_SHOW_ARMOR =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_GLOBAL_TALK =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_IDLE_CHAT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_TELEPORT =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_CHAT_LISTEN =
+            SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> DATA_ATTITUDE =
             SynchedEntityData.defineId(CompanionEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> DATA_TEAM =
@@ -319,6 +327,10 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         builder.define(DATA_FORM_VARIANT, "");
         builder.define(DATA_SHOW_NAME_TAG, true);
         builder.define(DATA_SHOW_ARMOR, true);
+        builder.define(DATA_GLOBAL_TALK, true);
+        builder.define(DATA_IDLE_CHAT, true);
+        builder.define(DATA_TELEPORT, true);
+        builder.define(DATA_CHAT_LISTEN, CompanionPlayerAiPrefs.defaultChatListen().configName());
         builder.define(DATA_ATTITUDE, CompanionAttitude.PASSIVE.serializedName());
         builder.define(DATA_TEAM, "");
         builder.define(DATA_FOLLOW_RADIUS, CompanionFollowDistances.DEFAULT_FOLLOW_RADIUS);
@@ -583,6 +595,9 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         }
 
         if ((!settings.idleChat() && !hasReactive) || (llmOn && runtime.isBusy())) {
+            return;
+        }
+        if (!hasReactive && !isIdleChatEnabled()) {
             return;
         }
         boolean child = getLeaderUuid() != null;
@@ -1588,7 +1603,15 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             lastSpeakTick = tickCount;
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
+            Component msg = Component.literal("<" + getChatDisplayName() + "> " + text);
+            if (isGlobalTalkEnabled()) {
+                var server = owner.getServer();
+                if (server != null) {
+                    server.getPlayerList().broadcastSystemMessage(msg, false);
+                    return;
+                }
+            }
+            owner.displayClientMessage(msg, false);
         }
     }
 
@@ -2216,6 +2239,40 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         entityData.set(DATA_SHOW_ARMOR, visible);
     }
 
+    public boolean isGlobalTalkEnabled() {
+        return entityData.get(DATA_GLOBAL_TALK);
+    }
+
+    public void setGlobalTalkEnabled(boolean enabled) {
+        entityData.set(DATA_GLOBAL_TALK, enabled);
+    }
+
+    public boolean isIdleChatEnabled() {
+        return entityData.get(DATA_IDLE_CHAT);
+    }
+
+    public void setIdleChatEnabled(boolean enabled) {
+        entityData.set(DATA_IDLE_CHAT, enabled);
+    }
+
+    public boolean isTeleportEnabled() {
+        return entityData.get(DATA_TELEPORT);
+    }
+
+    public void setTeleportEnabled(boolean enabled) {
+        entityData.set(DATA_TELEPORT, enabled);
+    }
+
+    public com.azscompanions.ai.ChatListenMode getChatListenMode() {
+        return CompanionPlayerAiPrefs.parseChatListen(
+                entityData.get(DATA_CHAT_LISTEN), CompanionPlayerAiPrefs.defaultChatListen());
+    }
+
+    public void setChatListenMode(com.azscompanions.ai.ChatListenMode mode) {
+        entityData.set(DATA_CHAT_LISTEN,
+                (mode == null ? CompanionPlayerAiPrefs.defaultChatListen() : mode).configName());
+    }
+
     public CompanionAttitude getAttitude() {
         return CompanionAttitude.byName(entityData.get(DATA_ATTITUDE));
     }
@@ -2560,6 +2617,10 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         tag.putString(CompanionFormVariants.NBT_KEY, getFormVariant());
         tag.putBoolean("ShowNameTag", isNameTagVisible());
         tag.putBoolean("ShowArmor", isArmorVisible());
+        tag.putBoolean(CompanionPlayerAiPrefs.NBT_GLOBAL_TALK, isGlobalTalkEnabled());
+        tag.putBoolean(CompanionPlayerAiPrefs.NBT_IDLE_CHAT, isIdleChatEnabled());
+        tag.putBoolean(CompanionPlayerAiPrefs.NBT_TELEPORT, isTeleportEnabled());
+        tag.putString(CompanionPlayerAiPrefs.NBT_CHAT_LISTEN, getChatListenMode().configName());
         tag.putString("Attitude", getAttitude().serializedName());
         tag.putString("TeamId", getTeamId() == null ? "" : getTeamId());
         tag.putFloat("FollowRadius", getFollowRadius());
@@ -2702,6 +2763,28 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             setArmorVisible(tag.getBooleanOr("ShowArmor", true));
         } else {
             setArmorVisible(true);
+        }
+        if (tag.contains(CompanionPlayerAiPrefs.NBT_GLOBAL_TALK)) {
+            setGlobalTalkEnabled(tag.getBooleanOr(CompanionPlayerAiPrefs.NBT_GLOBAL_TALK, true));
+        } else {
+            setGlobalTalkEnabled(CompanionPlayerAiPrefs.defaultGlobalTalk());
+        }
+        if (tag.contains(CompanionPlayerAiPrefs.NBT_IDLE_CHAT)) {
+            setIdleChatEnabled(tag.getBooleanOr(CompanionPlayerAiPrefs.NBT_IDLE_CHAT, true));
+        } else {
+            setIdleChatEnabled(CompanionPlayerAiPrefs.defaultIdleChat());
+        }
+        if (tag.contains(CompanionPlayerAiPrefs.NBT_TELEPORT)) {
+            setTeleportEnabled(tag.getBooleanOr(CompanionPlayerAiPrefs.NBT_TELEPORT, true));
+        } else {
+            setTeleportEnabled(CompanionPlayerAiPrefs.defaultTeleport());
+        }
+        if (tag.contains(CompanionPlayerAiPrefs.NBT_CHAT_LISTEN)) {
+            setChatListenMode(CompanionPlayerAiPrefs.parseChatListen(
+                    tag.getStringOr(CompanionPlayerAiPrefs.NBT_CHAT_LISTEN, ""),
+                    CompanionPlayerAiPrefs.defaultChatListen()));
+        } else {
+            setChatListenMode(CompanionPlayerAiPrefs.defaultChatListen());
         }
         if (tag.contains("Attitude")) {
             setAttitude(CompanionAttitude.byName(tag.getStringOr("Attitude", "")));

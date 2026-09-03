@@ -3,6 +3,8 @@ package com.azscompanions.entity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Loader-agnostic rules for CCI / streamer temporary summons (sub gift, bits, CommandOutcome).
@@ -20,6 +22,15 @@ public final class CompanionCciSummonSupport {
     public static final float MAX_HEALTH_VALUE = 1024.0f;
 
     public static final String SKIP_TOKEN = "-";
+
+    /** Default {@code /az summon} behavior mode (same as charm companions). */
+    public static final String DEFAULT_MODE = "follow";
+
+    /**
+     * Default {@code /az summon} / CCI type when omitted: player-form with a random Steve or Alex skin.
+     * Explicit {@code kon}/{@code bits}/{@code wiggly} still use those appearances.
+     */
+    public static final String DEFAULT_TYPE = "player";
 
     private CompanionCciSummonSupport() {
     }
@@ -74,6 +85,66 @@ public final class CompanionCciSummonSupport {
                 || v.equalsIgnoreCase("*");
     }
 
+    /**
+     * Canonical companion behavior mode for {@code /az summon}.
+     * Idle → wander; attack → guard. Unknown / skip → {@link #DEFAULT_MODE}.
+     */
+    public static String resolveBehaviorMode(String raw) {
+        if (isSkipToken(raw)) {
+            return DEFAULT_MODE;
+        }
+        String key = raw.trim().toLowerCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        return switch (key) {
+            case "follow" -> "follow";
+            case "stay" -> "stay";
+            case "sit" -> "sit";
+            case "idle", "wander" -> "wander";
+            case "attack", "guard" -> "guard";
+            case "patrol" -> "patrol";
+            case "home" -> "home";
+            case "task" -> "task";
+            default -> DEFAULT_MODE;
+        };
+    }
+
+    public static boolean looksLikeBehaviorMode(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+        if (isSkipToken(raw)) {
+            return true;
+        }
+        String key = raw.trim().toLowerCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        return switch (key) {
+            case "follow", "stay", "sit", "idle", "wander", "attack", "guard", "patrol", "home", "task" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * Mode sits after shield. If that token is not a mode (and not {@code -}), treat it as the
+     * nametag so {@code ... - Alice} still names the summon.
+     *
+     * @return {@code [canonicalMode, nameOrEmpty]}
+     */
+    public static String[] splitModeAndName(String modeOrName, String name) {
+        String resolvedName = name == null ? "" : name.trim();
+        if (looksLikeBehaviorMode(modeOrName)) {
+            return new String[] { resolveBehaviorMode(modeOrName), resolvedName };
+        }
+        if (!isSkipToken(modeOrName) && resolvedName.isEmpty()) {
+            return new String[] { DEFAULT_MODE, modeOrName.trim() };
+        }
+        return new String[] { DEFAULT_MODE, resolvedName };
+    }
+
+    public static boolean displayNameMatches(String displayName, String query) {
+        if (query == null || query.isBlank() || displayName == null) {
+            return false;
+        }
+        return displayName.trim().equalsIgnoreCase(query.trim());
+    }
+
     public static String sanitizeDisplayName(String name) {
         if (name == null) {
             return "";
@@ -87,11 +158,13 @@ public final class CompanionCciSummonSupport {
 
     /**
      * Resolve {@code kon}/{@code bits}/{@code wiggly}/{@code dox} plus form names and datapack ids.
-     * Wiggly maps to wolf form (not the UUID perk dog). Bits are scaled down but are not charm children.
+     * Blank / {@code player} defaults to a player-form companion with a random Steve or Alex skin
+     * (not Kon’s texture). Wiggly maps to wolf form (not the UUID perk dog). Bits are scaled down
+     * but are not charm children.
      */
     public static TypeSpec resolveType(String raw) {
         if (raw == null || raw.isBlank()) {
-            return TypeSpec.kon();
+            return TypeSpec.playerDefault();
         }
         String token = raw.trim();
         int colon = token.indexOf(':');
@@ -101,13 +174,16 @@ public final class CompanionCciSummonSupport {
             case "kon", "dox" -> TypeSpec.kon();
             case "bit", "bits" -> TypeSpec.bits();
             case "wiggly", "wiggles", "mister_wiggly" -> TypeSpec.wiggly();
-            case "wolfy" -> new TypeSpec("kon", "wolf", 1.0f, false);
+            case "player", "human", "person", "skin" -> TypeSpec.playerDefault();
+            case "steve" -> TypeSpec.steve();
+            case "alex" -> TypeSpec.alex();
+            case "wolfy" -> new TypeSpec("kon", "wolf", 1.0f, false, VanillaPlayerPick.NONE);
             default -> {
                 CompanionForm form = tryForm(key);
                 if (form != null) {
-                    yield new TypeSpec("kon", form.serializedName(), 1.0f, false);
+                    yield new TypeSpec("kon", form.serializedName(), 1.0f, false, VanillaPlayerPick.NONE);
                 }
-                yield new TypeSpec(path, "player", 1.0f, false);
+                yield new TypeSpec(path, "player", 1.0f, false, VanillaPlayerPick.NONE);
             }
         };
     }
@@ -151,6 +227,37 @@ public final class CompanionCciSummonSupport {
                 || "human".equalsIgnoreCase(formName);
     }
 
+    /**
+     * Apply a vanilla Steve/Alex skin when the type asked for one and no Mojang username skin landed.
+     */
+    public static boolean shouldApplyVanillaDefault(TypeSpec spec, boolean appliedUsernameSkin) {
+        return spec != null
+                && !appliedUsernameSkin
+                && spec.vanillaPlayerPick() != VanillaPlayerPick.NONE
+                && wantsPlayerSkin(spec.formName());
+    }
+
+    public static VanillaPlayerSkin pickVanillaPlayerSkin(VanillaPlayerPick pick) {
+        return pickVanillaPlayerSkin(pick, ThreadLocalRandom.current());
+    }
+
+    /**
+     * Steve = wide arms + {@code textures/entity/player/wide/steve.png}.
+     * Alex = slim arms + {@code textures/entity/player/slim/alex.png}.
+     * {@link VanillaPlayerPick#RANDOM} is 50/50 per call (not cached for the process).
+     */
+    public static VanillaPlayerSkin pickVanillaPlayerSkin(VanillaPlayerPick pick, Random random) {
+        if (pick == null || pick == VanillaPlayerPick.NONE) {
+            return null;
+        }
+        return switch (pick) {
+            case STEVE -> VanillaPlayerSkin.STEVE;
+            case ALEX -> VanillaPlayerSkin.ALEX;
+            case RANDOM -> random.nextBoolean() ? VanillaPlayerSkin.STEVE : VanillaPlayerSkin.ALEX;
+            case NONE -> null;
+        };
+    }
+
     private static CompanionForm tryForm(String key) {
         try {
             return CompanionForm.valueOf(key.toUpperCase(Locale.ROOT));
@@ -159,17 +266,52 @@ public final class CompanionCciSummonSupport {
         }
     }
 
-    public record TypeSpec(String definitionPath, String formName, float bodyScale, boolean bitSized) {
+    public enum VanillaPlayerPick {
+        NONE,
+        RANDOM,
+        STEVE,
+        ALEX
+    }
+
+    /**
+     * Vanilla player texture applied to player-form CCI summons that are not Kon/Bits
+     * and did not resolve a Mojang username skin.
+     */
+    public record VanillaPlayerSkin(String texturePath, boolean slim, String label) {
+        public static final VanillaPlayerSkin STEVE = new VanillaPlayerSkin(
+                "minecraft:textures/entity/player/wide/steve.png", false, "Steve");
+        public static final VanillaPlayerSkin ALEX = new VanillaPlayerSkin(
+                "minecraft:textures/entity/player/slim/alex.png", true, "Alex");
+    }
+
+    public record TypeSpec(
+            String definitionPath,
+            String formName,
+            float bodyScale,
+            boolean bitSized,
+            VanillaPlayerPick vanillaPlayerPick) {
         public static TypeSpec kon() {
-            return new TypeSpec("kon", "player", 1.0f, false);
+            return new TypeSpec("kon", "player", 1.0f, false, VanillaPlayerPick.NONE);
         }
 
         public static TypeSpec bits() {
-            return new TypeSpec("kon", "player", CompanionChildLimits.DEFAULT_BODY_SCALE, true);
+            return new TypeSpec("kon", "player", CompanionChildLimits.DEFAULT_BODY_SCALE, true, VanillaPlayerPick.NONE);
         }
 
         public static TypeSpec wiggly() {
-            return new TypeSpec("kon", "wolf", 1.0f, false);
+            return new TypeSpec("kon", "wolf", 1.0f, false, VanillaPlayerPick.NONE);
+        }
+
+        public static TypeSpec playerDefault() {
+            return new TypeSpec("kon", "player", 1.0f, false, VanillaPlayerPick.RANDOM);
+        }
+
+        public static TypeSpec steve() {
+            return new TypeSpec("kon", "player", 1.0f, false, VanillaPlayerPick.STEVE);
+        }
+
+        public static TypeSpec alex() {
+            return new TypeSpec("kon", "player", 1.0f, false, VanillaPlayerPick.ALEX);
         }
 
         public String definitionId(String namespace) {

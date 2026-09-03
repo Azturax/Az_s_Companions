@@ -58,7 +58,7 @@ public final class CompanionMenuScreen extends Screen {
                 minecraft.setScreen(new CompanionBehaviorScreen(companion, this));
             }
         }).bounds(bx, by + 56, 160, 22).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b -> {
             com.azscompanions.network.ModNetworking.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_INVENTORY"));
         }).bounds(bx, by + 84, 160, 22).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.stats"), b -> {

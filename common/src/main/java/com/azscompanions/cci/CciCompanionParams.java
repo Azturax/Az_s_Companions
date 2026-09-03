@@ -189,6 +189,17 @@ public final class CciCompanionParams {
         return skipOrValue(first("armor", "armorset", "armour", "material"));
     }
 
+    /**
+     * Companion behavior mode for temporary summons. Keys avoid {@code mode=} (play / attitude).
+     */
+    public String behaviorModeOr(String fallback) {
+        String v = first("behavior", "companionmode", "followmode", "behaviormode");
+        if (v == null || CompanionCciSummonSupport.isSkipToken(v)) {
+            return fallback;
+        }
+        return CompanionCciSummonSupport.resolveBehaviorMode(v);
+    }
+
     public boolean isTemporarySummon() {
         return flag("temporary", false) || flag("cci", false) || flag("temp", false)
                 || has("duration") || has("durationseconds") || has("expire") || has("lifetime") || has("ttl");

@@ -166,7 +166,9 @@ public final class FabricCompanionAiAsk {
                     String line = speak.length() > 512 ? speak.substring(0, 509) + "…" : speak;
                     line = CompanionChatCensor.censorOutput(line, settings);
                     companion.speakLine(line);
-                    notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    if (!companion.isGlobalTalkEnabled()) {
+                        notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    }
                 } else if (fallbackLine != null && !fallbackLine.isBlank()) {
                     companion.speakLine(fallbackLine);
                 }

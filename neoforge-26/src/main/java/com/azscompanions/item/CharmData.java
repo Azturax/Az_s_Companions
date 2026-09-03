@@ -78,6 +78,15 @@ public final class CharmData {
         return getTag(stack).getBooleanOr(TAG_LOGOUT_PARKED, false);
     }
 
+    public static void clearLogoutParked(ItemStack stack) {
+        CompoundTag tag = getTag(stack);
+        if (!tag.contains(TAG_LOGOUT_PARKED)) {
+            return;
+        }
+        tag.remove(TAG_LOGOUT_PARKED);
+        setTag(stack, tag);
+    }
+
     /** Read stored companion NBT without removing it (safe if spawn fails). */
     @Nullable
     public static CompoundTag peekStoredCompanion(ItemStack stack) {

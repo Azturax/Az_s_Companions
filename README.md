@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft (**1.21.1**, **1.21.5**, **1.20.1**). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v1.0.10](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.10)
+- **Release:** [v1.0.11](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.11)
 - **Publishing (Modrinth / CurseForge):** [docs/PUBLISHING.md](docs/PUBLISHING.md)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
@@ -22,8 +22,8 @@ Install **one** Az's Companions jar for your loader. NeoForge and Fabric are **a
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge | `:neoforge` | `azscompanions-neoforge-1.0.10+1.21.1.jar` |
-| Fabric | `:fabric` | `azscompanions-fabric-1.0.10+1.21.1.jar` |
+| NeoForge | `:neoforge` | `azscompanions-neoforge-1.0.11+1.21.1.jar` |
+| Fabric | `:fabric` | `azscompanions-fabric-1.0.11+1.21.1.jar` |
 
 Java **21**. NeoForge **21.1.x** or Fabric Loader ≥0.16 + Fabric API. For streaming: optionally install CCI **1.13.0** + iChunUtil **1.0.3** (same loader).
 
@@ -31,8 +31,8 @@ Java **21**. NeoForge **21.1.x** or Fabric Loader ≥0.16 + Fabric API. For stre
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge | `:neoforge-21.5` | `azscompanions-neoforge-1.0.10+1.21.5.jar` |
-| Fabric | `:fabric-21.5` | `azscompanions-fabric-1.0.10+1.21.5.jar` |
+| NeoForge | `:neoforge-21.5` | `azscompanions-neoforge-1.0.11+1.21.5.jar` |
+| Fabric | `:fabric-21.5` | `azscompanions-fabric-1.0.11+1.21.5.jar` |
 
 Java **21**. NeoForge **21.5.x** or Fabric API `0.128.2+1.21.5`. Optional CCI **1.13.0** + iChunUtil **1.0.7** (pins in [MULTI_VERSION.md](docs/MULTI_VERSION.md)).
 
@@ -40,8 +40,8 @@ Java **21**. NeoForge **21.5.x** or Fabric API `0.128.2+1.21.5`. Optional CCI **
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| Forge | `:forge-1.20.1` | `azscompanions-forge-1.0.10+1.20.1.jar` |
-| Fabric | `:fabric-1.20.1` | `azscompanions-fabric-1.0.10+1.20.1.jar` |
+| Forge | `:forge-1.20.1` | `azscompanions-forge-1.0.11+1.20.1.jar` |
+| Fabric | `:fabric-1.20.1` | `azscompanions-fabric-1.0.11+1.20.1.jar` |
 
 Java **17**. Forge **47.4.x** or Fabric API `0.92.11+1.20.1`. There is **no** NeoForge 20.1 line. Optional CCI **1.13.0** + iChunUtil **1.0.3**. Honest API omissions: [fabric-1.20.1/NOTES.md](fabric-1.20.1/NOTES.md), [forge-1.20.1/NOTES.md](forge-1.20.1/NOTES.md).
 
@@ -49,8 +49,8 @@ Java **17**. Forge **47.4.x** or Fabric API `0.92.11+1.20.1`. There is **no** Ne
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge 26.1.2 | `:neoforge-26-1` | `azscompanions-neoforge-1.0.10+26.1.2.jar` |
-| NeoForge 26.2 | `:neoforge-26` | `azscompanions-neoforge-1.0.10+26.2.jar` |
+| NeoForge 26.1.2 | `:neoforge-26-1` | `azscompanions-neoforge-1.0.11+26.1.2.jar` |
+| NeoForge 26.2 | `:neoforge-26` | `azscompanions-neoforge-1.0.11+26.2.jar` |
 
 Java **25**. No CCI for 26.x.
 
@@ -151,38 +151,60 @@ Fabric CCI fallback (permission **0**): `/azscci <subject> [message]`
 Permission **2**. All loaders including 26.x. Spawns an **extra** companion that follows the target player. It is **not** the charm companion, does **not** steal or replace Kon/Bits/Wiggly/Dox, and is excluded from unique-per-player spawn guards and logout/charm persistence.
 
 ```
-/az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]
+/az summon [type] [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [mode] [name]
 ```
 
-Arguments are nested left-to-right. To reach `name` you must pass duration, health, and the four equipment tokens.
+Arguments are nested left-to-right. To reach `name` you must pass duration, health, the four equipment tokens, and `mode` (or `-` to skip mode).
 
 | Arg | Default | Notes |
 |-----|---------|--------|
-| `type` | required | `kon`, `bits`, `wiggly` (wolf form, not the perk dog), `dox`, any form (`player`, `wolf`, `zombie`, …), or a datapack id |
+| `type` | `player` (random Steve/Alex) | Omit, `player`, or `human` → player-form with a **random Steve (wide) or Alex (slim)** vanilla skin each summon. `steve` / `alex` force one. `kon`, `bits`, `wiggly` (wolf form, **not** the perk dog), `dox` keep those appearances. Any form (`wolf`, `zombie`, …) or a datapack id |
 | `player` | command source | Who the summon follows (the streamer) |
 | `durationSeconds` | `90` | Timed death window (`0`–`3600`). `0` = no expiry (testing). NeoForge/Forge config: `cciSummonDurationSeconds`. Fabric default is 90 |
 | `health` | companion default | Integer `1`–`1024` (Brigadier — **not** skippable with `-`) |
-| `armor` | none | Material (`leather`/`chainmail`/`iron`/`gold`/`diamond`/`netherite`) = full set, or a single item id. Skip with `-` / `none` / `default` / `skip` / `*`. Bare numbers ignored |
+| `armor` | none | Material (`leather`/`chainmail`/`iron`/`gold`/`diamond`/`netherite`) = full set, or a single item id. Skip with `-` / `none` / `default` / `skip` / `*` |
 | `weapon` | none | Item id → main hand. Invalid ids ignored. Same skip tokens |
 | `tool` | none | Item id → main hand if no weapon, else utility slot. Same skip tokens |
 | `shield` | none | Item id → offhand. Same skip tokens |
+| `mode` | `follow` | Behavior: `follow`, `stay`, `sit`, `idle`/`wander`, `attack`/`guard`, `patrol`, `home`. Skip with `-`. A non-mode token here is treated as `name` (so older `… - Alice` still names the summon) |
 | `name` | unset | Username nametag (sub gift / bits). Always shown. Greedy string (spaces allowed) |
 
-**Charm companions are not expired by this timer.** Only entities flagged `CciSummoned` die when the window ends (death animation; inventory is not dumped). Charm Kon / Bits / Wiggly / Dox are untouched.
+**Charm companions are not expired or killed by this command.** Only entities flagged `CciSummoned` die when the window ends or when `/az summon kill` runs. Charm Kon / Bits / Wiggly / Dox and the Wiggly dog are untouched. `/az summon wiggly` spawns a wolf-form companion **without** the extra sidekick dog.
 
-Username + skin: `name` is the nametag. For **player-form** summons (`kon`, `bits`, `dox`, `player`), the mod looks up that Minecraft username’s skin (Mojang profile). If lookup fails, the default companion skin stays and the nametag still shows. Wolf/`wiggly`/mob forms skip skins so models are not replaced.
+Username + skin: `name` is the nametag. For **player-form** summons (`player`, `kon`, `bits`, `dox`), the mod looks up that Minecraft username’s skin (Mojang profile) and uses it when found. If lookup fails (or no name was given): default/`player` summons keep a random Steve/Alex skin; explicit `kon`/`bits`/`dox` keep Kon’s texture. Wolf/`wiggly`/mob forms skip skins so models are not replaced. Charm-owned Kon/Bits/Wiggly are unchanged.
+
+Kill **only** temporary `/az summon` / CCI extras (permission **2**):
+
+```
+/az summon kill all              # every CCI summon on the server
+/az summon kill all Steve        # CCI summons owned by Steve
+/az summon kill nearest          # closest CCI summon to the executor
+/az summon kill Alice            # one CCI summon whose nametag is Alice
+```
 
 Examples:
 
 ```
-# Sub gift: Alice’s Kon follows the streamer for 90s (health 20, skip gear)
-/az summon kon Steve 90 20 - - - - Alice
+# Default: random Steve or Alex following you for 90s (Follow)
+/az summon
+
+# Sub gift: Alice’s skin, Follow (mode skipped with -)
+/az summon player Steve 90 20 - - - - - Alice
+
+# Wander/idle instead of glued follow
+/az summon player Steve 90 20 - - - - idle Alice
+
+# Guard/attack
+/az summon kon Steve 90 20 diamond netherite_sword - shield attack Alice
+
+# Explicit Kon model (not the default)
+/az summon kon Steve 90 20 - - - - follow Alice
 
 # Bits cheer: diamond kit, 120s
-/az summon bits Steve 120 40 diamond netherite_sword diamond_pickaxe shield CheerName
+/az summon bits Steve 120 40 diamond netherite_sword diamond_pickaxe shield - CheerName
 
 # Testing: no expiry
-/az summon kon Steve 0
+/az summon player Steve 0
 ```
 
 CCI IMC (1.21.1 / 1.21.5 / 1.20.1 — **not** 26.x). Owned by the streamer player who sent the packet:
@@ -190,10 +212,10 @@ CCI IMC (1.21.1 / 1.21.5 / 1.20.1 — **not** 26.x). Owned by the streamer playe
 ```
 modId   = azscompanions
 subject = companion_cci_summon
-message = type=kon;name=$username;duration=90;health=40;armor=diamond;weapon=netherite_sword;tool=diamond_pickaxe;shield=shield
+message = name=$username;duration=90;health=40;armor=diamond;weapon=netherite_sword;tool=diamond_pickaxe;shield=shield
 ```
 
-Aliases: `cci_summon`, `temp_summon`, `companion_temp_summon`, `stream_summon`, `companion_stream_summon`. Fabric: `/azscci companion_cci_summon type=kon;name=$username;duration=90`. IMC keys also accept `user`/`username`/`ign` for the nametag and `hp` for health.
+Omit `type` (or use `type=player`) for a random Steve/Alex; set `type=kon` only when you want Kon’s appearance. Aliases: `cci_summon`, `temp_summon`, `companion_temp_summon`, `stream_summon`, `companion_stream_summon`. Fabric: `/azscci companion_cci_summon name=$username;duration=90`. IMC keys also accept `user`/`username`/`ign` for the nametag and `hp` for health.
 
 Existing `companion_summon` still recruits a **persistent** owned companion (charm path). Use `companion_cci_summon` / `/az summon` for stream timed spawns.
 
@@ -212,7 +234,7 @@ Existing `companion_summon` still recruits a **persistent** owned companion (cha
 ./gradlew buildNeoForge26 buildNeoForge261
 ```
 
-Outputs under `*/build/libs/azscompanions-*-1.0.10+*.jar` (**8 jars** total).
+Outputs under `*/build/libs/azscompanions-*-1.0.11+*.jar` (**8 jars** total).
 
 ## Publishing (Modrinth / CurseForge)
 
@@ -220,7 +242,7 @@ GitHub Actions workflow [`.github/workflows/publish.yml`](.github/workflows/publ
 
 1. Create **Az's Companions** Modrinth + CurseForge projects (suggested slug `azs-companions`)
 2. Add secrets `PUBLISH_MODRINTH_TOKEN`, `PUBLISH_CURSEFORGE_TOKEN` (legacy `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` also work) and variables `MODRINTH_PROJECT_ID`, `CURSEFORGE_PROJECT_ID` (Az's Companions project IDs)
-3. Publish a GitHub Release, or run **Actions → Publish Modrinth / CurseForge** with tag `v1.0.10`
+3. Publish a GitHub Release, or run **Actions → Publish Modrinth / CurseForge** with tag `v1.0.11`
 
 Full setup: [docs/PUBLISHING.md](docs/PUBLISHING.md). Store paste copy: [docs/STORE_DESCRIPTION.md](docs/STORE_DESCRIPTION.md).
 

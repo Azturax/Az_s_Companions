@@ -70,13 +70,18 @@ public final class CompanionAiSettings {
     private boolean censorChat = true;
     private List<String> censorExtraWords = new ArrayList<>();
 
-    /** Auto-reply to chat: off (default) | player (owner only) | global (any chat near companions). */
-    private ChatListenMode chatListenMode = ChatListenMode.OFF;
+    /** Auto-reply to public chat: off | player (owner only) | global (nearby players). Default global. */
+    private ChatListenMode chatListenMode = ChatListenMode.GLOBAL;
     /**
      * When true (default), saying a companion's display name in chat triggers that companion
      * even if {@link #chatListenMode} is {@code off}. Ownership selects owner vs stranger mode.
      */
-    private boolean nameListen = false;
+    private boolean nameListen = true;
+    /**
+     * When true (default), AI speak lines go to public/server chat (all players) tagged with
+     * the companion name. Scripted hurt/inventory lines stay owner-scoped.
+     */
+    private boolean globalTalk = true;
     private double chatReactRange = CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE;
     private int chatReactCooldownSeconds = CompanionAiChatSupport.DEFAULT_CHAT_REACT_COOLDOWN_SECONDS;
 
@@ -348,6 +353,15 @@ public final class CompanionAiSettings {
 
     public CompanionAiSettings setNameListen(boolean nameListen) {
         this.nameListen = nameListen;
+        return this;
+    }
+
+    public boolean globalTalk() {
+        return globalTalk;
+    }
+
+    public CompanionAiSettings setGlobalTalk(boolean globalTalk) {
+        this.globalTalk = globalTalk;
         return this;
     }
 
@@ -803,6 +817,7 @@ public final class CompanionAiSettings {
                 .setCensorExtraWords(censorExtraWords)
                 .setChatListenMode(chatListenMode)
                 .setNameListen(nameListen)
+                .setGlobalTalk(globalTalk)
                 .setChatReactRange(chatReactRange)
                 .setChatReactCooldownSeconds(chatReactCooldownSeconds)
                 .setIdleChat(idleChat)

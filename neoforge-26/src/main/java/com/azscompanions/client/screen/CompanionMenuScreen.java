@@ -8,9 +8,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
@@ -27,7 +27,7 @@ public final class CompanionMenuScreen extends Screen {
     private int panelX;
     private int panelY;
     private final int panelW = 220;
-    private final int panelH = 180;
+    private final int panelH = 230;
 
     public CompanionMenuScreen(CompanionEntity companion) {
         super(Component.translatable("screen.azscompanions.menu"));
@@ -55,9 +55,33 @@ public final class CompanionMenuScreen extends Screen {
                 minecraft.gui.setScreen(new CompanionBehaviorScreen(companion, this));
             }
         }).bounds(bx, by + 56, 160, 22).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b -> {
             ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_INVENTORY"));
         }).bounds(bx, by + 84, 160, 22).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.stats"), b -> {
+            ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "OPEN_STATS"));
+        }).bounds(bx, by + 112, 160, 22).build());
+
+        boolean child = companion.isChildCompanion();
+        String removeKey = child
+                ? "screen.azscompanions.dismiss_child"
+                : "screen.azscompanions.remove_child";
+        addRenderableWidget(Button.builder(Component.translatable(removeKey), b -> {
+            ClientPacketDistributor.sendToServer(new CompanionCommandPacket(companion.getId(), "REMOVE_CHILD"));
+            onClose();
+        }).bounds(bx, by + 140, 160, 22).build());
+        if (!child) {
+            addRenderableWidget(Button.builder(
+                    Component.translatable(
+                            "screen.azscompanions.stored_children_tooltip",
+                            companion.getStoredChildCount(),
+                            companion.getMaxChildren()),
+                    b -> {
+                        ClientPacketDistributor.sendToServer(
+                                new CompanionCommandPacket(companion.getId(), "CALL_STORED_CHILD"));
+                        onClose();
+                    }).bounds(panelX + 8, panelY + 8, 72, 20).build());
+        }
 
         addRenderableWidget(new IconButton(
                 panelX + panelW - 28, panelY + 8, 20, 20, DONATE_ICON,
@@ -97,7 +121,7 @@ public final class CompanionMenuScreen extends Screen {
         protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             int bg = isHoveredOrFocused() ? 0xFF606060 : 0xFF404040;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
-            graphics.blit(icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, icon, getX() + 2, getY() + 2, 0, 0, width - 4, height - 4, width - 4, height - 4);
         }
     }
 }

@@ -81,7 +81,9 @@ public final class FabricNetworkingClient {
                             payload.aiStatus(),
                             payload.chunkLoading(),
                             payload.teamfight(),
-                            payload.companionSummary()));
+                            payload.companionSummary(),
+                            payload.playerFacing(),
+                            payload.canEditServerAi()));
                 }));
         ClientPlayNetworking.registerGlobalReceiver(FabricNetworking.AiJoinOfferPayload.TYPE, (payload, context) ->
                 context.client().execute(() ->
@@ -119,6 +121,10 @@ public final class FabricNetworkingClient {
 
     public static void sendAdminAction(String action) {
         ClientPlayNetworking.send(new FabricNetworking.AdminActionPayload(action == null ? "" : action));
+    }
+
+    public static void sendGeneralSettings(FabricNetworking.GeneralSettingsPayload payload) {
+        ClientPlayNetworking.send(payload);
     }
 
     public static void sendAiJoinConsent(boolean accepted, String suggestProfile, boolean applyProfile) {

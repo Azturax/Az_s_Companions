@@ -61,6 +61,7 @@ public final class CompanionCharmItem extends Item {
                 MisterWigglySidekick.ensureFor(created);
                 created.sayHello();
                 player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_bound"));
+                com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
             }
             return;
         }
@@ -97,6 +98,34 @@ public final class CompanionCharmItem extends Item {
             return;
         }
 
+        // Bound but missing (unloaded / left behind before dimension travel): restore world identity first.
+        var server = player.level().getServer();
+        if (server != null) {
+            var identity = com.azscompanions.world.CompanionIdentityStore.get(server).peekIdentity(bound);
+            if (identity != null) {
+                var payload = identity.copy();
+                CompanionEntity restored = CompanionRecruitment.spawnFromStored(player, payload, bound);
+                if (restored != null) {
+                    CharmData.clearLogoutParked(stack);
+                    MisterWigglySidekick.ensureFor(restored);
+                    restored.sayHello();
+                    player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_summoned"));
+                    com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, restored);
+                    return;
+                }
+            }
+        }
+
+        // Last resort: if a primary already exists (unloaded UUID mismatch), rebind instead of cloning.
+        CompanionEntity existing = CompanionRecruitment.findAnyPrimary(player);
+        if (existing != null) {
+            CharmData.bind(stack, existing.getUUID());
+            MisterWigglySidekick.ensureFor(existing);
+            existing.sayHello();
+            player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_summoned"));
+            com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, existing);
+            return;
+        }
         CompanionEntity created = CompanionRecruitment.recruit(player, CompanionRegistry.KON_ID.toString());
         if (created != null) {
             CharmData.bind(stack, created.getUUID());
@@ -104,6 +133,8 @@ public final class CompanionCharmItem extends Item {
             MisterWigglySidekick.ensureFor(created);
             created.sayHello();
             player.sendOverlayMessage(Component.translatable("message.azscompanions.charm_bound"));
+            com.azscompanions.ai.CompanionPersonaOnboarding.offerIfNeeded(player, created);
+            com.azscompanions.entity.CompanionDimensionTravelSupport.rememberIdentity(player, created);
         }
     }
 

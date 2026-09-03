@@ -2,6 +2,7 @@ package com.azscompanions.admin;
 
 import com.azscompanions.util.OwnableUuids;
 
+import com.azscompanions.ai.ChatListenMode;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.config.AiConfig;
@@ -34,7 +35,19 @@ public final class NeoAzAdminActions {
             player.displayClientMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
             return;
         }
-        // Prefer live runtime so a prior admin save (incl. apiKey) is reflected without restart.
+        sendOpenPacket(player, false, true);
+    }
+
+    /** Permission 0: player's companion AI / chat settings. LLM keys only if host or admin. */
+    public static void openAiConfig(ServerPlayer player) {
+        if (player == null) {
+            return;
+        }
+        boolean secrets = NeoAzAdminAccess.mayEditServerAi(player);
+        sendOpenPacket(player, true, secrets);
+    }
+
+    private static void sendOpenPacket(ServerPlayer player, boolean playerFacing, boolean canEditServerAi) {
         AdminAiConfigSnapshot snap = AdminAiConfigSnapshot.fromSettings(CompanionAiRuntime.get().settings());
         TeamFightSession session = TeamFightSession.of(player.getUUID());
         PacketDistributor.sendToPlayer(player, new OpenAzAdminPacket(
@@ -42,32 +55,57 @@ public final class NeoAzAdminActions {
                 CompanionAiRuntime.get().statusLine(),
                 ServerConfig.COMPANION_CHUNK_LOADING.get(),
                 session.isEnabled(),
-                summarizeCompanions(player)));
+                summarizeCompanions(player),
+                playerFacing,
+                canEditServerAi));
     }
 
     public static boolean saveAiConfig(ServerPlayer player, AdminAiConfigSnapshot snap) {
-        if (!NeoAzAdminAccess.mayUse(player)) {
-            player.displayClientMessage(Component.literal(NeoAzAdminAccess.denyMessage(player)), false);
-            return false;
-        }
         if (snap == null) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID), false);
             return false;
         }
-        String err = snap.validate();
+        boolean secrets = NeoAzAdminAccess.mayEditServerAi(player);
+        String err = secrets ? snap.validate() : null;
         if (err != null) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_INVALID + " (" + err + ")"), false);
             return false;
         }
         try {
-            CompanionAiSettings merged = snap.mergeInto(CompanionAiRuntime.get().settings());
-            AiConfig.saveSettingsToDiskWithoutReload(merged);
+            CompanionAiSettings merged;
+            if (secrets) {
+                merged = snap.mergeInto(CompanionAiRuntime.get().settings());
+                AiConfig.saveSettingsToDiskWithoutReload(merged);
+            } else {
+                merged = snap.mergePlayerFacingInto(CompanionAiRuntime.get().settings());
+            }
             CompanionAiRuntime.get().applySettings(merged);
-            player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVED_APPLIED), false);
+            applyChatPrefsToOwned(player, snap);
+            player.displayClientMessage(Component.literal(
+                    secrets ? AzAdminMessages.AI_SAVED_APPLIED : AzAdminMessages.AI_PLAYER_SAVED), false);
             return true;
         } catch (Exception e) {
             player.displayClientMessage(Component.literal(AzAdminMessages.AI_SAVE_FAILED), false);
             return false;
+        }
+    }
+
+    private static void applyChatPrefsToOwned(ServerPlayer player, AdminAiConfigSnapshot snap) {
+        if (player.getServer() == null) {
+            return;
+        }
+        ChatListenMode listen = snap.chatListen();
+        boolean talk = snap.globalTalk();
+        boolean idle = snap.idleChat();
+        for (ServerLevel level : player.getServer().getAllLevels()) {
+            for (Entity e : level.getAllEntities()) {
+                if (e instanceof CompanionEntity c && c.isOwnedBy(player) && !c.isFightSpawn()) {
+                    c.setChatListenMode(listen);
+                    c.setGlobalTalkEnabled(talk);
+                    c.setIdleChatEnabled(idle);
+                    com.azscompanions.entity.CompanionPlayerDataSupport.save(c);
+                }
+            }
         }
     }
 

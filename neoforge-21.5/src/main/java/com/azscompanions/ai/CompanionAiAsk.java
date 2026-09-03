@@ -171,7 +171,9 @@ public final class CompanionAiAsk {
                     } else {
                         owner.displayClientMessage(Component.literal(line), false);
                     }
-                    notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    if (!companion.isGlobalTalkEnabled()) {
+                        notifySpeakerLine(companion, owner, notifySpeaker, line);
+                    }
                 } else if (fallbackLine != null && !fallbackLine.isBlank()) {
                     companion.speakLine(fallbackLine);
                 }

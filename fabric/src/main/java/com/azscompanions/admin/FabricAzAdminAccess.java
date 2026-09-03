@@ -17,6 +17,18 @@ public final class FabricAzAdminAccess {
         return FabricAdminConfig.enableAzAdminCommand();
     }
 
+    public static boolean mayEditServerAi(ServerPlayer player) {
+        if (player == null) {
+            return false;
+        }
+        MinecraftServer server = player.getServer();
+        if (server != null && !server.isDedicatedServer()
+                && server.isSingleplayerOwner(player.getGameProfile())) {
+            return true;
+        }
+        return mayUse(player);
+    }
+
     public static boolean mayUse(ServerPlayer player) {
         if (player == null) {
             return false;

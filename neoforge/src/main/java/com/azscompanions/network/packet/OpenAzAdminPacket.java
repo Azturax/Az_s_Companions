@@ -13,7 +13,9 @@ public record OpenAzAdminPacket(
         String aiStatus,
         boolean chunkLoading,
         boolean teamfight,
-        String companionSummary
+        String companionSummary,
+        boolean playerFacing,
+        boolean canEditServerAi
 ) implements CustomPacketPayload {
     public static final Type<OpenAzAdminPacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(AzsCompanions.MOD_ID, "open_admin"));
@@ -27,12 +29,15 @@ public record OpenAzAdminPacket(
         buf.writeBoolean(p.chunkLoading);
         buf.writeBoolean(p.teamfight);
         buf.writeUtf(p.companionSummary == null ? "" : p.companionSummary, 1024);
+        buf.writeBoolean(p.playerFacing);
+        buf.writeBoolean(p.canEditServerAi);
     }
 
     private static OpenAzAdminPacket read(RegistryFriendlyByteBuf buf) {
         return new OpenAzAdminPacket(
                 buf.readUtf(AdminAiConfigSnapshot.MAX_WIRE_JSON), buf.readUtf(512),
-                buf.readBoolean(), buf.readBoolean(), buf.readUtf(1024));
+                buf.readBoolean(), buf.readBoolean(), buf.readUtf(1024),
+                buf.readBoolean(), buf.readBoolean());
     }
 
     @Override

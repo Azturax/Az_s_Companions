@@ -31,6 +31,12 @@ public final class WigglyDogPerkSupport {
     public static final int MAX_OWNED_DOGS = 1;
 
     /**
+     * Fixed entity scale for the Wiggly dog (toggle perk and companion sidekick).
+     * Applied via {@code Attributes.SCALE} where that attribute exists (1.20.5+).
+     */
+    public static final float DOG_SCALE = 0.7f;
+
+    /**
      * Player {@code tickCount} window after join: do not spawn a replacement dog while
      * the original may still be loading. Keep in lockstep with
      * {@code CompanionSpawnGuardSupport#LOGIN_GRACE_TICKS}.
@@ -81,6 +87,57 @@ public final class WigglyDogPerkSupport {
             return false;
         }
         return AzsCompanionsConstants.TOGGLE_WIGGLY_DOG_NAME.equalsIgnoreCase(name.trim());
+    }
+
+    /**
+     * Datapack / summon type path for the Wiggly companion (not Kon, Bits, Dox, or player skins).
+     */
+    public static boolean isWigglyDefinition(String definitionId) {
+        if (definitionId == null || definitionId.isBlank()) {
+            return false;
+        }
+        String token = definitionId.trim();
+        int colon = token.indexOf(':');
+        String path = colon >= 0 ? token.substring(colon + 1) : token;
+        String key = path.toLowerCase(java.util.Locale.ROOT).replace('-', '_').replace(' ', '_');
+        return "wiggly".equals(key) || "wiggles".equals(key) || "mister_wiggly".equals(key);
+    }
+
+    /**
+     * Charm Wiggly is wolf-form or a {@code wiggly} definition. Bits (children) never qualify.
+     */
+    public static boolean isWigglyCompanionType(String definitionId, String formName, boolean childCompanion) {
+        if (childCompanion) {
+            return false;
+        }
+        if (isWigglyDefinition(definitionId)) {
+            return true;
+        }
+        return formName != null && "wolf".equalsIgnoreCase(formName.trim());
+    }
+
+    /**
+     * Companion-following sidekick dog: charm-owned Wiggly only.
+     * CCI / {@code /az summon} extras ({@code cciSummoned}) never get a dog, even if type is
+     * {@code wiggly} or the owner UUID is Mister Wiggly.
+     */
+    public static boolean shouldSpawnCompanionSidekick(
+            UUID ownerUuid,
+            boolean cciSummoned,
+            boolean childCompanion,
+            String definitionId,
+            String formName) {
+        if (cciSummoned) {
+            return false;
+        }
+        if (ownerUuid == null || !AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID.equals(ownerUuid)) {
+            return false;
+        }
+        return isWigglyCompanionType(definitionId, formName, childCompanion);
+    }
+
+    public static boolean scaleNeedsUpdate(double current) {
+        return Math.abs(current - DOG_SCALE) > 0.001d;
     }
 
     /**

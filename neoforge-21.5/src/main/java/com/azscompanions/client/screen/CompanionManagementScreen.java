@@ -115,7 +115,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 applyFlags(CompanionSettingsPacket.FLAG_SLIM);
             }).bounds(cx, cy + 72, 90, 18).build();
             addRenderableWidget(slimBtn);
-            addRenderableWidget(Button.builder(Component.literal("Open Inventory"), b ->
+            addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b ->
                     PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx + 96, cy + 72, 100, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.BODY) {
@@ -141,7 +141,7 @@ public final class CompanionManagementScreen extends AbstractContainerScreen<Com
                 applyFlags(CompanionSettingsPacket.FLAG_PROPORTIONS);
             }).bounds(cx + 128, cy + 112, 110, 18).build());
         } else if (menu.tab() == CompanionManagementMenu.Tab.INVENTORY) {
-            addRenderableWidget(Button.builder(Component.literal("Open Inventory GUI"), b ->
+            addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b ->
                     PacketDistributor.sendToServer(new CompanionCommandPacket(c.getId(), "OPEN_INVENTORY"))
             ).bounds(cx, cy, 140, 20).build());
         }

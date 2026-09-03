@@ -32,6 +32,7 @@ public final class FabricNetworking {
     public static void register() {
         PayloadTypeRegistry.playC2S().register(RecruitPayload.TYPE, RecruitPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(GeneralSettingsPayload.TYPE, GeneralSettingsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ContextSkinsPayload.TYPE, ContextSkinsPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(BehaviorPayload.TYPE, BehaviorPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MenuActionPayload.TYPE, MenuActionPayload.CODEC);
@@ -216,6 +217,26 @@ public final class FabricNetworking {
                     FabricCompanionPlayerDataSupport.save(companion);
                 }));
 
+        ServerPlayNetworking.registerGlobalReceiver(GeneralSettingsPayload.TYPE, (payload, context) ->
+                context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    Entity entity = player.level().getEntity(payload.entityId());
+                    if (!(entity instanceof FabricCompanionEntity companion)
+                            || (!companion.isOwnedBy(player) && !companion.isTrusted(player))) {
+                        return;
+                    }
+                    if (companion.distanceTo(player) > 16.0d) {
+                        return;
+                    }
+                    companion.setNameTagVisible(payload.showNameTag());
+                    companion.setTeleportEnabled(payload.teleportEnabled());
+                    companion.setGlobalTalkEnabled(payload.globalTalk());
+                    companion.setIdleChatEnabled(payload.idleChat());
+                    companion.setChatListenMode(com.azscompanions.entity.CompanionPlayerAiPrefs.parseChatListen(
+                            payload.chatListen(), com.azscompanions.ai.ChatListenMode.GLOBAL));
+                    companion.setChunkLoadingEnabled(payload.chunkLoading());
+                    FabricCompanionPlayerDataSupport.save(companion);
+                }));
 
         ServerPlayNetworking.registerGlobalReceiver(BehaviorPayload.TYPE, (payload, context) ->
                 context.server().execute(() -> {
@@ -366,14 +387,18 @@ public final class FabricNetworking {
                                       String aiStatus,
                                       boolean chunkLoading,
                                       boolean teamfight,
-                                      String companionSummary) {
+                                      String companionSummary,
+                                      boolean playerFacing,
+                                      boolean canEditServerAi) {
         String json = snap == null ? "{}" : snap.toWireJson();
         ServerPlayNetworking.send(player, new OpenAdminPayload(
                 json,
                 aiStatus == null ? "" : aiStatus,
                 chunkLoading,
                 teamfight,
-                companionSummary == null ? "" : companionSummary));
+                companionSummary == null ? "" : companionSummary,
+                playerFacing,
+                canEditServerAi));
     }
 
     public static void sendTeamFightHud(ServerPlayer player, String encodedSnapshot) {
@@ -516,7 +541,9 @@ public final class FabricNetworking {
             String aiStatus,
             boolean chunkLoading,
             boolean teamfight,
-            String companionSummary
+            String companionSummary,
+            boolean playerFacing,
+            boolean canEditServerAi
     ) implements CustomPacketPayload {
         public static final Type<OpenAdminPayload> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "open_admin"));
@@ -529,6 +556,8 @@ public final class FabricNetworking {
             buf.writeBoolean(p.chunkLoading);
             buf.writeBoolean(p.teamfight);
             buf.writeUtf(p.companionSummary == null ? "" : p.companionSummary, 1024);
+            buf.writeBoolean(p.playerFacing);
+            buf.writeBoolean(p.canEditServerAi);
         }
 
         private static OpenAdminPayload read(RegistryFriendlyByteBuf buf) {
@@ -537,7 +566,9 @@ public final class FabricNetworking {
                     buf.readUtf(512),
                     buf.readBoolean(),
                     buf.readBoolean(),
-                    buf.readUtf(1024));
+                    buf.readUtf(1024),
+                    buf.readBoolean(),
+                    buf.readBoolean());
         }
 
         @Override
@@ -857,6 +888,47 @@ public final class FabricNetworking {
                     buf.readUtf(32), buf.readBoolean(), buf.readBoolean(),
                     buf.readUtf(64),
                     buf.readVarInt());
+        }
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record GeneralSettingsPayload(
+            int entityId,
+            boolean showNameTag,
+            boolean teleportEnabled,
+            boolean globalTalk,
+            boolean idleChat,
+            String chatListen,
+            boolean chunkLoading
+    ) implements CustomPacketPayload {
+        public static final Type<GeneralSettingsPayload> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(AzsCompanionsFabric.MOD_ID, "companion_general_settings"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, GeneralSettingsPayload> CODEC =
+                StreamCodec.of(GeneralSettingsPayload::write, GeneralSettingsPayload::read);
+
+        private static void write(RegistryFriendlyByteBuf buf, GeneralSettingsPayload p) {
+            buf.writeVarInt(p.entityId);
+            buf.writeBoolean(p.showNameTag);
+            buf.writeBoolean(p.teleportEnabled);
+            buf.writeBoolean(p.globalTalk);
+            buf.writeBoolean(p.idleChat);
+            buf.writeUtf(p.chatListen == null ? "" : p.chatListen, 16);
+            buf.writeBoolean(p.chunkLoading);
+        }
+
+        private static GeneralSettingsPayload read(RegistryFriendlyByteBuf buf) {
+            return new GeneralSettingsPayload(
+                    buf.readVarInt(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readUtf(16),
+                    buf.readBoolean());
         }
 
         @Override

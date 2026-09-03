@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.11
+
+Wiggly-only dog, `/az summon` modes and kill command, Steve/Alex CCI defaults, 26.x item textures, and companion gear/AI menus.
+
+### Changed
+- **Wiggly dog** — only a charm-owned Wiggly companion gets the extra dog (0.7 scale, one at a time). `/az summon` never spawns the sidekick, even with type `wiggly`.
+- **`/az summon` default** — omitted type is a player-form companion with a random Steve or Alex skin (not Kon). Explicit `kon` / `bits` / `wiggly` still work.
+
+### Added
+- **`/az summon` mode** — optional `follow` / `stay` / `sit` / `idle` / `attack` / `patrol` / `home` (idle → wander, attack → guard). Default Follow.
+- **`/az summon kill`** — `all`, `nearest`, or nametag. Removes **CCI timed summons only**; charm Kon / Bits / Wiggly / Dox are untouched.
+- **Gear / AI menus** (Minecraft **1.21.1** and **1.21.5**) — companion general settings (nametag, teleport, global talk, idle chat, chat listen, chunk loading) plus adventure inventory.
+
+### Fixed
+- **26.x item textures** — `items/*.json` so Companion Charm and Kon Bed render on Minecraft 26.x.
+- **26.x spawn / Bits** — spawn de-dupe and stored Bits persistence on NeoForge 26.1.2 / 26.2.
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.11+<mc>.jar` on tag `v1.0.11` (**8** unified jars).
+
 ## 1.0.10
 
 Kon/Bits invincibility (including Draconic Evolution), duplicate-spawn guards, safe teleports, per-player persistence, quieter chat, and CCI `/az summon`.

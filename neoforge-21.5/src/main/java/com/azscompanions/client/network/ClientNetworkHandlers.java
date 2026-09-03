@@ -130,7 +130,9 @@ public final class ClientNetworkHandlers {
                     packet.aiStatus(),
                     packet.chunkLoading(),
                     packet.teamfight(),
-                    packet.companionSummary()));
+                    packet.companionSummary(),
+                    packet.playerFacing(),
+                    packet.canEditServerAi()));
         });
     }
 

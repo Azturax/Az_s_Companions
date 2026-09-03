@@ -102,4 +102,31 @@ class WigglyDogPerkSupportTest {
         assertTrue(WigglyDogPerkSupport.keepScore(true, true, false, 100.0d)
                 < WigglyDogPerkSupport.keepScore(true, false, true, 1.0d));
     }
+
+    @Test
+    void sidekickOnlyForCharmWiggly() {
+        UUID wiggly = AzsCompanionsConstants.MISTER_WIGGLY_PLAYER_UUID;
+        UUID other = UUID.randomUUID();
+        assertEquals(0.7f, WigglyDogPerkSupport.DOG_SCALE, 1.0e-6f);
+        assertTrue(WigglyDogPerkSupport.isWigglyDefinition("azscompanions:wiggly"));
+        assertTrue(WigglyDogPerkSupport.isWigglyDefinition("wiggly"));
+        assertFalse(WigglyDogPerkSupport.isWigglyDefinition("azscompanions:kon"));
+        assertTrue(WigglyDogPerkSupport.isWigglyCompanionType("azscompanions:kon", "wolf", false));
+        assertFalse(WigglyDogPerkSupport.isWigglyCompanionType("azscompanions:kon", "player", false));
+        assertFalse(WigglyDogPerkSupport.isWigglyCompanionType("azscompanions:kon", "wolf", true));
+        assertTrue(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                wiggly, false, false, "azscompanions:kon", "wolf"));
+        assertFalse(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                wiggly, true, false, "azscompanions:kon", "wolf"));
+        assertFalse(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                wiggly, false, false, "azscompanions:kon", "player"));
+        assertFalse(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                wiggly, false, true, "azscompanions:kon", "player"));
+        assertFalse(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                other, false, false, "azscompanions:kon", "wolf"));
+        assertTrue(WigglyDogPerkSupport.shouldSpawnCompanionSidekick(
+                wiggly, false, false, "azscompanions:wiggly", "player"));
+        assertTrue(WigglyDogPerkSupport.scaleNeedsUpdate(1.0d));
+        assertFalse(WigglyDogPerkSupport.scaleNeedsUpdate(0.7d));
+    }
 }

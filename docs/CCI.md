@@ -81,7 +81,7 @@ Pins differ by Minecraft line — **do not** mix Modrinth version ids across MC 
 
 **Fabric fallback:** `/azscci <subject> [message]` (CommandOutcome) when IMC is awkward.
 
-**Ops / testing (permission 2):** `/az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]` — same temporary spawn as `companion_cci_summon`. Full syntax is in the README Commands section.
+**Ops / testing (permission 2):** `/az summon [type] [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [mode] [name]` — same temporary spawn as `companion_cci_summon`. Omitted type is a random Steve/Alex, not Kon. Kill extras with `/az summon kill all [player]`, `/az summon kill nearest`, `/az summon kill <name>` (CCI summons only — never charm companions or the Wiggly dog). Full syntax is in the README Commands section.
 
 **Dedicated server:** CCI IMC is normally client-driven; the bridge packet applies on the server as the **streamer player who sent the packet**. That player owns summoned leaders/children. Another player’s “Kon” is never selected.
 
@@ -150,7 +150,7 @@ Unless noted, needs an owned companion within **~96 blocks**.
 | `companion_set_attitude` | `set_attitude`, `attitude` | `hostile` / `attitude=passive` | Persist PASSIVE/HOSTILE |
 | `companion_set_team` | `set_team`, `team` | `red` / `$username` / `team=blue` | teamId (nametag); rivals fight |
 | `companion_summon` | `summon` | `form=zombie;attitude=hostile;team=red;skin=Notch` | Recruit **persistent** owned companion (charm path) |
-| `companion_cci_summon` | `cci_summon`, `temp_summon`, `companion_temp_summon`, `stream_summon`, `companion_stream_summon` | `type=kon;name=$username;duration=90;health=40;armor=diamond;weapon=netherite_sword;tool=diamond_pickaxe;shield=shield` | **Temporary extra** companion. Auto-dies after `duration` (default 90s). Does **not** replace or expire charm Kon/Bits/Wiggly/Dox. Nametag = username; player-form skin from Mojang if possible |
+| `companion_cci_summon` | `cci_summon`, `temp_summon`, `companion_temp_summon`, `stream_summon`, `companion_stream_summon` | `name=$username;duration=90;health=40;armor=diamond;weapon=netherite_sword;tool=diamond_pickaxe;shield=shield;behavior=follow` | **Temporary extra** companion. Auto-dies after `duration` (default 90s). Does **not** replace or expire charm Kon/Bits/Wiggly/Dox. Default type is player-form **random Steve/Alex**; Mojang username skin when `name`/`user` maps to a player. Use `type=kon` (or `bits`/`wiggly`) only when you want that appearance. `type=wiggly` is wolf-form **without** the extra Wiggly sidekick dog. `behavior=` / `companionMode=` sets Follow / Stay / Sit / Idle(Wander) / Attack(Guard) |
 | `companion_summon_passive` | `summon_passive` | `form=chicken;team=blue` | Summon PASSIVE |
 | `companion_summon_hostile` | `summon_hostile` | `form=skeleton;team=red` | Summon HOSTILE |
 | `companion_set_mainhand` | `set_mainhand`, `mainhand` | `minecraft:diamond_sword` / `clear` | Main hand |
@@ -171,19 +171,34 @@ Mob **form variants** (Customization `<`/`>`): wolf coats, cat breeds, fox `red`
 
 Sub-gift / bits extras. **Does not** go through unique-per-player spawn guards, **does not** steal the charm companion, **does not** persist on logout. Charm companions never receive the expiry flag.
 
-In-game (permission 2): `/az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]`
+In-game (permission 2): `/az summon [type] [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [mode] [name]`
 
 ```
-# Sub gift
-/az summon kon Steve 90 20 - - - - Alice
+# Default: random Steve (wide) or Alex (slim), Follow
+/az summon
+
+# Sub gift — username skin when Mojang lookup succeeds (mode skipped)
+/az summon player Steve 90 20 - - - - - Alice
+
+# Wander / idle
+/az summon player Steve 90 20 - - - - idle Alice
+
+# Explicit Kon model
+/az summon kon Steve 90 20 - - - - follow Alice
 
 # Bits
-/az summon bits Steve 120 40 diamond netherite_sword diamond_pickaxe shield CheerName
+/az summon bits Steve 120 40 diamond netherite_sword diamond_pickaxe shield - CheerName
+
+# Remove temporary summons only (never charm Kon/Bits/Wiggly or the Wiggly dog)
+/az summon kill all
+/az summon kill all Steve
+/az summon kill nearest
+/az summon kill Alice
 ```
 
-IMC keys: `type`/`companion`/`id`, `duration`/`ttl`/`seconds` (`0` = no expiry, max 3600), `health`/`hp`, `armor`/`armour` (material or item id), `weapon`/`mainhand`, `tool`/`pickaxe`, `shield`/`offhand`, `name`/`user`/`username`/`ign` (nametag). Skip tokens: `-`, `none`, `default`, `skip`, `*`.
+IMC keys: `type`/`companion`/`id` (omit or `player` = random Steve/Alex; `kon`/`bits`/`wiggly`/`dox`/`steve`/`alex` as named), `duration`/`ttl`/`seconds` (`0` = no expiry, max 3600), `health`/`hp`, `armor`/`armour` (material or item id), `weapon`/`mainhand`, `tool`/`pickaxe`, `shield`/`offhand`, `behavior`/`companionMode`/`followMode` (`follow`, `stay`, `sit`, `idle`/`wander`, `attack`/`guard`; default `follow`), `name`/`user`/`username`/`ign` (nametag). Skip tokens: `-`, `none`, `default`, `skip`, `*`. Do **not** use `mode=` here — that key is play/attitude on other CCI actions.
 
-Skin lookup runs only for player-form (`kon`/`bits`/`dox`/`player`). Wolf/`wiggly`/mob forms keep their model. Failed Mojang lookup still keeps the nametag.
+Skin lookup runs only for player-form (`player`/`kon`/`bits`/`dox`/`steve`/`alex`). A fetched username skin wins. If lookup fails or no name is given, default/`player` uses Steve/Alex; explicit `kon`/`bits` keep Kon’s texture. Wolf/`wiggly`/mob forms keep their model. Failed Mojang lookup still keeps the nametag.
 
 ### Persona (1) — also via summon / modify
 

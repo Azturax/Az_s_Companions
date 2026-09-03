@@ -107,6 +107,11 @@ public final class CompanionCommands {
                                 .executes(ctx -> askGreedy(ctx.getSource().getPlayerOrException(),
                                         StringArgumentType.getString(ctx, "message")))))
                 .then(Commands.literal("ai")
+                        .executes(ctx -> {
+                            com.azscompanions.admin.NeoAzAdminActions.openAiConfig(
+                                    ctx.getSource().getPlayerOrException());
+                            return 1;
+                        })
                         .then(Commands.literal("status")
                                 .executes(ctx -> {
                                     ctx.getSource().sendSuccess(() -> Component.literal(CompanionAiAsk.status()), false);
@@ -114,7 +119,7 @@ public final class CompanionCommands {
                                 }))
                         .then(Commands.literal("config")
                                 .executes(ctx -> {
-                                    com.azscompanions.admin.NeoAzAdminActions.openPanel(
+                                    com.azscompanions.admin.NeoAzAdminActions.openAiConfig(
                                             ctx.getSource().getPlayerOrException());
                                     return 1;
                                 })))

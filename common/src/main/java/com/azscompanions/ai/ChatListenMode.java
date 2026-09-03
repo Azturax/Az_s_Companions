@@ -3,10 +3,10 @@ package com.azscompanions.ai;
 /**
  * When companions auto-reply to player chat via the LLM pipeline.
  * <ul>
- *   <li>{@link #OFF} — no auto chat reactions (default, safe)</li>
+ *   <li>{@link #OFF} — no auto chat reactions</li>
  *   <li>{@link #PLAYER} — companion replies only when its <em>owner</em> chats</li>
- *   <li>{@link #GLOBAL} — any player chat may trigger the nearest owned companion
- *       to the speaker among online owners (showcase / streamer-friendly)</li>
+ *   <li>{@link #GLOBAL} — nearby public chat may trigger one spawned companion
+ *       (name mentions always prefer the addressed companion)</li>
  * </ul>
  */
 public enum ChatListenMode {

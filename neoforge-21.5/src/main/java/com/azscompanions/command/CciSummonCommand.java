@@ -2,11 +2,13 @@ package com.azscompanions.command;
 
 import com.azscompanions.AzsCompanions;
 import com.azscompanions.cci.CciCompanionParams;
+import com.azscompanions.cci.CciMessages;
 import com.azscompanions.config.ServerConfig;
 import com.azscompanions.entity.CompanionAttitude;
 import com.azscompanions.entity.CompanionCciSummonSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionForm;
+import com.azscompanions.entity.CompanionMode;
 import com.azscompanions.entity.CompanionRecruitment;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.item.CompanionCharmItem;
@@ -22,10 +24,12 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -33,6 +37,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,11 +47,13 @@ import java.util.UUID;
  * CCI / streamer temporary summon.
  * <p>
  * Syntax (permission 2):
- * {@code /az summon <type> [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [name]}
+ * {@code /az summon [type] [player] [durationSeconds] [health] [armor] [weapon] [tool] [shield] [mode] [name]}
  * <p>
- * Use {@code -} to skip an optional equipment/health token. Duration {@code 0} disables expiry
- * (testing). Default duration is {@code cciSummonDurationSeconds} (90). Charm companions are never
- * spawned or expired by this command.
+ * Omitted type (or {@code player}) is a player-form companion with a random Steve or Alex skin.
+ * Explicit {@code kon}/{@code bits}/{@code wiggly} keep those appearances. Use {@code -} to skip
+ * an optional equipment/health token. Duration {@code 0} disables expiry (testing). Default
+ * duration is {@code cciSummonDurationSeconds} (90). Charm companions are never spawned or expired
+ * by this command.
  */
 public final class CciSummonCommand {
     private static final HttpClient HTTP = HttpClient.newBuilder()
@@ -58,42 +66,63 @@ public final class CciSummonCommand {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildBranch() {
         var nameArg = Commands.argument("name", StringArgumentType.greedyString())
-                .executes(ctx -> equipped(ctx, StringArgumentType.getString(ctx, "name")));
-        var shieldArg = Commands.argument("shield", StringArgumentType.word())
-                .executes(ctx -> equipped(ctx, null))
+                .executes(ctx -> equipped(ctx, modeOrNull(ctx), StringArgumentType.getString(ctx, "name")));
+        var modeArg = Commands.argument("mode", StringArgumentType.word())
+                .executes(ctx -> equipped(ctx, modeOrNull(ctx), null))
                 .then(nameArg);
+        var shieldArg = Commands.argument("shield", StringArgumentType.word())
+                .executes(ctx -> equipped(ctx, null, null))
+                .then(modeArg);
         var toolArg = Commands.argument("tool", StringArgumentType.word())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), armor(ctx), weapon(ctx),
-                        StringArgumentType.getString(ctx, "tool"), null, null))
+                        StringArgumentType.getString(ctx, "tool"), null, null, null))
                 .then(shieldArg);
         var weaponArg = Commands.argument("weapon", StringArgumentType.word())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), armor(ctx),
-                        StringArgumentType.getString(ctx, "weapon"), null, null, null))
+                        StringArgumentType.getString(ctx, "weapon"), null, null, null, null))
                 .then(toolArg);
         var armorArg = Commands.argument("armor", StringArgumentType.word())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx),
-                        StringArgumentType.getString(ctx, "armor"), null, null, null, null))
+                        StringArgumentType.getString(ctx, "armor"), null, null, null, null, null))
                 .then(weaponArg);
         var healthArg = Commands.argument("health", IntegerArgumentType.integer(1, (int) CompanionCciSummonSupport.MAX_HEALTH_VALUE))
-                .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), null, null, null, null, null))
+                .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), null, null, null, null, null, null))
                 .then(armorArg);
         var durationArg = Commands.argument("durationSeconds", IntegerArgumentType.integer(0, CompanionCciSummonSupport.MAX_DURATION_SECONDS))
-                .executes(ctx -> run(ctx, player(ctx), dur(ctx), -1, null, null, null, null, null))
+                .executes(ctx -> run(ctx, player(ctx), dur(ctx), -1, null, null, null, null, null, null))
                 .then(healthArg);
         var playerArg = Commands.argument("player", EntityArgument.player())
-                .executes(ctx -> run(ctx, player(ctx), defaultDuration(), -1, null, null, null, null, null))
+                .executes(ctx -> run(ctx, player(ctx), defaultDuration(), -1, null, null, null, null, null, null))
                 .then(durationArg);
         return Commands.literal("summon")
                 .requires(source -> source.hasPermission(2))
+                .executes(ctx -> run(ctx, null, defaultDuration(), -1, null, null, null, null, null, null))
+                .then(killBranch())
                 .then(Commands.argument("type", StringArgumentType.word())
-                        .executes(ctx -> run(ctx, null, defaultDuration(), -1, null, null, null, null, null))
+                        .executes(ctx -> run(ctx, null, defaultDuration(), -1, null, null, null, null, null, null))
                         .then(playerArg));
     }
 
-    private static int equipped(CommandContext<CommandSourceStack> ctx, @Nullable String name) throws CommandSyntaxException {
+    private static LiteralArgumentBuilder<CommandSourceStack> killBranch() {
+        return Commands.literal("kill")
+                .then(Commands.literal("all")
+                        .executes(ctx -> killAll(ctx, null))
+                        .then(Commands.argument("owner", EntityArgument.player())
+                                .executes(ctx -> killAll(ctx, EntityArgument.getPlayer(ctx, "owner")))))
+                .then(Commands.literal("nearest")
+                        .executes(CciSummonCommand::killNearest))
+                .then(Commands.argument("summonName", StringArgumentType.greedyString())
+                        .executes(ctx -> killNamed(ctx, StringArgumentType.getString(ctx, "summonName"))));
+    }
+
+    private static int equipped(
+            CommandContext<CommandSourceStack> ctx,
+            @Nullable String mode,
+            @Nullable String name) throws CommandSyntaxException {
         return run(ctx, player(ctx), dur(ctx), hp(ctx), armor(ctx), weapon(ctx),
                 StringArgumentType.getString(ctx, "tool"),
                 StringArgumentType.getString(ctx, "shield"),
+                mode,
                 name);
     }
 
@@ -121,6 +150,22 @@ public final class CciSummonCommand {
         return ServerConfig.CCI_SUMMON_DURATION_SECONDS.get();
     }
 
+    private static String typeOrDefault(CommandContext<CommandSourceStack> ctx) {
+        try {
+            return StringArgumentType.getString(ctx, "type");
+        } catch (IllegalArgumentException ex) {
+            return CompanionCciSummonSupport.DEFAULT_TYPE;
+        }
+    }
+
+    private static String modeOrNull(CommandContext<CommandSourceStack> ctx) {
+        try {
+            return StringArgumentType.getString(ctx, "mode");
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
     private static int run(
             CommandContext<CommandSourceStack> ctx,
             @Nullable ServerPlayer target,
@@ -130,9 +175,11 @@ public final class CciSummonCommand {
             @Nullable String weapon,
             @Nullable String tool,
             @Nullable String shield,
+            @Nullable String mode,
             @Nullable String name) throws CommandSyntaxException {
         ServerPlayer owner = target != null ? target : ctx.getSource().getPlayerOrException();
-        String type = StringArgumentType.getString(ctx, "type");
+        String type = typeOrDefault(ctx);
+        String[] modeName = CompanionCciSummonSupport.splitModeAndName(mode, name);
         CompanionEntity spawned = spawn(
                 owner,
                 type,
@@ -142,8 +189,9 @@ public final class CciSummonCommand {
                 weapon,
                 tool,
                 shield,
-                name,
-                null);
+                modeName[1],
+                null,
+                modeName[0]);
         if (spawned == null) {
             ctx.getSource().sendFailure(Component.translatable("message.azscompanions.cci.cci_summon_failed"));
             return 0;
@@ -169,7 +217,7 @@ public final class CciSummonCommand {
         int duration = params.summonDurationSecondsOr(defaultDuration());
         return spawn(
                 streamer,
-                params.companionTypeOr("kon"),
+                params.companionTypeOr(CompanionCciSummonSupport.DEFAULT_TYPE),
                 duration,
                 params.healthOrNull(),
                 params.armorSpec(),
@@ -177,7 +225,8 @@ public final class CciSummonCommand {
                 params.toolItem(),
                 params.shieldItem(),
                 params.summonDisplayName(),
-                params.skinUsername());
+                params.skinUsername(),
+                params.behaviorModeOr(CompanionCciSummonSupport.DEFAULT_MODE));
     }
 
     @Nullable
@@ -192,6 +241,22 @@ public final class CciSummonCommand {
             @Nullable String shield,
             @Nullable String name,
             @Nullable String skinUsername) {
+        return spawn(owner, type, durationSeconds, health, armor, weapon, tool, shield, name, skinUsername, null);
+    }
+
+    @Nullable
+    public static CompanionEntity spawn(
+            ServerPlayer owner,
+            String type,
+            int durationSeconds,
+            @Nullable Float health,
+            @Nullable String armor,
+            @Nullable String weapon,
+            @Nullable String tool,
+            @Nullable String shield,
+            @Nullable String name,
+            @Nullable String skinUsername,
+            @Nullable String mode) {
         CompanionCciSummonSupport.TypeSpec spec = CompanionCciSummonSupport.resolveType(type);
         CompanionEntity companion = CompanionRecruitment.spawnCciSummon(owner, spec.definitionId(AzsCompanions.MOD_ID));
         if (companion == null) {
@@ -203,6 +268,7 @@ public final class CciSummonCommand {
         companion.setFightSpawn(true);
         companion.markCciSummoned(CompanionCciSummonSupport.expireAtGameTime(
                 owner.level().getGameTime(), durationSeconds));
+        companion.setMode(CompanionMode.byName(CompanionCciSummonSupport.resolveBehaviorMode(mode)));
 
         String display = CompanionCciSummonSupport.sanitizeDisplayName(name);
         if (display.isEmpty() && skinUsername != null) {
@@ -214,8 +280,20 @@ public final class CciSummonCommand {
         companion.setNameTagVisible(true);
 
         String skin = skinUsername != null && !skinUsername.isBlank() ? skinUsername : display;
+        boolean appliedUsernameSkin = false;
         if (!skin.isBlank() && CompanionCciSummonSupport.wantsPlayerSkin(spec.formName())) {
-            resolveAndApplySkin(companion, skin);
+            appliedUsernameSkin = resolveAndApplySkin(companion, skin);
+        }
+        if (CompanionCciSummonSupport.shouldApplyVanillaDefault(spec, appliedUsernameSkin)) {
+            CompanionCciSummonSupport.VanillaPlayerSkin vanilla =
+                    CompanionCciSummonSupport.pickVanillaPlayerSkin(spec.vanillaPlayerPick());
+            if (vanilla != null) {
+                companion.setSkinPath(vanilla.texturePath());
+                companion.setSlimArms(vanilla.slim());
+                if (display.isEmpty()) {
+                    companion.setCustomDisplayName(vanilla.label());
+                }
+            }
         }
 
         if (health != null) {
@@ -233,6 +311,91 @@ public final class CciSummonCommand {
         applySlot(companion, "offhand", shield);
         return companion;
     }
+
+    private static int killAll(CommandContext<CommandSourceStack> ctx, @Nullable ServerPlayer ownerFilter) {
+        List<CompanionEntity> targets = collectCciSummons(ctx.getSource().getServer().getAllLevels(), ownerFilter);
+        if (targets.isEmpty()) {
+            ctx.getSource().sendFailure(Component.translatable(CciMessages.CCI_KILL_NONE));
+            return 0;
+        }
+        for (CompanionEntity companion : targets) {
+            killCciSummon(companion);
+        }
+        int count = targets.size();
+        ctx.getSource().sendSuccess(() -> Component.translatable(CciMessages.CCI_KILL_ALL, count), true);
+        return count;
+    }
+
+    private static int killNearest(CommandContext<CommandSourceStack> ctx) {
+        Vec3 pos = ctx.getSource().getPosition();
+        List<CompanionEntity> targets = collectCciSummons(ctx.getSource().getServer().getAllLevels(), null);
+        CompanionEntity nearest = pickNearest(targets, pos);
+        if (nearest == null) {
+            ctx.getSource().sendFailure(Component.translatable(CciMessages.CCI_KILL_NONE));
+            return 0;
+        }
+        String label = nearest.getChatDisplayName();
+        killCciSummon(nearest);
+        ctx.getSource().sendSuccess(() -> Component.translatable(CciMessages.CCI_KILL_ONE, label), true);
+        return 1;
+    }
+
+    private static int killNamed(CommandContext<CommandSourceStack> ctx, String query) {
+        Vec3 pos = ctx.getSource().getPosition();
+        List<CompanionEntity> matches = new ArrayList<>();
+        for (CompanionEntity companion : collectCciSummons(ctx.getSource().getServer().getAllLevels(), null)) {
+            if (CompanionCciSummonSupport.displayNameMatches(companion.getChatDisplayName(), query)) {
+                matches.add(companion);
+            }
+        }
+        CompanionEntity target = pickNearest(matches, pos);
+        if (target == null) {
+            ctx.getSource().sendFailure(Component.translatable(CciMessages.CCI_KILL_NONE_NAMED, query));
+            return 0;
+        }
+        String label = target.getChatDisplayName();
+        killCciSummon(target);
+        ctx.getSource().sendSuccess(() -> Component.translatable(CciMessages.CCI_KILL_ONE, label), true);
+        return 1;
+    }
+
+    private static List<CompanionEntity> collectCciSummons(
+            Iterable<ServerLevel> levels,
+            @Nullable ServerPlayer ownerFilter) {
+        List<CompanionEntity> out = new ArrayList<>();
+        UUID owner = ownerFilter == null ? null : ownerFilter.getUUID();
+        for (ServerLevel dim : levels) {
+            for (var entity : dim.getAllEntities()) {
+                if (entity instanceof CompanionEntity companion
+                        && companion.isAlive()
+                        && companion.isCciSummoned()
+                        && (owner == null || owner.equals(companion.getOwnerUuid()))) {
+                    out.add(companion);
+                }
+            }
+        }
+        return out;
+    }
+
+    @Nullable
+    private static CompanionEntity pickNearest(List<CompanionEntity> candidates, Vec3 pos) {
+        CompanionEntity best = null;
+        double bestD = Double.MAX_VALUE;
+        for (CompanionEntity companion : candidates) {
+            double d = companion.distanceToSqr(pos.x, pos.y, pos.z);
+            if (d < bestD) {
+                bestD = d;
+                best = companion;
+            }
+        }
+        return best;
+    }
+
+    private static void killCciSummon(CompanionEntity companion) {
+        companion.setInvulnerable(false);
+        companion.hurt(companion.damageSources().genericKill(), Float.MAX_VALUE);
+    }
+
 
     private static void applyHealth(CompanionEntity companion, float health) {
         float clamped = CompanionCciSummonSupport.clampHealth(health);
@@ -323,7 +486,7 @@ public final class CciSummonCommand {
         return BuiltInRegistries.ITEM.getOptional(loc).map(ItemStack::new);
     }
 
-    private static void resolveAndApplySkin(CompanionEntity companion, String username) {
+    private static boolean resolveAndApplySkin(CompanionEntity companion, String username) {
         try {
             String encoded = java.net.URLEncoder.encode(username.trim(), java.nio.charset.StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
@@ -334,28 +497,30 @@ public final class CciSummonCommand {
             HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200 || response.body() == null || response.body().isBlank()) {
                 AzsCompanions.LOGGER.info("CCI summon skin lookup: no Mojang profile for {}", username);
-                return;
+                return false;
             }
             String body = response.body();
             int idIdx = body.indexOf("\"id\"");
             if (idIdx < 0) {
-                return;
+                return false;
             }
             int q1 = body.indexOf('"', idIdx + 4);
             int q2 = body.indexOf('"', q1 + 1);
             if (q1 < 0 || q2 < 0) {
-                return;
+                return false;
             }
             String hex = body.substring(q1 + 1, q2).replace("-", "");
             if (hex.length() != 32) {
-                return;
+                return false;
             }
             UUID uuid = UUID.fromString(hex.replaceFirst(
                     "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)",
                     "$1-$2-$3-$4-$5"));
             companion.setSkinPath("player:" + uuid);
+            return true;
         } catch (Exception e) {
             AzsCompanions.LOGGER.warn("CCI summon Mojang skin lookup failed for {}", username, e);
+            return false;
         }
     }
 }

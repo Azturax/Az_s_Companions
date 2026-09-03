@@ -17,7 +17,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class AzAdminScreen extends Screen {
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_EDGE = 0xFF8B8B8B;
-    private static final int PANEL_H = 330;
+    private static final int PANEL_H = 360;
 
     private enum Tab { OVERVIEW, AI }
 
@@ -26,6 +26,8 @@ public final class AzAdminScreen extends Screen {
     private final boolean chunkLoading;
     private final boolean teamfight;
     private final String companionSummary;
+    private final boolean playerFacing;
+    private final boolean canEditServerAi;
 
     private Tab tab = Tab.AI;
     private LlmProviderProfile profile;
@@ -41,18 +43,29 @@ public final class AzAdminScreen extends Screen {
     private Button idleChatButton;
     private Button reactiveChatButton;
     private Button itemFindChatButton;
+    private Button globalTalkButton;
+    private Button chatListenButton;
     private boolean syncingFields;
     /** True when Clear was pressed; blank apiKey box alone keeps the existing key. */
     private boolean clearApiKeyOnSave;
 
     public AzAdminScreen(AdminAiConfigSnapshot snap, String aiStatus, boolean chunkLoading,
                          boolean teamfight, String companionSummary) {
-        super(Component.literal("Az Admin"));
+        this(snap, aiStatus, chunkLoading, teamfight, companionSummary, false, true);
+    }
+
+    public AzAdminScreen(AdminAiConfigSnapshot snap, String aiStatus, boolean chunkLoading,
+                         boolean teamfight, String companionSummary,
+                         boolean playerFacing, boolean canEditServerAi) {
+        super(Component.literal(playerFacing ? "Companion AI" : "Az Admin"));
         this.snap = snap == null ? new AdminAiConfigSnapshot() : snap;
         this.aiStatus = aiStatus == null ? "" : aiStatus;
         this.chunkLoading = chunkLoading;
         this.teamfight = teamfight;
         this.companionSummary = companionSummary == null ? "" : companionSummary;
+        this.playerFacing = playerFacing;
+        this.canEditServerAi = canEditServerAi;
+        this.tab = playerFacing ? Tab.AI : Tab.AI;
         this.profile = this.snap.profile();
         if (this.profile == LlmProviderProfile.CUSTOM) {
             this.profile = LlmProviderProfile.detect(this.snap);
@@ -70,18 +83,22 @@ public final class AzAdminScreen extends Screen {
         int bx = px + 12;
         int bw = panelW - 24;
 
-        addRenderableWidget(Button.builder(Component.literal(tab == Tab.OVERVIEW ? "[Overview]" : "Overview"),
-                b -> {
-                    tab = Tab.OVERVIEW;
-                    init();
-                }).bounds(bx, py + 8, bw / 2 - 4, 18).build());
-        addRenderableWidget(Button.builder(Component.literal(tab == Tab.AI ? "[AI Config]" : "AI Config"),
-                b -> {
-                    tab = Tab.AI;
-                    init();
-                }).bounds(bx + bw / 2 + 4, py + 8, bw / 2 - 4, 18).build());
+        if (playerFacing) {
+            tab = Tab.AI;
+        } else {
+            addRenderableWidget(Button.builder(Component.literal(tab == Tab.OVERVIEW ? "[Overview]" : "Overview"),
+                    b -> {
+                        tab = Tab.OVERVIEW;
+                        init();
+                    }).bounds(bx, py + 8, bw / 2 - 4, 18).build());
+            addRenderableWidget(Button.builder(Component.literal(tab == Tab.AI ? "[AI Config]" : "AI Config"),
+                    b -> {
+                        tab = Tab.AI;
+                        init();
+                    }).bounds(bx + bw / 2 + 4, py + 8, bw / 2 - 4, 18).build());
+        }
 
-        if (tab == Tab.OVERVIEW) {
+        if (!playerFacing && tab == Tab.OVERVIEW) {
             initOverview(bx, py, bw, panelH);
         } else {
             initAi(bx, py, bw, panelH);
@@ -123,111 +140,128 @@ public final class AzAdminScreen extends Screen {
     }
 
     private void initAi(int bx, int py, int bw, int panelH) {
-        int y = py + 34;
-        profileButton = Button.builder(Component.literal("Profile: " + profile.label()), b -> cycleProfile())
-                .bounds(bx, y, bw, 18).build();
-        addRenderableWidget(profileButton);
-        y += 22;
+        int y = playerFacing ? py + 12 : py + 34;
+        if (canEditServerAi) {
+            profileButton = Button.builder(Component.literal("Profile: " + profile.label()), b -> cycleProfile())
+                    .bounds(bx, y, bw, 18).build();
+            addRenderableWidget(profileButton);
+            y += 22;
 
-        syncingFields = true;
-        providerBox = new EditBox(font, bx, y, bw, 16, Component.literal("provider"));
-        providerBox.setMaxLength(AdminAiConfigSnapshot.MAX_PROVIDER);
-        providerBox.setValue(snap.provider());
-        providerBox.setEditable(true);
-        providerBox.setHint(Component.literal("provider"));
-        providerBox.setResponder(v -> onAiFieldEdited());
-        addRenderableWidget(providerBox);
-        y += 20;
+            syncingFields = true;
+            providerBox = new EditBox(font, bx, y, bw, 16, Component.literal("provider"));
+            providerBox.setMaxLength(AdminAiConfigSnapshot.MAX_PROVIDER);
+            providerBox.setValue(snap.provider());
+            providerBox.setEditable(true);
+            providerBox.setHint(Component.literal("provider"));
+            providerBox.setResponder(v -> onAiFieldEdited());
+            addRenderableWidget(providerBox);
+            y += 20;
 
-        baseUrlBox = new EditBox(font, bx, y, bw, 16, Component.literal("baseUrl"));
-        baseUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
-        baseUrlBox.setValue(snap.baseUrl());
-        baseUrlBox.setEditable(true);
-        baseUrlBox.setHint(Component.literal("baseUrl"));
-        baseUrlBox.setResponder(v -> onAiFieldEdited());
-        addRenderableWidget(baseUrlBox);
-        y += 20;
+            baseUrlBox = new EditBox(font, bx, y, bw, 16, Component.literal("baseUrl"));
+            baseUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
+            baseUrlBox.setValue(snap.baseUrl());
+            baseUrlBox.setEditable(true);
+            baseUrlBox.setHint(Component.literal("baseUrl"));
+            baseUrlBox.setResponder(v -> onAiFieldEdited());
+            addRenderableWidget(baseUrlBox);
+            y += 20;
 
-        modelBox = new EditBox(font, bx, y, bw, 16, Component.literal("model"));
-        modelBox.setMaxLength(AdminAiConfigSnapshot.MAX_MODEL);
-        modelBox.setValue(snap.model());
-        modelBox.setEditable(true);
-        modelBox.setHint(Component.literal("model"));
-        addRenderableWidget(modelBox);
-        y += 20;
+            modelBox = new EditBox(font, bx, y, bw, 16, Component.literal("model"));
+            modelBox.setMaxLength(AdminAiConfigSnapshot.MAX_MODEL);
+            modelBox.setValue(snap.model());
+            modelBox.setEditable(true);
+            modelBox.setHint(Component.literal("model"));
+            addRenderableWidget(modelBox);
+            y += 20;
 
-        apiKeyEnvBox = new EditBox(font, bx, y, bw, 16, Component.literal("apiKeyEnv"));
-        apiKeyEnvBox.setMaxLength(AdminAiConfigSnapshot.MAX_ENV);
-        apiKeyEnvBox.setValue(snap.apiKeyEnv());
-        apiKeyEnvBox.setEditable(true);
-        apiKeyEnvBox.setHint(Component.literal("apiKeyEnv"));
-        addRenderableWidget(apiKeyEnvBox);
-        y += 20;
+            apiKeyEnvBox = new EditBox(font, bx, y, bw, 16, Component.literal("apiKeyEnv"));
+            apiKeyEnvBox.setMaxLength(AdminAiConfigSnapshot.MAX_ENV);
+            apiKeyEnvBox.setValue(snap.apiKeyEnv());
+            apiKeyEnvBox.setEditable(true);
+            apiKeyEnvBox.setHint(Component.literal("apiKeyEnv"));
+            addRenderableWidget(apiKeyEnvBox);
+            y += 20;
 
-        int clearW = 52;
-        apiKeyBox = new EditBox(font, bx, y, bw - clearW - 6, 16, Component.literal("apiKey"));
-        apiKeyBox.setMaxLength(AdminAiConfigSnapshot.MAX_API_KEY);
-        apiKeyBox.setValue("");
-        apiKeyBox.setEditable(true);
-        apiKeyBox.setHint(Component.literal("apiKey (blank=keep)"));
-        apiKeyBox.setFormatter((text, pos) -> FormattedCharSequence.forward(
-                "*".repeat(Math.max(0, text.length())), Style.EMPTY));
-        apiKeyBox.setResponder(v -> {
-            if (!syncingFields && v != null && !v.isBlank()) {
-                clearApiKeyOnSave = false;
-            }
-        });
-        addRenderableWidget(apiKeyBox);
-        addRenderableWidget(Button.builder(Component.literal("Clear"), b -> {
-            clearApiKeyOnSave = true;
-            if (apiKeyBox != null) {
-                apiKeyBox.setValue("");
-            }
-        }).bounds(bx + bw - clearW, y - 1, clearW, 18).build());
-        y += 20;
-        syncingFields = false;
+            int clearW = 52;
+            apiKeyBox = new EditBox(font, bx, y, bw - clearW - 6, 16, Component.literal("apiKey"));
+            apiKeyBox.setMaxLength(AdminAiConfigSnapshot.MAX_API_KEY);
+            apiKeyBox.setValue("");
+            apiKeyBox.setEditable(true);
+            apiKeyBox.setHint(Component.literal("apiKey (blank=keep)"));
+            apiKeyBox.setFormatter((text, pos) -> FormattedCharSequence.forward(
+                    "*".repeat(Math.max(0, text.length())), Style.EMPTY));
+            apiKeyBox.setResponder(v -> {
+                if (!syncingFields && v != null && !v.isBlank()) {
+                    clearApiKeyOnSave = false;
+                }
+            });
+            addRenderableWidget(apiKeyBox);
+            addRenderableWidget(Button.builder(Component.literal("Clear"), b -> {
+                clearApiKeyOnSave = true;
+                if (apiKeyBox != null) {
+                    apiKeyBox.setValue("");
+                }
+            }).bounds(bx + bw - clearW, y - 1, clearW, 18).build());
+            y += 20;
+            syncingFields = false;
 
-        languageBox = new EditBox(font, bx, y, (bw - 6) / 2, 16, Component.literal("lang"));
-        languageBox.setMaxLength(AdminAiConfigSnapshot.MAX_LANG);
-        languageBox.setValue(snap.inputLanguage());
-        languageBox.setEditable(true);
-        languageBox.setHint(Component.literal("lang"));
-        addRenderableWidget(languageBox);
+            languageBox = new EditBox(font, bx, y, (bw - 6) / 2, 16, Component.literal("lang"));
+            languageBox.setMaxLength(AdminAiConfigSnapshot.MAX_LANG);
+            languageBox.setValue(snap.inputLanguage());
+            languageBox.setEditable(true);
+            languageBox.setHint(Component.literal("lang"));
+            addRenderableWidget(languageBox);
 
-        mcpUrlBox = new EditBox(font, bx + (bw - 6) / 2 + 6, y, (bw - 6) / 2, 16, Component.literal("mcpUrl"));
-        mcpUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
-        mcpUrlBox.setValue(snap.mcpUrl());
-        mcpUrlBox.setEditable(true);
-        mcpUrlBox.setHint(Component.literal("mcpUrl"));
-        mcpUrlBox.setResponder(v -> onAiFieldEdited());
-        addRenderableWidget(mcpUrlBox);
-        y += 20;
+            mcpUrlBox = new EditBox(font, bx + (bw - 6) / 2 + 6, y, (bw - 6) / 2, 16, Component.literal("mcpUrl"));
+            mcpUrlBox.setMaxLength(AdminAiConfigSnapshot.MAX_URL);
+            mcpUrlBox.setValue(snap.mcpUrl());
+            mcpUrlBox.setEditable(true);
+            mcpUrlBox.setHint(Component.literal("mcpUrl"));
+            mcpUrlBox.setResponder(v -> onAiFieldEdited());
+            addRenderableWidget(mcpUrlBox);
+            y += 20;
 
-        serverLlmButton = Button.builder(Component.literal(serverLlmLabel(snap.serverLlmOnly())),
-                b -> {
-                    snap.setServerLlmOnly(!snap.serverLlmOnly());
-                    serverLlmButton.setMessage(Component.literal(serverLlmLabel(snap.serverLlmOnly())));
-                }).bounds(bx, y, bw / 2 - 4, 18).build();
-        addRenderableWidget(serverLlmButton);
+            serverLlmButton = Button.builder(Component.literal(serverLlmLabel(snap.serverLlmOnly())),
+                    b -> {
+                        snap.setServerLlmOnly(!snap.serverLlmOnly());
+                        serverLlmButton.setMessage(Component.literal(serverLlmLabel(snap.serverLlmOnly())));
+                    }).bounds(bx, y, bw / 2 - 4, 18).build();
+            addRenderableWidget(serverLlmButton);
+            y += 20;
+        }
+
         idleChatButton = Button.builder(Component.literal(idleChatLabel(snap.idleChat())),
                 b -> {
                     snap.setIdleChat(!snap.idleChat());
                     idleChatButton.setMessage(Component.literal(idleChatLabel(snap.idleChat())));
-                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
+                }).bounds(bx, y, bw / 2 - 4, 18).build();
         addRenderableWidget(idleChatButton);
-        y += 20;
         reactiveChatButton = Button.builder(Component.literal(reactiveChatLabel(snap.reactiveChat())),
                 b -> {
                     snap.setReactiveChat(!snap.reactiveChat());
                     reactiveChatButton.setMessage(Component.literal(reactiveChatLabel(snap.reactiveChat())));
-                }).bounds(bx, y, bw / 2 - 4, 18).build();
+                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
         addRenderableWidget(reactiveChatButton);
+        y += 20;
         itemFindChatButton = Button.builder(Component.literal(itemFindChatLabel(snap.itemFindChat())),
                 b -> {
                     snap.setItemFindChat(!snap.itemFindChat());
                     itemFindChatButton.setMessage(Component.literal(itemFindChatLabel(snap.itemFindChat())));
-                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
+                }).bounds(bx, y, bw / 2 - 4, 18).build();
         addRenderableWidget(itemFindChatButton);
+        globalTalkButton = Button.builder(Component.literal(globalTalkLabel(snap.globalTalk())),
+                b -> {
+                    snap.setGlobalTalk(!snap.globalTalk());
+                    globalTalkButton.setMessage(Component.literal(globalTalkLabel(snap.globalTalk())));
+                }).bounds(bx + bw / 2 + 4, y, bw / 2 - 4, 18).build();
+        addRenderableWidget(globalTalkButton);
+        y += 20;
+        chatListenButton = Button.builder(Component.literal(chatListenLabel(snap.chatListen())),
+                b -> {
+                    snap.setChatListenMode(com.azscompanions.entity.CompanionPlayerAiPrefs.cycleChatListen(snap.chatListen()));
+                    chatListenButton.setMessage(Component.literal(chatListenLabel(snap.chatListen())));
+                }).bounds(bx, y, bw, 18).build();
+        addRenderableWidget(chatListenButton);
 
         addRenderableWidget(Button.builder(Component.literal("Save & apply"), b -> save())
                 .bounds(bx, py + panelH - 26, bw, 18).build());
@@ -329,6 +363,18 @@ public final class AzAdminScreen extends Screen {
         return "Item-find chat: " + (on ? "ON" : "OFF");
     }
 
+    private static String globalTalkLabel(boolean on) {
+        return "Global talk: " + (on ? "ON" : "OFF");
+    }
+
+    private static String chatListenLabel(com.azscompanions.ai.ChatListenMode mode) {
+        return switch (mode == null ? com.azscompanions.ai.ChatListenMode.GLOBAL : mode) {
+            case OFF -> "Reply to chat: OFF";
+            case PLAYER -> "Reply to chat: owner";
+            case GLOBAL -> "Reply to chat: global";
+        };
+    }
+
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int panelW = Math.min(360, width - 20);
@@ -337,7 +383,11 @@ public final class AzAdminScreen extends Screen {
         int py = (height - panelH) / 2;
         graphics.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, PANEL_EDGE);
         graphics.fill(px, py, px + panelW, py + panelH, PANEL_BG);
-        graphics.drawString(font, tab == Tab.OVERVIEW ? "Az Admin" : "AI config → server (Save & apply) · /ask only",
+        graphics.drawString(font, tab == Tab.OVERVIEW
+                        ? "Az Admin"
+                        : (playerFacing
+                        ? "Companion AI (perm 0) · /az ai"
+                        : "AI config → server (Save & apply)"),
                 px + 12, py - 12, 0xFFFFFF, false);
     }
 

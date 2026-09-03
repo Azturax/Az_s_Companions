@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -126,7 +127,7 @@ public final class CompanionCommandScreen extends Screen {
             graphics.fill(getX(), getY(), getX() + width, getY() + height, bg);
             int pad = 2;
             int size = width - pad * 2;
-            graphics.blit(icon, getX() + pad, getY() + pad, 0, 0, size, size, size, size);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, icon, getX() + pad, getY() + pad, 0, 0, size, size, size, size);
         }
     }
 }

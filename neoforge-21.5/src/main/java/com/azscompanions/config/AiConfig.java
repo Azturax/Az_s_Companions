@@ -42,6 +42,7 @@ public final class AiConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> CENSOR_EXTRA_WORDS;
     public static final ModConfigSpec.ConfigValue<String> CHAT_LISTEN_MODE;
     public static final ModConfigSpec.BooleanValue NAME_LISTEN;
+    public static final ModConfigSpec.BooleanValue GLOBAL_TALK;
     public static final ModConfigSpec.DoubleValue CHAT_REACT_RANGE;
     public static final ModConfigSpec.IntValue CHAT_REACT_COOLDOWN_SECONDS;
     public static final ModConfigSpec.BooleanValue IDLE_CHAT;
@@ -158,11 +159,14 @@ public final class AiConfig {
         CENSOR_EXTRA_WORDS = builder.comment("Extra whole words to censor (case-insensitive).")
                 .defineListAllowEmpty("censorExtraWords", List.of(), () -> "", o -> o instanceof String);
         CHAT_LISTEN_MODE = builder.comment(
-                        "RETIRED (0.3.12): ignored. Companions reply only via /ask / /az ask.")
-                .define("chatListenMode", "off");
+                        "Public chat auto-reply: off | player (owner only) | global (nearby players, default).")
+                .define("chatListenMode", "global");
         NAME_LISTEN = builder.comment(
-                        "RETIRED (0.3.12): ignored. Name-mention chat listen removed.")
-                .define("nameListen", false);
+                        "Name-mention in chat can wake a companion even if listen is off. Default true.")
+                .define("nameListen", true);
+        GLOBAL_TALK = builder.comment(
+                        "AI speak lines go to public/server chat tagged with the companion name. Default true.")
+                .define("globalTalk", true);
         CHAT_REACT_RANGE = builder.comment("Max blocks for chat auto-react / name mentions.")
                 .defineInRange("chatReactRange", CompanionAiChatSupport.DEFAULT_CHAT_REACT_RANGE, 8.0d, 128.0d);
         CHAT_REACT_COOLDOWN_SECONDS = builder.comment("Per-companion and per-owner cooldown between auto-replies.")
@@ -281,9 +285,9 @@ public final class AiConfig {
                 .setMemoryMaxMessages(MEMORY_MAX_MESSAGES.get())
                 .setCensorChat(CENSOR_CHAT.get())
                 .setCensorExtraWords(censorExtra)
-                // 0.3.12: chatListen / nameListen / enableAiActions retired — ask-only
-                .setChatListenMode(ChatListenMode.OFF)
-                .setNameListen(false)
+                .setChatListenMode(ChatListenMode.fromConfig(CHAT_LISTEN_MODE.get()))
+                .setNameListen(NAME_LISTEN.get())
+                .setGlobalTalk(GLOBAL_TALK.get())
                 .setChatReactRange(CHAT_REACT_RANGE.get())
                 .setChatReactCooldownSeconds(CHAT_REACT_COOLDOWN_SECONDS.get())
                 .setIdleChat(IDLE_CHAT.get())
@@ -354,6 +358,9 @@ public final class AiConfig {
         toml.append("memoryMaxMessages = ").append(s.memoryMaxMessages()).append("\n");
         toml.append("censorChat = ").append(s.censorChat()).append("\n");
         toml.append("censorExtraWords = ").append(stringListToml(s.censorExtraWords())).append("\n");
+        toml.append("chatListenMode = \"").append(esc(s.chatListenMode().configName())).append("\"\n");
+        toml.append("nameListen = ").append(s.nameListen()).append("\n");
+        toml.append("globalTalk = ").append(s.globalTalk()).append("\n");
         toml.append("chatReactRange = ").append(s.chatReactRange()).append("\n");
         toml.append("chatReactCooldownSeconds = ").append(s.chatReactCooldownSeconds()).append("\n");
         toml.append("idleChat = ").append(s.idleChat()).append("\n");

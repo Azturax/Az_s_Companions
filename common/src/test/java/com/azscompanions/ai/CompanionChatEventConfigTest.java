@@ -34,6 +34,8 @@ class CompanionChatEventConfigTest {
         assertTrue(s.reactiveChat());
         assertTrue(s.itemFindChat());
         assertTrue(s.customChatEvents().isEmpty());
+        assertTrue(s.globalTalk());
+        assertEquals(ChatListenMode.GLOBAL, s.chatListenMode());
     }
 
     @Test

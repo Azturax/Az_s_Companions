@@ -127,6 +127,7 @@ public final class FabricFollowOwnerGoal extends Goal {
                 return;
             }
             boolean mayTeleport = companion.getMode() == FabricCompanionMode.FOLLOW
+                    && companion.isTeleportEnabled()
                     && CompanionFollowDistances.shouldGroundTeleport(dist, followRadius())
                     && !CompanionFollowDistances.tooCloseToTeleport(dist, followRadius())
                     && companion.isOwnerExploring();

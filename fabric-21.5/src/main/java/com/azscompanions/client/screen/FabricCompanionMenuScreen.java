@@ -57,7 +57,7 @@ public final class FabricCompanionMenuScreen extends Screen {
                 minecraft.setScreen(new FabricCompanionBehaviorScreen(companion, this));
             }
         }).bounds(bx, by + 56, 160, 22).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.inventory.adventure"), b -> {
             FabricNetworkingClient.sendMenuAction(companion.getId(), "OPEN_INVENTORY");
         }).bounds(bx, by + 84, 160, 22).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.azscompanions.stats"), b -> {

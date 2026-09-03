@@ -9,6 +9,7 @@ import com.azscompanions.network.packet.CompanionBehaviorPacket;
 import com.azscompanions.network.packet.CompanionCommandPacket;
 import com.azscompanions.network.packet.CompanionDialoguePacket;
 import com.azscompanions.network.packet.CompanionGatherAssignPacket;
+import com.azscompanions.network.packet.CompanionGeneralSettingsPacket;
 import com.azscompanions.network.packet.CompanionContextSkinsPacket;
 import com.azscompanions.network.packet.CompanionSettingsPacket;
 import com.azscompanions.network.packet.AdminActionPacket;
@@ -39,6 +40,7 @@ public final class ModNetworking {
         registrar.playToServer(CompanionCommandPacket.TYPE, CompanionCommandPacket.STREAM_CODEC, CompanionCommandPacket::handle);
         registrar.playToServer(CompanionGatherAssignPacket.TYPE, CompanionGatherAssignPacket.STREAM_CODEC, CompanionGatherAssignPacket::handle);
         registrar.playToServer(CompanionSettingsPacket.TYPE, CompanionSettingsPacket.STREAM_CODEC, CompanionSettingsPacket::handle);
+        registrar.playToServer(CompanionGeneralSettingsPacket.TYPE, CompanionGeneralSettingsPacket.STREAM_CODEC, CompanionGeneralSettingsPacket::handle);
         registrar.playToServer(CompanionContextSkinsPacket.TYPE, CompanionContextSkinsPacket.STREAM_CODEC, CompanionContextSkinsPacket::handle);
         registrar.playToServer(CompanionBehaviorPacket.TYPE, CompanionBehaviorPacket.STREAM_CODEC, CompanionBehaviorPacket::handle);
         registrar.playToServer(CompanionPersonaPacket.TYPE, CompanionPersonaPacket.STREAM_CODEC, CompanionPersonaPacket::handle);

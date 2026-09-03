@@ -155,6 +155,7 @@ public final class CompanionFollowGoal extends Goal {
             // Wander: never teleport here — home-bed leash is the only Wander teleport.
             // Follow: only beyond the long ground leash, and never under min teleport floor.
             boolean mayTeleport = companion.getMode() == CompanionMode.FOLLOW
+                    && companion.isTeleportEnabled()
                     && CompanionFollowDistances.shouldGroundTeleport(dist, followRadius())
                     && !CompanionFollowDistances.tooCloseToTeleport(dist, followRadius())
                     && companion.isOwnerExploring();

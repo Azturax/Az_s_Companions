@@ -46,12 +46,16 @@ public final class WigglyDogPerk {
         }
         Wolf dog = findOrCullOwned(player);
         if (dog == null || !dog.isAlive()) {
+            if (com.azscompanions.entity.CompanionSpawnGuardSupport.inLoginGrace(player.tickCount)) {
+                return;
+            }
             dog = spawn(level, player);
             if (dog == null) {
                 return;
             }
         }
         dog.setOwner(player);
+        applyDogScale(dog);
         clearGlow(dog);
         if (SpecialPlayerPerks.isOwnerActivelyFlying(player)) {
             dog.setOrderedToSit(false);
@@ -184,9 +188,21 @@ public final class WigglyDogPerk {
         wolf.setOrderedToSit(false);
         wolf.getPersistentData().putBoolean(WigglyDogPerkSupport.ENTITY_TAG, true);
         wolf.getPersistentData().store(WigglyDogPerkSupport.OWNER_TAG, UUIDUtil.CODEC, player.getUUID());
+        applyDogScale(wolf);
         clearGlow(wolf);
         level.addFreshEntity(wolf);
         return wolf;
+    }
+
+    private static void applyDogScale(Wolf wolf) {
+        var attr = wolf.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+        if (attr == null) {
+            return;
+        }
+        if (WigglyDogPerkSupport.scaleNeedsUpdate(attr.getBaseValue())) {
+            attr.setBaseValue(WigglyDogPerkSupport.DOG_SCALE);
+            wolf.refreshDimensions();
+        }
     }
 
     private static void clearGlow(Wolf wolf) {

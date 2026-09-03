@@ -108,7 +108,17 @@ public final class CompanionAiConfigIO {
         } else if (root.has("filterProfanity")) {
             s.setCensorChat(root.get("filterProfanity").getAsBoolean());
         }
-        // Legacy keys ignored (0.3.12 ask-only): chatListenMode, chatReaction, nameListen
+        if (root.has("chatListenMode")) {
+            s.setChatListenMode(ChatListenMode.fromConfig(root.get("chatListenMode").getAsString()));
+        } else if (root.has("chatReaction")) {
+            s.setChatListenMode(ChatListenMode.fromConfig(root.get("chatReaction").getAsString()));
+        }
+        if (root.has("nameListen")) {
+            s.setNameListen(root.get("nameListen").getAsBoolean());
+        }
+        if (root.has("globalTalk")) {
+            s.setGlobalTalk(root.get("globalTalk").getAsBoolean());
+        }
         if (root.has("chatReactRange")) {
             s.setChatReactRange(root.get("chatReactRange").getAsDouble());
         }
@@ -258,10 +268,10 @@ public final class CompanionAiConfigIO {
     public static JsonObject toJson(CompanionAiSettings s) {
         JsonObject root = new JsonObject();
         root.addProperty("_comment",
-                "Text dialogue AI via /ask only. provider: disabled|local|openai_compatible|mcp "
+                "Text dialogue AI via /ask and optional public-chat listen. provider: disabled|local|openai_compatible|mcp "
                         + "(aliases: litellm, openrouter, …). Opt-in shared host LLM "
                         + "(serverLlmOnly, default false); separate minds per companion (perCompanionMemory). Prefer env API keys. "
-                        + "Legacy chatListenMode/nameListen/enableAiActions are ignored.");
+                        + "chatListenMode=off|player|global (default global). globalTalk broadcasts AI lines to public chat.");
         root.addProperty("provider", s.provider().name().toLowerCase());
         root.addProperty("baseUrl", s.baseUrl());
         root.addProperty("model", s.model());
@@ -282,6 +292,9 @@ public final class CompanionAiConfigIO {
         root.addProperty("perCompanionMemory", s.perCompanionMemory());
         root.addProperty("memoryMaxMessages", s.memoryMaxMessages());
         root.addProperty("censorChat", s.censorChat());
+        root.addProperty("chatListenMode", s.chatListenMode().configName());
+        root.addProperty("nameListen", s.nameListen());
+        root.addProperty("globalTalk", s.globalTalk());
         root.addProperty("chatReactRange", s.chatReactRange());
         root.addProperty("chatReactCooldownSeconds", s.chatReactCooldownSeconds());
         JsonArray censorExtra = new JsonArray();

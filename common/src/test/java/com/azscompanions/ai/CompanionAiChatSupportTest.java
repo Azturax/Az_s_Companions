@@ -94,11 +94,11 @@ class CompanionAiChatSupportTest {
                 .setServerLlmOnly(false);
         JsonObject json = CompanionAiConfigIO.toJson(s);
         CompanionAiSettings loaded = CompanionAiConfigIO.fromJson(json);
-        // 0.3.12: chatListenMode / nameListen / enableAiActions ignored — ask-only
-        assertEquals(ChatListenMode.OFF, loaded.chatListenMode());
-        assertFalse(json.has("chatListenMode"));
-        assertFalse(json.has("nameListen"));
-        assertFalse(json.has("enableAiActions"));
+        assertEquals(ChatListenMode.PLAYER, loaded.chatListenMode());
+        assertTrue(json.has("chatListenMode"));
+        assertEquals("player", json.get("chatListenMode").getAsString());
+        assertTrue(json.has("globalTalk"));
+        assertTrue(loaded.globalTalk());
         assertEquals(40.0d, loaded.chatReactRange(), 0.01);
         assertTrue(loaded.idleChat());
         assertEquals(60, loaded.idleChatSecondsMin());
@@ -171,15 +171,17 @@ class CompanionAiChatSupportTest {
     }
 
     @Test
-    void chatReactionAliasKeyIgnored() {
+    void chatListenAndGlobalTalkRoundTrip() {
         JsonObject root = new JsonObject();
-        root.addProperty("chatReaction", "global");
-        root.addProperty("chatListenMode", "player");
+        root.addProperty("chatReaction", "player");
+        root.addProperty("chatListenMode", "global");
         root.addProperty("nameListen", true);
+        root.addProperty("globalTalk", false);
         root.addProperty("enableAiActions", true);
         CompanionAiSettings loaded = CompanionAiConfigIO.fromJson(root);
-        assertEquals(ChatListenMode.OFF, loaded.chatListenMode());
-        assertFalse(loaded.nameListen());
+        assertEquals(ChatListenMode.GLOBAL, loaded.chatListenMode());
+        assertTrue(loaded.nameListen());
+        assertFalse(loaded.globalTalk());
         assertFalse(loaded.enableAiActions());
     }
 }

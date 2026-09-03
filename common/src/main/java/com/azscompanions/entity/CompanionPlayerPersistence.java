@@ -131,6 +131,9 @@ public final class CompanionPlayerPersistence {
         keys.add("TrustedCount");
         keys.add("Permissions");
         keys.add("TeleportEnabled");
+        keys.add("GlobalTalk");
+        keys.add("ChatListen");
+        keys.add("IdleChat");
         keys.add(WolfyPerkSupport.COMPANION_NBT_FLAG);
         keys.add("Definition");
         keys.add(CompanionPersona.NBT_WHO);
