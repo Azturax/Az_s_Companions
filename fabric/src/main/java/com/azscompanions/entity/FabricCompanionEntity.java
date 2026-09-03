@@ -19,6 +19,7 @@ import net.minecraft.world.damagesource.DamageSource;
 
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
@@ -1345,7 +1346,7 @@ public class FabricCompanionEntity extends PathfinderMob implements RangedAttack
         getDefinition().dialogue().pick(getDefinition().dialogue().success(), random)
                 .ifPresent(line -> {
                     if (getOwner() instanceof ServerPlayer sp) {
-                        sp.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+                        sp.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
                     }
                 });
     }
@@ -1354,7 +1355,7 @@ public class FabricCompanionEntity extends PathfinderMob implements RangedAttack
         getDefinition().dialogue().pick(getDefinition().dialogue().greetings(), random)
                 .ifPresent(line -> {
                     if (getOwner() instanceof ServerPlayer sp) {
-                        sp.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+                        sp.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
                     }
                 });
     }
@@ -1390,7 +1391,7 @@ public class FabricCompanionEntity extends PathfinderMob implements RangedAttack
             lastSpeakTick = tickCount;
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
-            Component msg = Component.literal("<" + getChatDisplayName() + "> " + text);
+            Component msg = Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), text));
             if (isGlobalTalkEnabled()) {
                 var server = owner.getServer();
                 if (server != null) {
@@ -1419,7 +1420,7 @@ public class FabricCompanionEntity extends PathfinderMob implements RangedAttack
         }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
         }
     }
 

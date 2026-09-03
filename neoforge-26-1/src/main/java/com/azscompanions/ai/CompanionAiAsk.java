@@ -220,7 +220,7 @@ public final class CompanionAiAsk {
             return;
         }
         notifySpeaker.sendSystemMessage(
-                Component.literal("<" + companion.getChatDisplayName() + "> " + line));
+                Component.literal(CompanionChatFormat.formatLine(companion.getOwnerUuid(), companion.getChatDisplayName(), line)));
     }
 
     private static void deliver(ServerPlayer player, CompanionEntity companion, String reply, Throwable error,

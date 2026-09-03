@@ -28,6 +28,7 @@ class CompanionAiChatSupportTest {
         assertTrue(CompanionAiChatSupport.shouldIgnoreChatMessage("Kon ask hello"));
         assertFalse(CompanionAiChatSupport.shouldIgnoreChatMessage("hello"));
         assertTrue(CompanionAiChatSupport.looksLikeCompanionReply("<Kon> hi"));
+        assertTrue(CompanionAiChatSupport.looksLikeCompanionReply("[BRAT] <Kon> hi"));
         assertTrue(CompanionAiChatSupport.looksLikeCompanionReply("… Kon is thinking"));
         assertFalse(CompanionAiChatSupport.looksLikeCompanionReply("hello world"));
     }

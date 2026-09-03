@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.12
+
+Companion chat rank prefix `[BRAT]` for a designated owner UUID (and CCI summons they own).
+
+### Added
+- **`[BRAT]` chat prefix** — companions owned by UUID `324ca5e2-c2e1-4b50-be3d-01198293e919` (and CCI summons they own) prefix owner-chat lines as `[BRAT] <Name> …`. Listen-loop detection still recognizes those replies.
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.12+<mc>.jar` on tag `v1.0.12` (**8** unified jars).
+
 ## 1.0.11
 
 Wiggly-only dog, `/az summon` modes and kill command, Steve/Alex CCI defaults, 26.x item textures, and companion gear/AI menus.

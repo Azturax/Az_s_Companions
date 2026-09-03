@@ -2,6 +2,7 @@ package com.azscompanions.entity;
 
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
@@ -1166,7 +1167,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         getDefinition().dialogue().pick(getDefinition().dialogue().success(), random)
                 .ifPresent(line -> {
                     if (getOwner() instanceof ServerPlayer sp) {
-                        sp.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+                        sp.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
                     }
                 });
     }
@@ -1175,7 +1176,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         getDefinition().dialogue().pick(getDefinition().dialogue().greetings(), random)
                 .ifPresent(line -> {
                     if (getOwner() instanceof ServerPlayer sp) {
-                        sp.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+                        sp.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
                     }
                 });
     }
@@ -1211,7 +1212,7 @@ public class FabricCompanionEntity extends PathfinderMob {
             lastSpeakTick = tickCount;
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), text)), false);
         }
     }
 
@@ -1232,7 +1233,7 @@ public class FabricCompanionEntity extends PathfinderMob {
         }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
         }
     }
 

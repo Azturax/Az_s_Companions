@@ -97,7 +97,8 @@ public final class CompanionAiChatSupport {
     }
 
     /**
-     * Heuristic loop guard: companion owner-chat lines look like {@code <Name> …}.
+     * Heuristic loop guard: companion owner-chat lines look like {@code <Name> …},
+     * optionally with a UUID rank prefix ({@code [BRAT] <Name> …}).
      * Also skips our own action-bar thinking marker if it somehow lands in chat.
      */
     public static boolean looksLikeCompanionReply(String raw) {
@@ -108,6 +109,7 @@ public final class CompanionAiChatSupport {
         if (text.startsWith("… ") && text.contains(" is thinking")) {
             return true;
         }
+        text = CompanionChatFormat.stripRankPrefix(text);
         return text.startsWith("<") && text.contains("> ");
     }
 

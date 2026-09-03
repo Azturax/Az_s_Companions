@@ -5,6 +5,7 @@ import com.azscompanions.ai.ChildAutonomyMode;
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
@@ -1456,7 +1457,7 @@ public class CompanionEntity extends PathfinderMob {
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
             // Chat only — scripted VoiceService uses the action-bar overlay, not both.
-            owner.sendSystemMessage(Component.literal("<" + getChatDisplayName() + "> " + text));
+            owner.sendSystemMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), text)));
         }
     }
 
@@ -1479,7 +1480,7 @@ public class CompanionEntity extends PathfinderMob {
         }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
-            owner.sendSystemMessage(Component.literal("<" + getChatDisplayName() + "> " + line));
+            owner.sendSystemMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)));
         }
     }
 

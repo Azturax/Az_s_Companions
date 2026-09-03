@@ -4,6 +4,7 @@ import com.azscompanions.ai.ChildAutonomyMode;
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
@@ -1624,7 +1625,7 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
             lastSpeakTick = tickCount;
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
-            Component msg = Component.literal("<" + getChatDisplayName() + "> " + text);
+            Component msg = Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), text));
             if (isGlobalTalkEnabled()) {
                 var server = owner.getServer();
                 if (server != null) {
@@ -1655,7 +1656,7 @@ public class CompanionEntity extends PathfinderMob implements RangedAttackMob {
         }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
         }
     }
 

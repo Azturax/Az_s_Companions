@@ -12,6 +12,7 @@ class CompanionChatListenSupportTest {
     void ignoresCommandsCompanionAndCci() {
         assertTrue(CompanionChatListenSupport.shouldIgnoreChat("/az ask hi"));
         assertTrue(CompanionChatListenSupport.shouldIgnoreChat("<Kon> hello"));
+        assertTrue(CompanionChatListenSupport.shouldIgnoreChat("[BRAT] <Kon> hello"));
         assertTrue(CompanionChatListenSupport.shouldIgnoreChat("[CCI] spawn"));
         assertTrue(CompanionChatListenSupport.shouldIgnoreChat("cci: wave"));
         assertFalse(CompanionChatListenSupport.shouldIgnoreChat("hey Kon, how's it going?"));

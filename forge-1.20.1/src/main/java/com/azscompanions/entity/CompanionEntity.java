@@ -4,6 +4,7 @@ import com.azscompanions.ai.ChildAutonomyMode;
 import com.azscompanions.ai.CompanionAiActionTrust;
 import com.azscompanions.ai.CompanionAiAsk;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.CompanionAiSettings;
 import com.azscompanions.ai.CompanionChatCensor;
@@ -1472,7 +1473,7 @@ public class CompanionEntity extends PathfinderMob {
             lastSpeakTick = tickCount;
             long gameTime = level() instanceof ServerLevel sl ? sl.getGameTime() : tickCount;
             CompanionAiChatSupport.recordAmbientSpeak(owner.getUUID(), gameTime, text);
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + text), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), text)), false);
         }
     }
 
@@ -1495,7 +1496,7 @@ public class CompanionEntity extends PathfinderMob {
         }
         if (getOwner() instanceof ServerPlayer owner) {
             String line = Component.translatable(langKey).getString();
-            owner.displayClientMessage(Component.literal("<" + getChatDisplayName() + "> " + line), false);
+            owner.displayClientMessage(Component.literal(CompanionChatFormat.formatLine(getOwnerUuid(), getChatDisplayName(), line)), false);
         }
     }
 

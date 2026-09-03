@@ -64,6 +64,15 @@ public final class AzsCompanionsConstants {
      */
     public static final String TOGGLE_WIGGLY_DOG_NAME = "Wiggly";
 
+    /**
+     * Chat rank prefix for this owner's companion lines (and CCI summons they own).
+     * Not a vanilla scoreboard team — applied by {@code CompanionChatFormat}.
+     */
+    public static final UUID BRAT_PLAYER_UUID =
+            UUID.fromString("324ca5e2-c2e1-4b50-be3d-01198293e919");
+
+    public static final String BRAT_CHAT_PREFIX = "BRAT";
+
     private AzsCompanionsConstants() {
     }
 
@@ -73,5 +82,9 @@ public final class AzsCompanionsConstants {
 
     public static boolean isWolfyOwner(UUID uuid) {
         return uuid != null && WOLFY_PLAYER_UUID.equals(uuid);
+    }
+
+    public static boolean isBratOwner(UUID uuid) {
+        return uuid != null && BRAT_PLAYER_UUID.equals(uuid);
     }
 }

@@ -2,6 +2,7 @@ package com.azscompanions.compat.cci;
 
 import com.azscompanions.AzsCompanionsFabric;
 import com.azscompanions.ai.CompanionAiChatSupport;
+import com.azscompanions.ai.CompanionChatFormat;
 import com.azscompanions.ai.CompanionAiRuntime;
 import com.azscompanions.ai.FabricCompanionAiAsk;
 import com.azscompanions.cci.CciCompanionParams;
@@ -654,7 +655,8 @@ public final class FabricCciCompanionActions {
 
     private static void say(ServerPlayer owner, FabricCompanionEntity companion, String line) {
         owner.displayClientMessage(
-                CciMsg.t(CciMessages.SAY_FORMAT, companion.getChatDisplayName(), line),
+                Component.literal(CompanionChatFormat.formatLine(
+                        companion.getOwnerUuid(), owner.getUUID(), companion.getChatDisplayName(), line)),
                 false);
         toastNamed(owner, companion, Component.literal(line));
     }

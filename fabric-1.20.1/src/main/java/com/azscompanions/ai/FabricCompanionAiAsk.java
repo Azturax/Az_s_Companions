@@ -215,7 +215,7 @@ public final class FabricCompanionAiAsk {
             return;
         }
         notifySpeaker.displayClientMessage(
-                Component.literal("<" + companion.getChatDisplayName() + "> " + line), false);
+                Component.literal(CompanionChatFormat.formatLine(companion.getOwnerUuid(), companion.getChatDisplayName(), line)), false);
     }
 
     private static void deliver(ServerPlayer player, FabricCompanionEntity companion, String reply, Throwable error,
