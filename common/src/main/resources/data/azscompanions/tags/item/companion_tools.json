@@ -1,10 +1,19 @@
 {
   "replace": false,
   "values": [
-    "#minecraft:pickaxes",
-    "#minecraft:axes",
-    "#minecraft:shovels",
-    "#minecraft:hoes",
-    "#minecraft:swords"
+    { "id": "#minecraft:pickaxes", "required": false },
+    { "id": "#minecraft:axes", "required": false },
+    { "id": "#minecraft:shovels", "required": false },
+    { "id": "#minecraft:hoes", "required": false },
+    { "id": "#minecraft:swords", "required": false },
+    { "id": "#c:tools", "required": false },
+    { "id": "#c:tools/mining_tools", "required": false },
+    { "id": "#c:tools/melee_weapons", "required": false },
+    { "id": "#forge:tools", "required": false },
+    { "id": "#forge:tools/pickaxes", "required": false },
+    { "id": "#forge:tools/axes", "required": false },
+    { "id": "#forge:tools/shovels", "required": false },
+    { "id": "#forge:tools/hoes", "required": false },
+    { "id": "#forge:tools/swords", "required": false }
   ]
 }

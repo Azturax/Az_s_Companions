@@ -1,10 +1,19 @@
 package com.azscompanions.util;
 
+import com.azscompanions.data.ModTags;
+import com.azscompanions.entity.CompanionEquipmentSupport;
 import com.azscompanions.entity.CompanionForm;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.Equippable;
 
 /** Inventory / equipment rules so armor is never invisible on unsupported forms. */
@@ -20,7 +29,10 @@ public final class CompanionArmorRules {
             return true;
         }
         Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
-        return equippable != null && equippable.slot() == EquipmentSlot.BODY;
+        if (equippable != null && equippable.slot() == EquipmentSlot.BODY) {
+            return true;
+        }
+        return CompanionEquipmentSupport.looksLikeBodyArmor(itemId(stack));
     }
 
     /**
@@ -35,12 +47,82 @@ public final class CompanionArmorRules {
             if (isCanineArmor(stack)) {
                 return false;
             }
-            Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
-            return equippable != null && equippable.slot() == uiSlot;
+            return isArmorForSlot(stack, uiSlot);
         }
         if (form.supportsWolfArmor() && uiSlot == EquipmentSlot.CHEST) {
             return isCanineArmor(stack);
         }
         return false;
+    }
+
+    public static boolean isArmorForSlot(ItemStack stack, EquipmentSlot uiSlot) {
+        if (stack.isEmpty() || uiSlot == null) {
+            return false;
+        }
+        Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
+        if (equippable != null && equippable.slot() == uiSlot) {
+            return true;
+        }
+        if (taggedForSlot(stack, uiSlot)) {
+            return true;
+        }
+        if (hasArmorAttributesForSlot(stack, uiSlot)) {
+            return true;
+        }
+        String id = itemId(stack);
+        if (CompanionEquipmentSupport.matchesArmorSlot(id, CompanionEquipmentSupport.slotName(uiSlot.name()))) {
+            return true;
+        }
+        return isGenericArmor(stack) && CompanionEquipmentSupport.armorKind(id) == CompanionEquipmentSupport.ArmorKind.NONE;
+    }
+
+    private static boolean taggedForSlot(ItemStack stack, EquipmentSlot uiSlot) {
+        return switch (uiSlot) {
+            case HEAD -> stack.is(ItemTags.HEAD_ARMOR)
+                    || stack.is(itemTag("c", "armors/helmets"))
+                    || stack.is(itemTag("forge", "armors/helmets"));
+            case CHEST -> stack.is(ItemTags.CHEST_ARMOR)
+                    || stack.is(itemTag("c", "armors/chestplates"))
+                    || stack.is(itemTag("forge", "armors/chestplates"));
+            case LEGS -> stack.is(ItemTags.LEG_ARMOR)
+                    || stack.is(itemTag("c", "armors/leggings"))
+                    || stack.is(itemTag("forge", "armors/leggings"));
+            case FEET -> stack.is(ItemTags.FOOT_ARMOR)
+                    || stack.is(itemTag("c", "armors/boots"))
+                    || stack.is(itemTag("forge", "armors/boots"));
+            default -> false;
+        };
+    }
+
+    private static boolean isGenericArmor(ItemStack stack) {
+        return stack.is(ModTags.Items.COMPANION_ARMOR)
+                || stack.is(itemTag("c", "armors"))
+                || stack.is(itemTag("forge", "armors"))
+                || stack.is(itemTag("neoforge", "armors"));
+    }
+
+    private static boolean hasArmorAttributesForSlot(ItemStack stack, EquipmentSlot uiSlot) {
+        ItemAttributeModifiers modifiers = stack.getOrDefault(
+                DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        for (ItemAttributeModifiers.Entry entry : modifiers.modifiers()) {
+            if (!entry.slot().test(uiSlot)) {
+                continue;
+            }
+            String path = entry.attribute().unwrapKey()
+                    .map(key -> key.location().getPath())
+                    .orElse("");
+            if (path.endsWith("armor") || path.endsWith("armor_toughness")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static TagKey<Item> itemTag(String namespace, String path) {
+        return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(namespace, path));
+    }
+
+    private static String itemId(ItemStack stack) {
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
     }
 }

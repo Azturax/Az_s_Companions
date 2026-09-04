@@ -125,6 +125,8 @@ final class CompanionCciSummonSupportTest {
         assertTrue(CompanionCciSummonSupport.armorItemIds("20").isEmpty());
         assertTrue(CompanionCciSummonSupport.armorItemIds("-").isEmpty());
         assertEquals("minecraft:diamond_chestplate", CompanionCciSummonSupport.armorItemIds("diamond_chestplate").get(0));
+        assertEquals("draconicevolution:wyvern_helmet",
+                CompanionCciSummonSupport.armorItemIds("draconicevolution:wyvern_helmet").get(0));
     }
 
     @Test

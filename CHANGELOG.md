@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.14
+
+Companions accept almost every modded armor piece and tool, not only vanilla `ArmorItem` / `SwordItem` classes.
+
+### Changed
+- **Equipment slots** — helmet, chest, legs, and boots accept items that occupy that slot, sit in armor/tool tags, have armor attributes, or have an equipment-shaped id (`wyvern_helmet`, `mage_robe`, …). Dirt and food stay rejected unless they are actually wearable.
+- **CCI `/az summon`** — armor, weapon, tool, and shield args accept `namespace:path` ids (e.g. `draconicevolution:wyvern_helmet`) via the item registry, not a vanilla-only list.
+- **Mining AI** — tool auto-equip also treats modded pickaxe/axe/shovel-like ids as tools, not only vanilla item tags.
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.14+<mc>.jar` on tag `v1.0.14` (**8** unified jars).
+
 ## 1.0.13
 
 Companions no longer gift valuables when they wake from sleep.

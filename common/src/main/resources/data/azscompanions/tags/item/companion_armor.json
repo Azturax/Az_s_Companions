@@ -1,9 +1,20 @@
 {
   "replace": false,
   "values": [
-    "#minecraft:head_armor",
-    "#minecraft:chest_armor",
-    "#minecraft:leg_armor",
-    "#minecraft:foot_armor"
+    { "id": "#minecraft:head_armor", "required": false },
+    { "id": "#minecraft:chest_armor", "required": false },
+    { "id": "#minecraft:leg_armor", "required": false },
+    { "id": "#minecraft:foot_armor", "required": false },
+    { "id": "#c:armors", "required": false },
+    { "id": "#c:armors/helmets", "required": false },
+    { "id": "#c:armors/chestplates", "required": false },
+    { "id": "#c:armors/leggings", "required": false },
+    { "id": "#c:armors/boots", "required": false },
+    { "id": "#forge:armors", "required": false },
+    { "id": "#forge:armors/helmets", "required": false },
+    { "id": "#forge:armors/chestplates", "required": false },
+    { "id": "#forge:armors/leggings", "required": false },
+    { "id": "#forge:armors/boots", "required": false },
+    { "id": "#neoforge:armors", "required": false }
   ]
 }

@@ -3,7 +3,7 @@
 Wholesome adult companion mod for Minecraft (**1.21.1**, **1.21.5**, **1.20.1**). Mod id: `azscompanions`.
 
 - **Repo:** [github.com/Azturax/Az_s_Companions](https://github.com/Azturax/Az_s_Companions)
-- **Release:** [v1.0.13](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.13)
+- **Release:** [v1.0.14](https://github.com/Azturax/Az_s_Companions/releases/tag/v1.0.14)
 - **Publishing (Modrinth / CurseForge):** [docs/PUBLISHING.md](docs/PUBLISHING.md)
 - **CCI Documentation:** [docs/CCI.md](docs/CCI.md)
 - **Companion AI:** [docs/COMPANION_AI.md](docs/COMPANION_AI.md)
@@ -22,8 +22,8 @@ Install **one** Az's Companions jar for your loader. NeoForge and Fabric are **a
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge | `:neoforge` | `azscompanions-neoforge-1.0.13+1.21.1.jar` |
-| Fabric | `:fabric` | `azscompanions-fabric-1.0.13+1.21.1.jar` |
+| NeoForge | `:neoforge` | `azscompanions-neoforge-1.0.14+1.21.1.jar` |
+| Fabric | `:fabric` | `azscompanions-fabric-1.0.14+1.21.1.jar` |
 
 Java **21**. NeoForge **21.1.x** or Fabric Loader ≥0.16 + Fabric API. For streaming: optionally install CCI **1.13.0** + iChunUtil **1.0.3** (same loader).
 
@@ -31,8 +31,8 @@ Java **21**. NeoForge **21.1.x** or Fabric Loader ≥0.16 + Fabric API. For stre
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge | `:neoforge-21.5` | `azscompanions-neoforge-1.0.13+1.21.5.jar` |
-| Fabric | `:fabric-21.5` | `azscompanions-fabric-1.0.13+1.21.5.jar` |
+| NeoForge | `:neoforge-21.5` | `azscompanions-neoforge-1.0.14+1.21.5.jar` |
+| Fabric | `:fabric-21.5` | `azscompanions-fabric-1.0.14+1.21.5.jar` |
 
 Java **21**. NeoForge **21.5.x** or Fabric API `0.128.2+1.21.5`. Optional CCI **1.13.0** + iChunUtil **1.0.7** (pins in [MULTI_VERSION.md](docs/MULTI_VERSION.md)).
 
@@ -40,8 +40,8 @@ Java **21**. NeoForge **21.5.x** or Fabric API `0.128.2+1.21.5`. Optional CCI **
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| Forge | `:forge-1.20.1` | `azscompanions-forge-1.0.13+1.20.1.jar` |
-| Fabric | `:fabric-1.20.1` | `azscompanions-fabric-1.0.13+1.20.1.jar` |
+| Forge | `:forge-1.20.1` | `azscompanions-forge-1.0.14+1.20.1.jar` |
+| Fabric | `:fabric-1.20.1` | `azscompanions-fabric-1.0.14+1.20.1.jar` |
 
 Java **17**. Forge **47.4.x** or Fabric API `0.92.11+1.20.1`. There is **no** NeoForge 20.1 line. Optional CCI **1.13.0** + iChunUtil **1.0.3**. Honest API omissions: [fabric-1.20.1/NOTES.md](fabric-1.20.1/NOTES.md), [forge-1.20.1/NOTES.md](forge-1.20.1/NOTES.md).
 
@@ -49,8 +49,8 @@ Java **17**. Forge **47.4.x** or Fabric API `0.92.11+1.20.1`. There is **no** Ne
 
 | Loader | Module | Jar |
 |--------|--------|-----|
-| NeoForge 26.1.2 | `:neoforge-26-1` | `azscompanions-neoforge-1.0.13+26.1.2.jar` |
-| NeoForge 26.2 | `:neoforge-26` | `azscompanions-neoforge-1.0.13+26.2.jar` |
+| NeoForge 26.1.2 | `:neoforge-26-1` | `azscompanions-neoforge-1.0.14+26.1.2.jar` |
+| NeoForge 26.2 | `:neoforge-26` | `azscompanions-neoforge-1.0.14+26.2.jar` |
 
 Java **25**. No CCI for 26.x.
 
@@ -234,7 +234,7 @@ Existing `companion_summon` still recruits a **persistent** owned companion (cha
 ./gradlew buildNeoForge26 buildNeoForge261
 ```
 
-Outputs under `*/build/libs/azscompanions-*-1.0.13+*.jar` (**8 jars** total).
+Outputs under `*/build/libs/azscompanions-*-1.0.14+*.jar` (**8 jars** total).
 
 ## Publishing (Modrinth / CurseForge)
 
@@ -242,7 +242,7 @@ GitHub Actions workflow [`.github/workflows/publish.yml`](.github/workflows/publ
 
 1. Create **Az's Companions** Modrinth + CurseForge projects (suggested slug `azs-companions`)
 2. Add secrets `PUBLISH_MODRINTH_TOKEN`, `PUBLISH_CURSEFORGE_TOKEN` (legacy `MODRINTH_TOKEN` / `CURSEFORGE_TOKEN` also work) and variables `MODRINTH_PROJECT_ID`, `CURSEFORGE_PROJECT_ID` (Az's Companions project IDs)
-3. Publish a GitHub Release, or run **Actions → Publish Modrinth / CurseForge** with tag `v1.0.13`
+3. Publish a GitHub Release, or run **Actions → Publish Modrinth / CurseForge** with tag `v1.0.14`
 
 Full setup: [docs/PUBLISHING.md](docs/PUBLISHING.md). Store paste copy: [docs/STORE_DESCRIPTION.md](docs/STORE_DESCRIPTION.md).
 

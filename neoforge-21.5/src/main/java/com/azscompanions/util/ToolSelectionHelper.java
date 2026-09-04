@@ -3,8 +3,10 @@ package com.azscompanions.util;
 import com.azscompanions.config.CommonConfig;
 import com.azscompanions.data.ModTags;
 import com.azscompanions.entity.CompanionEntity;
+import com.azscompanions.entity.CompanionEquipmentSupport;
 import com.azscompanions.entity.inventory.CompanionInventory;
 import com.azscompanions.item.CompanionCharmItem;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -113,9 +115,11 @@ public final class ToolSelectionHelper {
         }
         boolean correct = stack.isCorrectToolForDrops(state);
         float speed = stack.getDestroySpeed(state);
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         boolean taggedTool = stack.is(ModTags.Items.COMPANION_TOOLS)
                 || stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.AXES)
-                || stack.is(ItemTags.SHOVELS) || stack.is(ItemTags.HOES) || stack.is(ItemTags.SWORDS);
+                || stack.is(ItemTags.SHOVELS) || stack.is(ItemTags.HOES) || stack.is(ItemTags.SWORDS)
+                || CompanionEquipmentSupport.looksLikeTool(id);
         if (!correct && speed <= 1.01f && !taggedTool) {
             return -1f;
         }

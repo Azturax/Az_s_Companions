@@ -1,8 +1,10 @@
 package com.azscompanions.util;
 
+import com.azscompanions.entity.CompanionEquipmentSupport;
 import com.azscompanions.entity.FabricCompanionEntity;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.item.FabricCompanionCharmItem;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -99,8 +101,10 @@ public final class FabricToolSelectionHelper {
         }
         boolean correct = stack.isCorrectToolForDrops(state);
         float speed = stack.getDestroySpeed(state);
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         boolean tagged = stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.AXES)
-                || stack.is(ItemTags.SHOVELS) || stack.is(ItemTags.HOES) || stack.is(ItemTags.SWORDS);
+                || stack.is(ItemTags.SHOVELS) || stack.is(ItemTags.HOES) || stack.is(ItemTags.SWORDS)
+                || CompanionEquipmentSupport.looksLikeTool(id);
         if (!correct && speed <= 1.01f && !tagged) {
             return -1f;
         }

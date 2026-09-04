@@ -13,6 +13,8 @@ import com.azscompanions.entity.FabricCompanionRecruitment;
 import com.azscompanions.entity.inventory.FabricCompanionInventory;
 import com.azscompanions.item.FabricCompanionCharmItem;
 import com.azscompanions.util.CompanionArmorRules;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -65,24 +67,45 @@ public final class FabricCciSummonCommand {
     private FabricCciSummonCommand() {
     }
 
+    /** Allows {@code namespace:path} — Brigadier {@code word()} rejects {@code :}. */
+    private static ArgumentType<String> itemIdArg() {
+        return new ArgumentType<>() {
+            @Override
+            public String parse(StringReader reader) throws CommandSyntaxException {
+                if (!reader.canRead()) {
+                    return "";
+                }
+                char c = reader.peek();
+                if (c == '"' || c == '\'') {
+                    return reader.readString();
+                }
+                int start = reader.getCursor();
+                while (reader.canRead() && !Character.isWhitespace(reader.peek())) {
+                    reader.skip();
+                }
+                return reader.getString().substring(start, reader.getCursor());
+            }
+        };
+    }
+
     public static LiteralArgumentBuilder<CommandSourceStack> buildBranch() {
         var nameArg = Commands.argument("name", StringArgumentType.greedyString())
                 .executes(ctx -> equipped(ctx, modeOrNull(ctx), StringArgumentType.getString(ctx, "name")));
         var modeArg = Commands.argument("mode", StringArgumentType.word())
                 .executes(ctx -> equipped(ctx, modeOrNull(ctx), null))
                 .then(nameArg);
-        var shieldArg = Commands.argument("shield", StringArgumentType.word())
+        var shieldArg = Commands.argument("shield", itemIdArg())
                 .executes(ctx -> equipped(ctx, null, null))
                 .then(modeArg);
-        var toolArg = Commands.argument("tool", StringArgumentType.word())
+        var toolArg = Commands.argument("tool", itemIdArg())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), armor(ctx), weapon(ctx),
                         StringArgumentType.getString(ctx, "tool"), null, null, null))
                 .then(shieldArg);
-        var weaponArg = Commands.argument("weapon", StringArgumentType.word())
+        var weaponArg = Commands.argument("weapon", itemIdArg())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx), armor(ctx),
                         StringArgumentType.getString(ctx, "weapon"), null, null, null, null))
                 .then(toolArg);
-        var armorArg = Commands.argument("armor", StringArgumentType.word())
+        var armorArg = Commands.argument("armor", itemIdArg())
                 .executes(ctx -> run(ctx, player(ctx), dur(ctx), hp(ctx),
                         StringArgumentType.getString(ctx, "armor"), null, null, null, null, null))
                 .then(weaponArg);
