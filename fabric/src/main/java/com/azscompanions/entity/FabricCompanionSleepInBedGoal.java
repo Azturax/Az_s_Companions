@@ -66,7 +66,6 @@ public final class FabricCompanionSleepInBedGoal extends Goal {
     public void stop() {
         if (companion.isSleeping()) {
             companion.stopSleeping();
-            CompanionWakeLoot.tryGiveOnWake(companion);
         }
         companion.getNavigation().stop();
         if (ownerTooFar()) {

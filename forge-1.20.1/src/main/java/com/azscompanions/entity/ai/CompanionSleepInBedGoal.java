@@ -5,7 +5,6 @@ import com.azscompanions.entity.CompanionBedSleepSupport;
 import com.azscompanions.entity.CompanionEntity;
 import com.azscompanions.entity.CompanionFollowDistances;
 import com.azscompanions.entity.CompanionMode;
-import com.azscompanions.entity.CompanionWakeLoot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -78,7 +77,6 @@ public final class CompanionSleepInBedGoal extends Goal {
     public void stop() {
         if (companion.isSleeping()) {
             companion.stopSleeping();
-            CompanionWakeLoot.tryGiveOnWake(companion);
         }
         companion.getNavigation().stop();
         if (ownerTooFar()) {

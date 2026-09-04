@@ -348,4 +348,4 @@ Structure / archaeology loot from this mod (not soft-deps — always registered 
 | NeoForge | `config/azscompanions-common.toml` | `[world] enableLoot` | `true` |
 | Fabric | `config/azscompanions-common.json` | `world.enableLoot` | `true` |
 
-Set **`enableLoot=false`** to stop all of these injectors (and any future mod treasure loot appends gated the same way). Creative-tab items remain craftable/available; wake-bed gift loot is unrelated and unchanged.
+Set **`enableLoot=false`** to stop all of these injectors (and any future mod treasure loot appends gated the same way). Creative-tab items remain craftable/available.

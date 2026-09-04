@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.13
+
+Companions no longer gift valuables when they wake from sleep.
+
+### Removed
+- **Sleep wake loot** — `CompanionWakeLoot` removed on all loaders. Companions no longer drop or gift valuables after sleeping. Flower gifts and desert-pyramid charm loot are unchanged.
+
+### Loaders
+| Minecraft | Standalone (+ CCI soft-compat) |
+|-----------|--------------------------------|
+| **1.21.1** | NeoForge + Fabric |
+| **1.21.5** | NeoForge + Fabric |
+| **1.20.1** | Forge + Fabric |
+| **26.2 / 26.1.2** | NeoForge |
+
+Jar pattern: `azscompanions-<loader>-1.0.13+<mc>.jar` on tag `v1.0.13` (**8** unified jars).
+
 ## 1.0.12
 
 Companion chat rank prefix `[BRAT]` for a designated owner UUID (and CCI summons they own).

@@ -82,7 +82,6 @@
   "message.azscompanions.charm_despawned": "Your companion is stored in the charm.",
   "message.azscompanions.charm_only_one": "You can only keep one Companion Charm.",
   "message.azscompanions.kon_bed_granted": "Named Kon — received a Kon Bed!",
-  "message.azscompanions.wake_loot": "%s found something!",
   "message.azscompanions.hand_given_main": "Gave item to companion's main hand.",
   "message.azscompanions.hand_given_off": "Gave item to companion's off hand.",
   "message.azscompanions.hand_swapped": "Swapped item into companion's main hand.",
